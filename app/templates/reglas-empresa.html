@@ -1,0 +1,97 @@
+{% extends "layout.html" %}
+
+{% block title %}Mis Reglas{% endblock %}
+
+{% block head %}
+
+{% endblock %}
+
+{% block header %}Reglas de mi Empresa{% endblock %}
+{% block page_title %}Mis Reglas{% endblock %}
+
+{% block actions %}
+
+{% endblock %}
+
+{% block content %}
+<div class="alert alert-primary border-0 shadow-sm mb-4">
+                <div class="d-flex align-items-center">
+                    <i class="fa fa-info-circle fa-2x me-3 opacity-50"></i>
+                    <div>
+                        <h6 class="fw-bold mb-1">Información de Perfil</h6>
+                        <p class="mb-0 small">Como administrador de empresa, puedes activar/desactivar reglas y ajustar sus valores permitidos. Las reglas base y su lógica son gestionadas por soporte central.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-12">
+                    <div class="card shadow-sm border-0">
+                        <div class="card-body">
+                            <table id="tabla_reglas_empresa" class="table table-hover dt-responsive nowrap w-100 align-middle">
+                                <thead class="table-light text-uppercase" style="font-size: 0.75rem; letter-spacing: 1px;">
+                                    <tr>
+                                        <th>Regla</th>
+                                        <th>Descripción</th>
+                                        <th>Configuración Actual</th>
+                                        <th>Estado</th>
+                                        <th class="text-end">Acciones</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td><span class="fw-bold text-primary">max_consecutive_days</span></td>
+                                        <td>Define el máximo de días seguidos que un trabajador puede ser asignado.</td>
+                                        <td><span class="badge bg-light text-dark border"><i class="fa fa-history me-1"></i>Máx: 6 días</span></td>
+                                        <td>
+                                            <div class="form-check form-switch p-0" style="min-height: auto;">
+                                                <input class="form-check-input ms-0" type="checkbox" checked onclick="toastr.info('Estado actualizado para su empresa')">
+                                            </div>
+                                        </td>
+                                        <td class="text-end">
+                                            <button class="btn btn-outline-primary btn-sm px-3 shadow-sm" onclick="Modal('Editar', 1, '/modal-regla-empresa')">
+                                                <i class="fa fa-edit me-1"></i> Personalizar
+                                            </button>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td><span class="fw-bold text-primary">min_rest_hours</span></td>
+                                        <td>Horas mínimas de descanso entre el fin de un turno y el inicio del siguiente.</td>
+                                        <td><span class="badge bg-light text-dark border"><i class="fa fa-clock me-1"></i>Mín: 12 horas</span></td>
+                                        <td>
+                                            <div class="form-check form-switch p-0" style="min-height: auto;">
+                                                <input class="form-check-input ms-0" type="checkbox" checked onclick="toastr.info('Estado actualizado para su empresa')">
+                                            </div>
+                                        </td>
+                                        <td class="text-end">
+                                            <button class="btn btn-outline-primary btn-sm px-3 shadow-sm" onclick="Modal('Editar', 2, '/modal-regla-empresa')">
+                                                <i class="fa fa-edit me-1"></i> Personalizar
+                                            </button>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td><span class="fw-bold text-primary">sunday_rule</span></td>
+                                        <td>Evaluación de domingos legales trabajados por mes.</td>
+                                        <td><span class="badge bg-light text-dark border"><i class="fa fa-calendar-day me-1"></i>Eval: Domingos</span></td>
+                                        <td>
+                                            <div class="form-check form-switch p-0" style="min-height: auto;">
+                                                <input class="form-check-input ms-0" type="checkbox" onclick="toastr.info('Estado actualizado para su empresa')">
+                                            </div>
+                                        </td>
+                                        <td class="text-end">
+                                            <button class="btn btn-outline-primary btn-sm px-3 shadow-sm" onclick="Modal('Editar', 4, '/modal-regla-empresa')">
+                                                <i class="fa fa-edit me-1"></i> Personalizar
+                                            </button>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+{% endblock %}
+
+{% block scripts %}
+
+{% endblock %}

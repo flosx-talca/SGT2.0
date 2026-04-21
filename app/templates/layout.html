@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema de Gestión de Turnos - {% block title %}{% endblock %}</title>
+    <!-- Bootswatch CSS (Local) -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/bootstrap.css') }}">
+    <!-- DataTables CSS -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='vendor/dataTables.bootstrap5.min.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='vendor/responsive.bootstrap5.min.css') }}">
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='vendor/all.min.css') }}">
+    <!-- Toastr & SweetAlert2 -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    
+    <style>
+        /* Mostrar el spinner de carga de HTMX */
+        #fondo.htmx-request {
+            display: flex !important;
+        }
+        
+        /* Ocultar el contenido viejo INMEDIATAMENTE al empezar la carga */
+        .htmx-request#body-content {
+            opacity: 0;
+        }
+
+        /* Suavizar el swap */
+        .htmx-swapping #body-content {
+            opacity: 0;
+            transition: opacity 0.1s ease-out;
+        }
+    </style>
+    
+    <!-- HTMX for SPA-like navigation -->
+    <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+    
+    {% block head %}{% endblock %}
+</head>
+<body hx-indicator="#fondo">
+    <div id="fondo">
+        <div class="spinner-border text-primary" style="width: 3rem; height: 3rem;" role="status"></div>
+    </div>
+
+    <!-- Mobile Top Navbar -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary d-lg-none sticky-top shadow-sm">
+        <div class="container-fluid">
+            <a class="navbar-brand fw-bold" href="{{ url_for('index') }}">SGT 2.1</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="offcanvas" data-bs-target="#mobileSidebar">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+        </div>
+    </nav>
+
+    <div class="container-fluid p-0">
+        <!-- Sidebar -->
+        <aside class="sidebar d-none d-lg-block">
+            <!-- Logo: siempre fijo arriba -->
+            <div class="sidebar-header p-4 text-center border-bottom">
+                <h4 class="text-primary fw-bold mb-0">SGT 2.1</h4>
+                <small class="text-muted text-uppercase fw-bold" style="font-size: 0.7rem; letter-spacing: 1px;">Gestión de Turnos</small>
+            </div>
+            
+            <!-- Nav: scrollable -->
+            <div class="sidebar-content flex-grow-1">
+                <nav class="nav flex-column sidebar-nav">
+                    <a class="nav-link {{ 'active' if request.endpoint == 'index' else '' }}" 
+                       href="{{ url_for('index') }}" 
+                       hx-get="{{ url_for('index') }}" hx-target="#body-content" hx-push-url="true" hx-select="#body-content" hx-swap="innerHTML">
+                        <i class="fa fa-th-large"></i> Dashboard
+                    </a>
+                    <a class="nav-link {{ 'active' if request.endpoint == 'trabajadores' else '' }}" 
+                       href="{{ url_for('trabajadores') }}"
+                       hx-get="{{ url_for('trabajadores') }}" hx-target="#body-content" hx-push-url="true" hx-select="#body-content" hx-swap="innerHTML">
+                        <i class="fa fa-users"></i> Trabajadores
+                    </a>
+                    <a class="nav-link {{ 'active' if request.endpoint == 'turnos' else '' }}" 
+                       href="{{ url_for('turnos') }}"
+                       hx-get="{{ url_for('turnos') }}" hx-target="#body-content" hx-push-url="true" hx-select="#body-content" hx-swap="innerHTML">
+                        <i class="fa fa-clock"></i> Turnos
+                    </a>
+                    <a class="nav-link {{ 'active' if request.endpoint == 'planificacion' else '' }}" 
+                       href="{{ url_for('planificacion') }}"
+                       hx-get="{{ url_for('planificacion') }}" hx-target="#body-content" hx-push-url="true" hx-select="#body-content" hx-swap="innerHTML">
+                        <i class="fa fa-calendar-alt"></i> Planificación
+                    </a>
+
+                    <div class="sidebar-heading text-muted small fw-bold px-4 py-2 mt-2 text-uppercase" style="font-size: 0.65rem; letter-spacing: 1px;">Administración Local</div>
+                    <a class="nav-link {{ 'active' if request.endpoint == 'clientes' else '' }}" 
+                       href="{{ url_for('clientes') }}"
+                       hx-get="{{ url_for('clientes') }}" hx-target="#body-content" hx-push-url="true" hx-select="#body-content" hx-swap="innerHTML">
+                        <i class="fa fa-handshake"></i> Clientes
+                    </a>
+                    <a class="nav-link {{ 'active' if request.endpoint == 'empresas' else '' }}" 
+                       href="{{ url_for('empresas') }}"
+                       hx-get="{{ url_for('empresas') }}" hx-target="#body-content" hx-push-url="true" hx-select="#body-content" hx-swap="innerHTML">
+                        <i class="fa fa-building"></i> Empresas
+                    </a>
+                    <a class="nav-link {{ 'active' if request.endpoint == 'servicios' else '' }}" 
+                       href="{{ url_for('servicios') }}"
+                       hx-get="{{ url_for('servicios') }}" hx-target="#body-content" hx-push-url="true" hx-select="#body-content" hx-swap="innerHTML">
+                        <i class="fa fa-concierge-bell"></i> Servicios
+                    </a>
+
+                    <div class="sidebar-heading text-muted small fw-bold px-4 py-2 mt-2 text-uppercase" style="font-size: 0.65rem; letter-spacing: 1px;">Soporte y Configuración</div>
+                    <a class="nav-link {{ 'active' if request.endpoint == 'simulacion' else '' }}" 
+                       href="{{ url_for('simulacion') }}"
+                       hx-get="{{ url_for('simulacion') }}" hx-target="#body-content" hx-push-url="true" hx-select="#body-content" hx-swap="outerHTML">
+                        <i class="fa fa-robot"></i> Simulación
+                    </a>
+                    <a class="nav-link {{ 'active' if request.endpoint == 'reglas' else '' }}" 
+                       href="{{ url_for('reglas') }}"
+                       hx-get="{{ url_for('reglas') }}" hx-target="#body-content" hx-push-url="true" hx-select="#body-content" hx-swap="outerHTML">
+                        <i class="fa fa-cogs"></i> Reglas Generales
+                    </a>
+                </nav>
+            </div>
+
+            <div class="sidebar-footer-desktop p-3">
+                <!-- User Profile Dropdown -->
+                <div class="dropdown mb-3">
+                    <a href="#" class="d-flex align-items-center text-decoration-none dropdown-toggle" id="userMenu" data-bs-toggle="dropdown" aria-expanded="false">
+                        <div class="bg-primary-subtle rounded-circle p-2 me-2 text-primary d-flex align-items-center justify-content-center" style="width: 35px; height: 35px;">
+                            <i class="fa fa-user"></i>
+                        </div>
+                        <div class="overflow-hidden">
+                            <p class="mb-0 fw-bold small text-dark">M. Cordero</p>
+                            <small class="text-muted" style="font-size: 0.75rem;">Administrador</small>
+                        </div>
+                    </a>
+                    <ul class="dropdown-menu shadow border-0" aria-labelledby="userMenu">
+                        <li><a class="dropdown-item small py-2" href="#" onclick="toastr.info('Cargando perfil...')"><i class="fa fa-key me-2 text-warning"></i> Cambiar Clave</a></li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li><a class="dropdown-item small py-2 text-danger" href="{{ url_for('login') }}"><i class="fa fa-sign-out-alt me-2"></i> Cerrar Sesión</a></li>
+                    </ul>
+                </div>
+
+                <!-- Branch Selector Dropdown -->
+                <div class="dropdown">
+                    <a href="#" class="bg-white rounded p-2 border border-primary-subtle d-flex align-items-center shadow-sm text-decoration-none dropdown-toggle" id="branchSelector" data-bs-toggle="dropdown" aria-expanded="false">
+                        <div class="bg-primary rounded-circle p-1 me-2 text-white d-flex align-items-center justify-content-center" style="width: 24px; height: 24px;">
+                            <i class="fa fa-map-marker-alt" style="font-size: 0.7rem;"></i>
+                        </div>
+                        <div class="overflow-hidden flex-grow-1">
+                            <small class="text-muted d-block text-uppercase fw-bold" style="font-size: 0.6rem; letter-spacing: 0.5px;">Sucursal Activa</small>
+                            <p class="mb-0 fw-bold small text-truncate text-primary" id="currentBranchName">Estación Central Copec</p>
+                        </div>
+                    </a>
+                    <ul class="dropdown-menu w-100 shadow border-0" aria-labelledby="branchSelector">
+                        <li><h6 class="dropdown-header small text-uppercase">Cambiar Sucursal</h6></li>
+                        <li><a class="dropdown-item small py-2" href="#" onclick="cambiarSucursal('Estación Central Copec')"><i class="fa fa-check me-2 text-success"></i> Estación Central</a></li>
+                        <li><a class="dropdown-item small py-2" href="#" onclick="cambiarSucursal('Pronto Vitacura')"><i class="fa fa-circle me-2 text-muted" style="font-size: 0.5rem;"></i> Pronto Vitacura</a></li>
+                        <li><a class="dropdown-item small py-2" href="#" onclick="cambiarSucursal('Bencinera Norte')"><i class="fa fa-circle me-2 text-muted" style="font-size: 0.5rem;"></i> Bencinera Norte</a></li>
+                    </ul>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Mobile Sidebar (Offcanvas) -->
+        <div class="offcanvas offcanvas-start" tabindex="-1" id="mobileSidebar" aria-labelledby="mobileSidebarLabel" style="width: 280px;">
+            <div class="offcanvas-header border-bottom bg-light">
+                <h5 class="offcanvas-title fw-bold text-primary" id="mobileSidebarLabel">SGT 2.1</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+            </div>
+            <div class="offcanvas-body p-0 d-flex flex-column">
+                <nav class="nav flex-column sidebar-nav py-3 flex-grow-1">
+                    <!-- Nav items will be cloned via JS -->
+                </nav>
+                <div class="sidebar-footer-mobile p-3 border-top bg-light">
+                    <!-- User info will be cloned via JS -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Content Wrapper (Fixed) -->
+        <main class="main-content">
+            <!-- Dynamic Content Container (Swapped by HTMX) -->
+            <div id="body-content">
+                <header class="d-flex justify-content-between align-items-center mb-3">
+                    <div>
+                        <h2 class="fw-bold mb-1">{% block header %}{% endblock %}</h2>
+                        <nav aria-label="breadcrumb">
+                            <ol class="breadcrumb mb-0">
+                                <li class="breadcrumb-item"><a href="{{ url_for('index') }}" class="text-decoration-none">Inicio</a></li>
+                                <li class="breadcrumb-item active" aria-current="page">{% block page_title %}{% endblock %}</li>
+                            </ol>
+                        </nav>
+                    </div>
+                    <div class="d-flex gap-2">
+                        <button class="btn btn-outline-secondary btn-sm shadow-sm"><i class="fa fa-bell"></i></button>
+                        {% block actions %}{% endblock %}
+                    </div>
+                </header>
+
+                {% block content %}{% endblock %}
+                
+                <!-- Scripts específicos de la página (dentro del swap) -->
+                {% block scripts %}{% endblock %}
+            </div>
+        </main>
+    </div>
+
+    <!-- Modal Base -->
+    <div class="modal fade" id="modal_contenido" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-xl">
+            <div class="modal-content border-0 shadow">
+                <!-- Content will be loaded via AJAX -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="{{ url_for('static', filename='vendor/jquery-3.7.0.min.js') }}"></script>
+    <script src="{{ url_for('static', filename='vendor/bootstrap.bundle.min.js') }}"></script>
+    <script src="{{ url_for('static', filename='vendor/jquery.dataTables.min.js') }}"></script>
+    <script src="{{ url_for('static', filename='vendor/dataTables.bootstrap5.min.js') }}"></script>
+    <script src="{{ url_for('static', filename='vendor/dataTables.responsive.min.js') }}"></script>
+    <script src="{{ url_for('static', filename='vendor/sweetalert2@11.js') }}"></script>
+    <script src="{{ url_for('static', filename='vendor/toastr.min.js') }}"></script>
+    
+    <script>
+        $(document).ready(function() {
+            // Ocultar spinner al cargar la página
+            setTimeout(() => {
+                $('#fondo').fadeOut(400);
+            }, 50);
+
+            // Limpieza y preparación antes de traer nuevo contenido
+            document.body.addEventListener('htmx:beforeRequest', function(evt) {
+                // 1. Destruir SOLO las DataTables activas (evita inicializar tablas normales por error)
+                if ($.fn.DataTable) {
+                    $('.dataTable, table').each(function() {
+                        if ($.fn.DataTable.isDataTable(this)) {
+                            $(this).DataTable().destroy();
+                        }
+                    });
+                }
+                
+                // 2. Mostrar el spinner (HTMX lo hará vía CSS, pero aseguramos con JS)
+                $('#fondo').fadeIn(100);
+            });
+
+            // Actualizar clase active en sidebar al navegar con HTMX
+            document.body.addEventListener('htmx:afterOnLoad', function(evt) {
+                $('.sidebar-nav .nav-link').removeClass('active');
+                $(`.sidebar-nav .nav-link[href="${evt.detail.pathInfo.requestPath}"]`).addClass('active');
+                
+                // Reset scroll to top
+                window.scrollTo(0, 0);
+                
+                // Cerrar cualquier modal que haya quedado abierto
+                $('.modal-backdrop').remove();
+                $('body').removeClass('modal-open').css('padding-right', '');
+
+                // OCULTAR EL SPINNER que mostramos en htmx:beforeRequest
+                setTimeout(() => {
+                    $('#fondo').fadeOut(400);
+                }, 100);
+            });
+
+            // Fallback para links no-HTMX
+            $(document).on('click', 'a:not([hx-get])', function(e) {
+                let href = $(this).attr('href');
+                if (href && href !== '#' && !href.startsWith('javascript:') && !$(this).attr('target')) {
+                    e.preventDefault();
+                    $('#fondo').fadeIn(150, function() {
+                        window.location.href = href;
+                    });
+                }
+            });
+
+            // Clone desktop nav and footer to mobile offcanvas
+            const desktopNav = $('aside.sidebar nav.sidebar-nav').html();
+            $('#mobileSidebar nav.sidebar-nav').html(desktopNav);
+            
+            const desktopFooter = $('.sidebar-footer-desktop').html();
+            $('.sidebar-footer-mobile').html(desktopFooter);
+
+            // Toastr config
+            toastr.options = {
+                "closeButton": true,
+                "progressBar": true,
+                "positionClass": "toast-top-right",
+                "timeOut": "3000"
+            };
+
+            function adjustSidebarHeight() {
+                const header = document.querySelector('.sidebar-header');
+                const footer = document.querySelector('.sidebar-footer-desktop');
+                if (header && footer) {
+                    const taken = header.offsetHeight + footer.offsetHeight;
+                    document.documentElement.style.setProperty('--sidebar-content-height', `calc(100vh - ${taken}px)`);
+                }
+            }
+            adjustSidebarHeight();
+            window.addEventListener('resize', adjustSidebarHeight);
+        });
+
+        function Modal(modo, id, url_base) {
+            $('#modal_contenido .modal-content').html('');
+            $('#fondo').fadeIn(150);
+            $.ajax({
+                url: url_base,
+                type: 'POST',
+                data: { 'modo': modo, 'id': id },
+                success: function(response) {
+                    $('#modal_contenido .modal-content').html(response);
+                    $('#modal_contenido').modal('show');
+                    setTimeout(() => {
+                        $('#fondo').fadeOut(200);
+                    }, 100);
+                },
+                error: function() {
+                    $('#fondo').fadeOut(150);
+                    toastr.error('Error al cargar el modal');
+                }
+            });
+        }
+
+        function CerrarModal() {
+            $('#modal_contenido').modal('hide');
+        }
+
+        function cambiarSucursal(nombre) {
+            $('#fondo').fadeIn();
+            setTimeout(() => {
+                $('#fondo').fadeOut();
+                $('#currentBranchName').text(nombre);
+                $('#mobileSidebar #currentBranchName').text(nombre);
+                toastr.success('Sucursal cambiada a: ' + nombre);
+            }, 800);
+        }
+    </script>
+</body>
+</html>

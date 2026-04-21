@@ -1,0 +1,60 @@
+<div class="modal-header bg-primary text-white">
+<h5 class="modal-title fw-bold">(Demo) Tipo de Servicio</h5>
+<button aria-label="Close" class="btn-close btn-close-white" onclick="CerrarModal()" type="button"></button>
+</div>
+<div class="modal-body p-4">
+<form id="form_servicio">
+<input id="id_servicio" name="id_servicio" type="hidden" value="0"/>
+<div class="row g-3">
+<div class="col-md-12">
+<label class="form-label small fw-bold text-muted"><code>(*)</code> Nombre del Servicio</label>
+<div class="input-group">
+<span class="input-group-text bg-light border-end-0"><i class="fa fa-concierge-bell text-muted"></i></span>
+<input class="form-control border-start-0" id="nombre_servicio" name="nombre_servicio" placeholder="Ej: Pronto, Gasolinera, Lavado" required="" type="text" value=""/>
+</div>
+</div>
+<div class="col-md-6">
+<label class="form-label small fw-bold text-muted"><code>(*)</code> Empresa Corresponsal</label>
+<select class="form-select" id="m_empresa_servicio" name="empresa_id" required="">
+<option disabled="" selected="" value="">Seleccione empresa...</option>
+<option value="1">Copec S.A.</option>
+<option value="2">Abastible</option>
+<option value="3">Enex</option>
+</select>
+</div>
+<div class="col-md-6">
+<label class="form-label small fw-bold text-muted">Estado</label>
+<select class="form-select" id="estado_servicio" name="estado">
+<option selected="" value="1">Activo</option>
+<option value="0">Inactivo</option>
+</select>
+</div>
+</div>
+</form>
+</div>
+<div class="modal-footer bg-light border-top-0">
+<button class="btn btn-secondary" onclick="CerrarModal()" type="button">
+<i class="fa fa-times me-1"></i> Cerrar
+    </button>
+<button class="btn btn-primary" id="btnGuardarServicio" onclick="guardarServicio()" type="button">
+<i class="fa fa-save me-1"></i> Guardar
+    </button>
+</div>
+<script>
+function guardarServicio() {
+    Swal.fire({
+        title: '¿Guardar Tipo de Servicio?',
+        text: "Modo Prototipo Estático: Los datos no se guardarán en BD.",
+        icon: 'info',
+        showCancelButton: true,
+        confirmButtonColor: '#18bc9c',
+        cancelButtonColor: '#d33',
+        confirmButtonText: 'Simular Guardado'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            toastr.success('Servicio guardado exitosamente (Simulación).');
+            CerrarModal();
+        }
+    });
+}
+</script>

@@ -1,0 +1,42 @@
+---
+description: Reglas del motor de planificación de turnos
+alwaysApply: false
+globs: **/scheduler/**/*.py, **/services/**/*scheduling*.py, **/services/**/*rule*.py, **/models/**/*worker*.py, **/models/**/*shift*.py
+---
+
+# Reglas del motor de turnos
+
+## Objetivo
+Construir el calendario mensual completo usando un solver global.
+
+## Stack técnico
+- Flask como framework web.
+- SQLAlchemy / Flask-SQLAlchemy para persistencia.
+- OR-Tools CP-SAT para resolver la planificación.
+- Pydantic para validar payloads y reglas.
+
+## Reglas de implementación
+- No usar enfoques greedy como solución principal.
+- Construir el problema completo del mes antes de resolver.
+- Separar claramente:
+  - hard rules
+  - soft rules
+  - client rules
+  - worker restrictions
+- Respetar cobertura mínima por turno.
+- Respetar disponibilidad del trabajador antes de asignar.
+- Considerar horas contratadas, duración del turno y tipo de jornada.
+- Mantener bloques de trabajo cercanos a 6 días como preferencia.
+- Evitar patrones fragmentados como 2 trabajo + 1 libre + 1 trabajo + 1 libre.
+- Reportar conflictos cuando no exista solución factible.
+
+## Modelado
+- Cada turno debe tener código, inicio, término, duración y cobertura mínima.
+- Cada trabajador debe tener tipo de jornada, horas pactadas, disponibilidad y restricciones.
+- Cada cliente puede sobrescribir reglas por sucursal o área.
+
+## Calidad del código
+- Mantén funciones pequeñas y claras.
+- Usa nombres descriptivos.
+- Separa builder, solver y explainers en módulos distintos.
+- Agrega explicaciones de asignación y de conflicto.

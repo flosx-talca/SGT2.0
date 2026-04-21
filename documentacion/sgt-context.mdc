@@ -1,0 +1,33 @@
+---
+description: Contexto base del proyecto SGT 2.1
+alwaysApply: true
+globs: **/*.py, **/*.md
+---
+
+# SGT 2.1 - Contexto base
+
+Este proyecto es un sistema de planificación de turnos multiempresa y multisucursal.
+
+## Reglas de contexto
+- Respeta siempre la jerarquía: Cliente -> Sucursal -> Área operativa -> Trabajador -> Turno.
+- El rol Super Admin tiene control total.
+- El rol Cliente administra su propio entorno.
+- El rol Administrador opera dentro de una empresa seleccionada.
+- El negocio debe soportar sucursales separadas por RUT.
+- Las áreas operativas actuales son Gasolinera y Pronto.
+- Las unidades de atención internas no se modelan por ahora; se resuelven por dotación por turno.
+- El sistema debe trabajar con turnos configurables por cliente.
+- El negocio actual usa como referencia Mañana, Tarde, Intermedio y Noche, pero esto no es rígido.
+- La planificación debe ser mensual y global, no greedy turno por turno.
+- El stack base es Flask + SQLAlchemy/Flask-SQLAlchemy + OR-Tools CP-SAT.
+- Usa Pydantic para validación y Mermaid para diagramación.
+
+## Archivos de referencia
+- docs/especificacion-funcional-sistema-turnos.md
+- docs/flujo-sgt-2.1.md
+
+## Principios
+- No inventes reglas que contradigan el documento funcional.
+- No conviertas hard rules en soft rules.
+- Mantén el diseño modular y escalable.
+- Si falta información, pide aclaración antes de asumir.

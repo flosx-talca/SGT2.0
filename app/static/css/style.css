@@ -1,5 +1,5 @@
 :root {
-    --sidebar-width: 260px;
+    --sidebar-width: 240px;
 }
 
 body { 
@@ -89,9 +89,15 @@ body {
 }
 
 .main-content {
-    margin-left: var(--sidebar-width);
-    padding: 2.5rem;
+    margin-left: var(--sidebar-width) !important;
+    padding: 1.5rem;
     min-height: 100vh;
+    display: block;
+}
+
+#body-content {
+    display: block;
+    width: 100%;
 }
 
 /* Mobile Adjustments */
@@ -114,15 +120,103 @@ body {
 
 #fondo {
     position: fixed;
-    top: 0; 
-    left: 0; 
-    width: 100%; 
-    height: 100%;
-    background: rgba(255, 255, 255, 0.9);
-    display: flex;
+    top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(255, 255, 255, 0.8);
+    display: none;
     justify-content: center;
     align-items: center;
     z-index: 10000;
-    transition: opacity 0.3s ease-in-out;
 }
+
+/* --- Cuadrante Matrix Styles --- */
+.cuadrante-wrapper {
+    overflow-x: auto;
+    max-width: 100%;
+    border-radius: 8px;
+    background: #fff;
+}
+
+.cuadrante-table {
+    border-collapse: separate;
+    border-spacing: 0;
+    font-size: 0.85rem;
+}
+
+.cuadrante-table th, .cuadrante-table td {
+    border: 1px solid #e9ecef;
+    padding: 0.5rem;
+    min-width: 45px;
+    text-align: center;
+}
+
+.cuadrante-table th {
+    background-color: #f8f9fa;
+    font-weight: 600;
+    color: #495057;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+}
+
+.col-fecha {
+    position: sticky;
+    left: 0;
+    background-color: #fff !important;
+    z-index: 11;
+    min-width: 100px !important;
+    font-weight: bold;
+    text-align: left !important;
+    border-right: 2px solid #dee2e6 !important;
+}
+
+.col-fecha.domingo {
+    background-color: #ffe5e5 !important;
+    color: #d9534f;
+}
+
+.celda-turno {
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.celda-turno:hover {
+    background-color: #f1f3f5;
+}
+
+.badge-turno {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 6px;
+    font-weight: bold;
+    color: white;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.badge-turno.libre {
+    background-color: #e9ecef !important;
+    color: #adb5bd !important;
+    box-shadow: none;
+}
+
+.badge-turno.vac {
+    background-color: #fff3cd !important;
+    color: #856404 !important;
+    border: 1px solid #ffeeba;
+}
+
+.dia-semana {
+    display: block;
+    font-size: 0.7rem;
+    color: #6c757d;
+    font-weight: normal;
+}
+
+.fila-total {
+    background-color: #f8f9fa;
+    font-weight: bold;
+}
+
 

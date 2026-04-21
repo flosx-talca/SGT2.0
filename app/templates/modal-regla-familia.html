@@ -1,0 +1,35 @@
+<div class="modal-header bg-primary text-white">
+<h5 class="modal-title fw-bold">(Demo) Familia de Regla</h5>
+<button aria-label="Close" class="btn-close btn-close-white" onclick="CerrarModal()" type="button"></button>
+</div>
+<div class="modal-body p-4">
+<form id="form_familia">
+<div class="row g-3">
+<div class="col-md-6">
+<label class="form-label small fw-bold text-muted">Código Familia</label>
+<input class="form-control" name="codigo" placeholder="Ej: range" type="text" value="comparison"/>
+</div>
+<div class="col-md-6">
+<label class="form-label small fw-bold text-muted">Función Evaluadora</label>
+<input class="form-control" name="funcion" placeholder="Ej: eval_range" type="text" value="eval_comparison"/>
+</div>
+<div class="col-12">
+<label class="form-label small fw-bold text-muted">Descripción</label>
+<textarea class="form-control" name="descripcion" rows="3">Compara un valor con un umbral usando operadores como ==, !=, &gt;, &lt;, &gt;=, &lt;=.</textarea>
+</div>
+<div class="col-md-6">
+<label class="form-label small fw-bold text-muted">Estado</label>
+<select class="form-select" name="estado">
+<option selected="" value="activo">Activo</option>
+<option value="inactivo">Inactivo</option>
+</select>
+</div>
+</div>
+</form>
+</div>
+<div class="modal-footer bg-light">
+<button class="btn btn-secondary px-4 shadow-sm" onclick="CerrarModal()" type="button">Cancelar</button>
+<button class="btn btn-primary px-4 shadow-sm" onclick="toastr.success('Familia guardada correctamente (Demo)')" type="button">
+<i class="fa fa-save me-1"></i> Guardar Familia
+                    </button>
+</div>

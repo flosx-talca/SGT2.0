@@ -1,0 +1,393 @@
+{% extends "layout.html" %}
+
+{% block title %}Reglas de Negocio{% endblock %}
+
+{% block head %}
+
+{% endblock %}
+
+{% block header %}Motor de Reglas{% endblock %}
+{% block page_title %}Reglas de Negocio{% endblock %}
+
+{% block actions %}
+
+{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-body p-0">
+        <div class="p-4 border-bottom d-flex justify-content-between align-items-center">
+            <div>
+                <h6 class="fw-bold mb-0">Configuración de Reglas</h6>
+                <small class="text-muted">Activa o desactiva reglas por empresa/sucursal sin modificar código</small>
+            </div>
+            <div class="d-flex gap-2 align-items-center">
+                <select class="form-select form-select-sm shadow-sm" id="filtro_empresa" onchange="filtrarReglas()">
+                    
+                </select>
+            </div>
+        </div>
+
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0" id="tablaReglas">
+                <thead class="table-light">
+                    <tr>
+                        <th class="px-4">Regla</th>
+                        <th>Motor</th>
+                        <th>Parámetros</th>
+                        <th class="text-center">Estado</th>
+                        <th class="text-center">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Modal para editar parámetros -->
+<div class="modal fade" id="modalEditarRegla" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title fw-bold" id="modalReglaTitle">Editar Parámetros</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-4">
+                <input type="hidden" id="editar_rule_id">
+                <input type="hidden" id="editar_empresa_id">
+                <div class="alert alert-info border-0 bg-info-subtle small mb-3">
+                    <i class="fa fa-info-circle me-1"></i>
+                    Los parámetros sobreescriben la configuración global para esta empresa/sucursal.
+                </div>
+                <div id="params_container">
+                    <!-- generado dinámicamente por JS -->
+                </div>
+            </div>
+            <div class="modal-footer bg-light border-top-0">
+                <button class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button class="btn btn-primary px-4" onclick="guardarParametros()">
+                    <i class="fa fa-save me-1"></i> Guardar
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    function toggleRegla(ruleId, empresaId, isEnabled) {
+        $('#fondo').fadeIn();
+        $.ajax({
+            url: '/reglas/toggle',
+            type: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify({ rule_id: ruleId, empresa_id: empresaId, enabled: isEnabled }),
+            success: function(res) {
+                $('#fondo').fadeOut();
+                if (res.status === 'success') {
+                    const badge = $(`#row-regla-${ruleId} td:nth-child(4)`);
+                    if (isEnabled) {
+                        badge.html('<span class="badge bg-success">Activa</span>');
+                        toastr.success('Regla activada');
+                    } else {
+                        badge.html('<span class="badge bg-secondary">Inactiva</span>');
+                        toastr.warning('Regla desactivada');
+                    }
+                } else {
+                    toastr.error(res.message);
+                }
+            },
+            error: function() {
+                $('#fondo').fadeOut();
+                toastr.error('Error al cambiar el estado de la regla');
+            }
+        });
+    }
+
+    function editarReglaBtn(btn) {
+        const ruleId  = btn.dataset.ruleId;
+        const empId   = btn.dataset.empresaId;
+        const nombre  = btn.dataset.ruleName;
+        let config;
+        try { config = JSON.parse(btn.dataset.config); } catch(e) { config = {}; }
+        editarRegla(ruleId, empId, nombre, config);
+    }
+
+    function editarRegla(ruleId, empresaId, nombre, config) {
+        $('#editar_rule_id').val(ruleId);
+        $('#editar_empresa_id').val(empresaId);
+        $('#modalReglaTitle').text('Parámetros: ' + nombre);
+
+        let html = '';
+        if (config && Object.keys(config).length > 0) {
+            for (const [key, val] of Object.entries(config)) {
+                const inputType = typeof val === 'number' ? 'number' : (typeof val === 'boolean' ? 'checkbox' : 'text');
+                html += `
+                <div class="mb-3">
+                    <label class="form-label small fw-bold text-muted text-uppercase">${key}</label>`;
+                if (Array.isArray(val)) {
+                    html += `<input type="text" class="form-control" id="param_${key}" value='${JSON.stringify(val)}' data-type="json">`;
+                } else if (inputType === 'checkbox') {
+                    html += `<div class="form-check form-switch">
+                        <input class="form-check-input" type="checkbox" id="param_${key}" ${val ? 'checked' : ''} data-type="bool">
+                    </div>`;
+                } else {
+                    html += `<input type="${inputType}" class="form-control" id="param_${key}" value="${val}" data-type="${inputType}">`;
+                }
+                html += `</div>`;
+            }
+        } else {
+            html = '<p class="text-muted text-center py-3"><i class="fa fa-check-circle text-success me-2"></i>Esta regla no tiene parámetros configurables.</p>';
+        }
+        $('#params_container').html(html);
+        $('#modalEditarRegla').modal('show');
+    }
+
+    function guardarParametros() {
+        const ruleId = $('#editar_rule_id').val();
+        const empresaId = $('#editar_empresa_id').val();
+
+        const config = {};
+        $('#params_container input, #params_container select').each(function() {
+            const key = this.id.replace('param_', '');
+            const type = $(this).data('type');
+            if (type === 'json') config[key] = JSON.parse($(this).val());
+            else if (type === 'bool') config[key] = $(this).is(':checked');
+            else if (type === 'number') config[key] = parseFloat($(this).val());
+            else config[key] = $(this).val();
+        });
+
+        $('#fondo').fadeIn();
+        $.ajax({
+            url: '/reglas/parametros',
+            type: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify({ rule_id: ruleId, empresa_id: empresaId, config: config }),
+            success: function(res) {
+                $('#fondo').fadeOut();
+                if (res.status === 'success') {
+                    toastr.success('Parámetros actualizados');
+                    $('#modalEditarRegla').modal('hide');
+                    setTimeout(() => location.reload(), 500);
+                } else {
+                    toastr.error(res.message);
+                }
+            },
+            error: function() {
+                $('#fondo').fadeOut();
+                toastr.error('Error al guardar parámetros');
+            }
+        });
+    }
+</script>
+
+<script>
+    $(document).ready(function() {
+        $('#btn_guardar_trabajador').click(function() {
+            if(!$('#rut').val() || !$('#nombre').val()) {
+                toastr.error('Por favor complete los campos obligatorios');
+                return;
+            }
+
+            const formData = $('#form_trabajador').serialize();
+            
+            $('#fondo').fadeIn();
+            
+            $.ajax({
+                url: '/trabajador/guardar',
+                type: 'POST',
+                data: formData,
+                success: function(res) {
+                    $('#fondo').fadeOut();
+                    if(res.status === 'success') {
+                        toastr.success(res.message);
+                        CerrarModal();
+                        setTimeout(() => {
+                            location.reload(); 
+                        }, 500);
+                    } else {
+                        toastr.error(res.message);
+                    }
+                },
+                error: function(xhr) {
+                    $('#fondo').fadeOut();
+                    const msg = xhr.responseJSON ? xhr.responseJSON.message : 'Error al guardar';
+                    toastr.error(msg);
+                }
+            });
+        });
+
+        // Lógica de Ausencias
+        $('#btn_add_ausencia').click(function() {
+            const f_ini = $('#fecha_inicio').val();
+            const f_fin = $('#fecha_fin').val();
+            const motivo = $('#motivo_ausencia').val();
+
+            if(!f_ini || !f_fin || !motivo) {
+                toastr.warning('Por favor complete rango de fechas y motivo');
+                return;
+            }
+            if(f_ini > f_fin) {
+                toastr.warning('La fecha de inicio no puede ser posterior a la de fin');
+                return;
+            }
+
+            $('#row_no_data').hide();
+
+            let badgeClass = 'bg-secondary';
+            if(motivo === 'VAC') badgeClass = 'bg-success';
+            if(motivo === 'LM') badgeClass = 'bg-danger';
+            if(motivo === 'PER') badgeClass = 'bg-info text-dark';
+            if(motivo === 'OTR') badgeClass = 'bg-warning text-dark';
+
+            const formatF = (d) => d.split('-').reverse().join('/');
+            
+            const tr = `
+                <tr>
+                    <td class="text-start ps-3 fw-bold text-secondary">
+                        <i class="fa fa-calendar-day me-2 text-muted"></i> ${formatF(f_ini)} - ${formatF(f_fin)}
+                        <input type="hidden" name="ausencia_ini[]" value="${f_ini}">
+                        <input type="hidden" name="ausencia_fin[]" value="${f_fin}">
+                        <input type="hidden" name="ausencia_motivo[]" value="${motivo}">
+                    </td>
+                    <td class="text-center align-middle">
+                        <span class="badge ${badgeClass} px-2">${motivo}</span>
+                    </td>
+                    <td class="text-end pe-3 align-middle">
+                        <button type="button" class="btn btn-sm btn-outline-danger btn-remove-ausencia" style="padding: 0.1rem 0.3rem;"><i class="fa fa-times"></i></button>
+                    </td>
+                </tr>
+            `;
+
+            $('#tabla_ausencias tbody').append(tr);
+
+            $('#fecha_inicio').val('');
+            $('#fecha_fin').val('');
+            $('#motivo_ausencia').val('');
+        });
+
+        $(document).on('click', '.btn-remove-ausencia', function() {
+            $(this).closest('tr').remove();
+            if($('#tabla_ausencias tbody tr').length === 1) {
+                $('#row_no_data').show();
+            }
+        });
+
+        // Rotar icono de collapse
+        $('#collapsePreferencias, #collapseAusencias').on('show.bs.collapse', function () {
+            $(this).prev('h6').find('i.fa-chevron-down').removeClass('fa-chevron-down').addClass('fa-chevron-up');
+        }).on('hide.bs.collapse', function () {
+            $(this).prev('h6').find('i.fa-chevron-up').removeClass('fa-chevron-up').addClass('fa-chevron-down');
+        });
+    });
+</script>
+<script>
+    // Preview del color en tiempo real
+    document.getElementById('t_color').addEventListener('input', function() {
+        document.getElementById('color_label').style.backgroundColor = this.value;
+    });
+    document.getElementById('t_abreviacion').addEventListener('input', function() {
+        document.getElementById('color_label').textContent = this.value || 'T';
+    });
+
+    $('#btn_guardar_turno').click(function() {
+        if (!$('#t_nombre').val() || !$('#t_hora_inicio').val() || !$('#t_hora_fin').val()) {
+            toastr.error('Por favor complete todos los campos obligatorios');
+            return;
+        }
+        const formData = $('#form_turno').serialize();
+        $('#fondo').fadeIn();
+        $.ajax({
+            url: '/turno/guardar',
+            type: 'POST',
+            data: formData,
+            success: function(res) {
+                $('#fondo').fadeOut();
+                if (res.status === 'success') {
+                    toastr.success(res.message);
+                    CerrarModal();
+                    setTimeout(() => location.reload(), 500);
+                } else {
+                    toastr.error(res.message);
+                }
+            },
+            error: function(xhr) {
+                $('#fondo').fadeOut();
+                const msg = xhr.responseJSON ? xhr.responseJSON.message : 'Error al guardar';
+                toastr.error(msg);
+            }
+        });
+    });
+</script>
+<script>
+    $(document).ready(function() {
+        $('#empresa').change(function() {
+            if($(this).val()) {
+                $('#sucursal').prop('disabled', false).html('<option value="1">Bencinera Norte</option><option value="2">Bencinera Centro</option>');
+            } else {
+                $('#sucursal').prop('disabled', true).html('<option value="">Seleccione empresa primero...</option>');
+            }
+        });
+
+        $('#btn_generar').click(function() {
+            Swal.fire({
+                title: '¿Desea generar la simulación?',
+                text: "Esto procesará las reglas configuradas para la sucursal.",
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonText: 'Sí, generar',
+                cancelButtonText: 'No, revisar'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    toastr.info('Procesando simulación...');
+                    setTimeout(() => {
+                        toastr.success('Simulación generada con éxito');
+                        CerrarModal();
+                        location.reload();
+                    }, 2000);
+                }
+            });
+        });
+    });
+</script>
+<script>
+function guardarEmpresa() {
+    Swal.fire({
+        title: '¿Guardar Empresa?',
+        text: "Modo Prototipo Estático: Los datos no se guardarán en BD.",
+        icon: 'info',
+        showCancelButton: true,
+        confirmButtonColor: '#18bc9c',
+        cancelButtonColor: '#d33',
+        confirmButtonText: 'Simular Guardado'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            toastr.success('Empresa guardada exitosamente (Simulación).');
+            CerrarModal();
+        }
+    });
+}
+</script>
+<script>
+function guardarServicio() {
+    Swal.fire({
+        title: '¿Guardar Tipo de Servicio?',
+        text: "Modo Prototipo Estático: Los datos no se guardarán en BD.",
+        icon: 'info',
+        showCancelButton: true,
+        confirmButtonColor: '#18bc9c',
+        cancelButtonColor: '#d33',
+        confirmButtonText: 'Simular Guardado'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            toastr.success('Servicio guardado exitosamente (Simulación).');
+            CerrarModal();
+        }
+    });
+}
+</script>
+{% endblock %}
