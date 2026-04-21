@@ -1,0 +1,61 @@
+<div class="modal-header bg-primary text-white">
+    <h5 class="modal-title fw-bold">Cliente</h5>
+    <button type="button" class="btn-close btn-close-white" onclick="CerrarModal()" aria-label="Close"></button>
+</div>
+
+<div class="modal-body p-4">
+    <form id="form_cliente">
+        <div class="row g-3">
+            <div class="col-md-6">
+                <label class="form-label small fw-bold text-muted"><code>(*)</code> RUT</label>
+                <div class="input-group">
+                    <span class="input-group-text bg-light border-end-0"><i class="fa fa-id-card text-muted"></i></span>
+                    <input type="text" class="form-control border-start-0" id="rut_cliente" placeholder="12.345.678-9" required>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <label class="form-label small fw-bold text-muted"><code>(*)</code> Correo Electrónico</label>
+                <div class="input-group">
+                    <span class="input-group-text bg-light border-end-0"><i class="fa fa-envelope text-muted"></i></span>
+                    <input type="email" class="form-control border-start-0" id="email_cliente" placeholder="ejemplo@correo.com" required>
+                </div>
+            </div>
+            <div class="col-md-12">
+                <label class="form-label small fw-bold text-muted"><code>(*)</code> Nombres</label>
+                <input type="text" class="form-control" id="nombre" placeholder="Nombres" required>
+            </div>
+            <div class="col-md-6">
+                <label class="form-label small fw-bold text-muted"><code>(*)</code> Primer Apellido</label>
+                <input type="text" class="form-control" id="apellido1" placeholder="Apellido Paterno" required>
+            </div>
+            <div class="col-md-6">
+                <label class="form-label small fw-bold text-muted">Segundo Apellido</label>
+                <input type="text" class="form-control" id="apellido2" placeholder="Apellido Materno">
+            </div>
+            <div class="col-md-6">
+                <label class="form-label small fw-bold text-muted">Estado</label>
+                <select class="form-select" id="estado">
+                    <option value="1">Activo</option>
+                    <option value="0">Inactivo</option>
+                </select>
+            </div>
+            <div class="col-12">
+                <label class="form-label small fw-bold text-muted"><code>(*)</code> Empresas Asociadas (Multiselección)</label>
+                <select class="form-select select2-modal" multiple="multiple" style="width: 100%;">
+                    <option value="1">Copec S.A.</option>
+                    <option value="2">Abastible</option>
+                    <option value="3">Retail Express Ltda.</option>
+                    <option value="4">Distribuidora Norte</option>
+                    <option value="5">Inversiones ABC</option>
+                </select>
+            </div>
+        </div>
+    </form>
+</div>
+
+<div class="modal-footer bg-light border-top-0">
+    <button type="button" class="btn btn-secondary" onclick="CerrarModal()">Cancelar</button>
+    <button type="button" class="btn btn-primary px-4" onclick="guardarCliente()">
+        <i class="fa fa-save me-1"></i> Guardar Cliente
+    </button>
+</div>

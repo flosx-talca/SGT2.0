@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SGT 2.1 - Clientes</title>
+    <link rel="stylesheet" href="static/css/bootstrap.css">
+    <link rel="stylesheet" href="static/vendor/dataTables.bootstrap5.min.css">
+    <link rel="stylesheet" href="static/vendor/responsive.bootstrap5.min.css">
+    <link rel="stylesheet" href="static/vendor/all.min.css">
+    <link rel="stylesheet" href="static/vendor/toastr.min.css">
+    <link rel="stylesheet" href="static/vendor/sweetalert2@11.js/dist/sweetalert2.min.css">
+    <!-- Select2 -->
+    <link rel="stylesheet" href="static/vendor/select2.min.css">
+    <link rel="stylesheet" href="static/vendor/select2-bootstrap-5-theme.min.css">
+    
+    <link rel="stylesheet" href="static/css/style.css">
+</head>
+<body>
+    <div id="fondo">
+        <div class="spinner-border text-primary" style="width: 3rem; height: 3rem;" role="status"></div>
+    </div>
+
+    <!-- Mobile Top Navbar -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary d-lg-none sticky-top shadow-sm">
+        <div class="container-fluid">
+            <a class="navbar-brand fw-bold" href="index.html">SGT 2.1</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="offcanvas" data-bs-target="#mobileSidebar">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+        </div>
+    </nav>
+
+    <div class="container-fluid p-0">
+        <!-- Sidebar -->
+        <aside class="sidebar d-none d-lg-block">
+            <!-- Logo: siempre fijo arriba -->
+            <div class="sidebar-header p-4 text-center border-bottom">
+                <h4 class="text-primary fw-bold mb-0">SGT 2.1</h4>
+                <small class="text-muted text-uppercase fw-bold" style="font-size: 0.7rem; letter-spacing: 1px;">Gestión de Turnos</small>
+            </div>
+            <!-- Nav: scrollable cuando no cabe -->
+            <div class="sidebar-content">
+                <nav class="nav flex-column sidebar-nav">
+                <a class="nav-link " href="index.html">
+                    <i class="fa fa-th-large"></i> Dashboard
+                </a>
+                <a class="nav-link " href="trabajadores.html">
+                    <i class="fa fa-users"></i> Trabajadores
+                </a>
+                <a class="nav-link " href="turnos.html">
+                    <i class="fa fa-clock"></i> Turnos
+                </a>
+                <a class="nav-link " href="simulacion.html">
+                    <i class="fa fa-calendar-alt"></i> Planificación
+                </a>
+                
+                <div class="sidebar-heading text-muted small fw-bold px-4 py-2 mt-2 text-uppercase" style="font-size: 0.65rem; letter-spacing: 1px;">Administración Local</div>
+                <a class="nav-link " href="reglas-empresa.html">
+                    <i class="fa fa-shield-alt"></i> Reglas de mi Empresa
+                </a>
+
+                <div class="sidebar-heading text-muted small fw-bold px-4 py-2 mt-2 text-uppercase" style="font-size: 0.65rem; letter-spacing: 1px;">Soporte y Configuración</div>
+                <a class="nav-link active" href="clientes.html">
+                    <i class="fa fa-user-tie"></i> Clientes
+                </a>
+                <a class="nav-link " href="empresas.html">
+                    <i class="fa fa-building"></i> Empresas
+                </a>
+                <a class="nav-link " href="servicios.html">
+                    <i class="fa fa-concierge-bell"></i> Tipo Servicio
+                </a>
+                
+                <div class="sidebar-heading text-muted small fw-bold px-4 py-2 mt-2 text-uppercase" style="font-size: 0.65rem; letter-spacing: 1px;">Motor de Reglas (Super Admin)</div>
+                <a class="nav-link " href="reglas-familias.html">
+                    <i class="fa fa-sitemap"></i> Familias
+                </a>
+                <a class="nav-link " href="reglas-config.html">
+                    <i class="fa fa-cogs"></i> Configuración Global
+                </a>
+                </nav>
+            </div>
+            
+            <div class="sidebar-footer-desktop p-3">
+                <!-- User Profile Dropdown -->
+                <div class="dropdown mb-3">
+                    <a href="#" class="d-flex align-items-center text-decoration-none dropdown-toggle" id="userMenu" data-bs-toggle="dropdown" aria-expanded="false">
+                        <div class="bg-primary-subtle rounded-circle p-2 me-2 text-primary d-flex align-items-center justify-content-center" style="width: 35px; height: 35px;">
+                            <i class="fa fa-user"></i>
+                        </div>
+                        <div class="overflow-hidden">
+                            <p class="mb-0 fw-bold small text-dark">M. Cordero</p>
+                            <small class="text-muted" style="font-size: 0.75rem;">Administrador</small>
+                        </div>
+                    </a>
+                    <ul class="dropdown-menu shadow border-0" aria-labelledby="userMenu">
+                        <li><a class="dropdown-item small py-2" href="#"><i class="fa fa-key me-2 text-warning"></i> Cambiar Clave</a></li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li><a class="dropdown-item small py-2 text-danger" href="login.html"><i class="fa fa-sign-out-alt me-2"></i> Cerrar Sesión</a></li>
+                    </ul>
+                </div>
+
+                <!-- Branch Selector -->
+                <div class="dropdown">
+                    <a href="#" class="bg-white rounded p-2 border border-primary-subtle d-flex align-items-center shadow-sm text-decoration-none dropdown-toggle" id="branchSelector" data-bs-toggle="dropdown">
+                        <div class="bg-primary rounded-circle p-1 me-2 text-white d-flex align-items-center justify-content-center" style="width: 24px; height: 24px;">
+                            <i class="fa fa-map-marker-alt" style="font-size: 0.7rem;"></i>
+                        </div>
+                        <div class="overflow-hidden flex-grow-1">
+                            <small class="text-muted d-block text-uppercase fw-bold" style="font-size: 0.6rem;">Sucursal Activa</small>
+                            <p class="mb-0 fw-bold small text-truncate text-primary">Estación Central Copec</p>
+                        </div>
+                    </a>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Mobile Sidebar -->
+        <div class="offcanvas offcanvas-start bg-light" tabindex="-1" id="mobileSidebar">
+            <div class="offcanvas-header border-bottom">
+                <h5 class="offcanvas-title fw-bold text-primary">SGT 2.1</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="offcanvas"></button>
+            </div>
+            <div class="offcanvas-body p-0 d-flex flex-column">
+                <nav class="nav flex-column sidebar-nav flex-grow-1">
+                    <!-- Cloned via JS -->
+                </nav>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <header class="d-flex justify-content-between align-items-center mb-5">
+                <div>
+                    <h2 class="fw-bold mb-1">Gestión de Clientes</h2>
+                    <nav aria-label="breadcrumb">
+                        <ol class="breadcrumb mb-0">
+                            <li class="breadcrumb-item"><a href="index.html" class="text-decoration-none">Inicio</a></li>
+                            <li class="breadcrumb-item active">Clientes</li>
+                        </ol>
+                    </nav>
+                </div>
+                <button class="btn btn-primary shadow-sm" onclick="Modal('Agregar', 0, 'modal-cliente.html')">
+                    <i class="fa fa-plus me-1"></i> Agregar Cliente
+                </button>
+            </header>
+
+            <div class="row">
+                <div class="col-12">
+                    <div class="card shadow-sm border-0">
+                        <div class="card-header bg-white py-3 border-bottom">
+                            <h5 class="mb-0 fw-bold text-dark"><i class="fa fa-user-tie me-2 text-primary"></i>Directorio de Clientes</h5>
+                        </div>
+                        <div class="card-body">
+                            <table id="tabla_clientes" class="table table-hover dt-responsive nowrap w-100 align-middle">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>RUT</th>
+                                        <th>Nombre Completo</th>
+                                        <th>Email</th>
+                                        <th>Empresas</th>
+                                        <th>Estado</th>
+                                        <th class="text-center">Acciones</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td class="fw-bold">12.345.678-9</td>
+                                        <td>Ricardo Soto Mayor</td>
+                                        <td>rsoto@petroleum.cl</td>
+                                        <td><span class="badge bg-primary">Copec</span> <span class="badge bg-primary">Abastible</span></td>
+                                        <td><span class="badge bg-success-subtle text-success">Activo</span></td>
+                                        <td class="text-center">
+                                            <div class="btn-group btn-group-sm">
+                                                <button class="btn btn-outline-info" onclick="Modal('Visualizar', 1, 'modal-cliente.html')"><i class="fa fa-eye"></i></button>
+                                                <button class="btn btn-outline-warning" onclick="Modal('Editar', 1, 'modal-cliente.html')"><i class="fa fa-edit"></i></button>
+                                                <button class="btn btn-outline-danger"><i class="fa fa-trash"></i></button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td class="fw-bold">15.987.654-3</td>
+                                        <td>Claudia Herrera Lynch</td>
+                                        <td>claudia.herrera@retail.com</td>
+                                        <td><span class="badge bg-primary">Retail Express</span></td>
+                                        <td><span class="badge bg-success-subtle text-success">Activo</span></td>
+                                        <td class="text-center">
+                                            <div class="btn-group btn-group-sm">
+                                                <button class="btn btn-outline-info" onclick="Modal('Visualizar', 2, 'modal-cliente.html')"><i class="fa fa-eye"></i></button>
+                                                <button class="btn btn-outline-warning" onclick="Modal('Editar', 2, 'modal-cliente.html')"><i class="fa fa-edit"></i></button>
+                                                <button class="btn btn-outline-danger"><i class="fa fa-trash"></i></button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Modal Base -->
+    <div class="modal fade" id="modal_contenido" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content border-0 shadow">
+                <!-- Content via AJAX / TPL -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="static/vendor/jquery-3.7.0.min.js"></script>
+    <script src="static/vendor/bootstrap.bundle.min.js"></script>
+    <script src="static/vendor/jquery.dataTables.min.js"></script>
+    <script src="static/vendor/dataTables.bootstrap5.min.js"></script>
+    <script src="static/vendor/dataTables.responsive.min.js"></script>
+    <script src="static/vendor/toastr.min.js"></script>
+    <script src="static/vendor/sweetalert2@11.js"></script>
+    <!-- Select2 JS -->
+    <script src="static/vendor/select2.min.js"></script>
+    
+    <script>
+        $(document).ready(function() {
+            // Ocultar spinner al cargar la página
+            $('#fondo').fadeOut(300);
+
+            // Mostrar spinner al navegar
+            $('.sidebar-nav .nav-link, .navbar-brand, .dropdown-item').on('click', function(e) {
+                let href = $(this).attr('href');
+                if (href && href !== '#' && !href.startsWith('javascript:') && !$(this).attr('target')) {
+                    $('#fondo').fadeIn(200);
+                }
+            });
+
+            // Clone desktop nav and footer to mobile offcanvas
+            const desktopNav = $('aside.sidebar nav.sidebar-nav').html();
+            $('#mobileSidebar nav.sidebar-nav').html(desktopNav);
+            
+            const desktopFooter = $('.sidebar-footer-desktop').html();
+            $('.sidebar-footer-mobile').html(desktopFooter);
+
+            // Calcular altura del sidebar-content dinámicamente
+            function adjustSidebarHeight() {
+                const header = document.querySelector('.sidebar-header');
+                const footer = document.querySelector('.sidebar-footer-desktop');
+                if (header && footer) {
+                    const taken = header.offsetHeight + footer.offsetHeight;
+                    document.documentElement.style.setProperty('--sidebar-content-height', `calc(100vh - ${taken}px)`);
+                }
+            }
+            adjustSidebarHeight();
+            window.addEventListener('resize', adjustSidebarHeight);
+
+            // Toastr config
+            toastr.options = {
+                "closeButton": true,
+                "progressBar": true,
+                "positionClass": "toast-top-right",
+            }
+        });
+
+        function Modal(modo, id, url_base) {
+            $('#fondo').fadeIn();
+            setTimeout(() => {
+                $('#fondo').fadeOut();
+                
+                // Sanitizar ID para el selector jQuery
+                let modalId = url_base.split('/').pop().replace('.html', '');
+                let htmlContent = $('#tpl_' + modalId).html();
+                
+                if(htmlContent) {
+                    $('#modal_contenido .modal-content').html(htmlContent);
+                    
+                    // Actualizar título
+                    let titleEl = $('#modal_contenido .modal-title');
+                    if(titleEl.length) {
+                        titleEl.text(titleEl.text().replace('(Demo)', modo).replace('Cliente', modo + ' Cliente'));
+                    }
+                    
+                    // Mostrar modal
+                    $('#modal_contenido').modal('show');
+                    
+                    // Init Select2 despues de mostrar
+                    setTimeout(() => {
+                        if ($.fn.select2) {
+                            $('#modal_contenido .select2-modal').select2({
+                                theme: 'bootstrap-5',
+                                placeholder: 'Seleccione empresas...',
+                                dropdownParent: $('#modal_contenido'),
+                                width: '100%'
+                            });
+                        }
+                    }, 100);
+
+                    if (modo === 'Visualizar') {
+                        $('#modal_contenido input, #modal_contenido select, #modal_contenido textarea').prop('disabled', true);
+                        $('#modal_contenido .btn-primary').hide();
+                    }
+                } else {
+                    toastr.error('Template no encontrado: #tpl_' + modalId);
+                    console.error('No se encontró el template con ID: #tpl_' + modalId + '. Ruta original: ' + url_base);
+                }
+            }, 400);
+        }
+
+        function CerrarModal() { $('#modal_contenido').modal('hide'); }
+
+        function guardarCliente() {
+            Swal.fire({
+                title: '¿Guardar Cliente?',
+                text: "Los datos se guardarán (Simulación Prototipo).",
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonText: 'Sí, guardar'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    toastr.success('Cliente guardado exitosamente');
+                    CerrarModal();
+                }
+            });
+        }
+    </script>
+
+    <!-- Templates -->
+    <div id="tpl_modal-cliente" style="display:none;">
+        <div class="modal-header bg-primary text-white">
+            <h5 class="modal-title fw-bold">Cliente</h5>
+            <button type="button" class="btn-close btn-close-white" onclick="CerrarModal()"></button>
+        </div>
+        <div class="modal-body p-4">
+            <form id="form_cliente">
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label small fw-bold text-muted"><code>(*)</code> RUT</label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-light border-end-0"><i class="fa fa-id-card text-muted"></i></span>
+                            <input type="text" class="form-control border-start-0" id="rut_cliente" placeholder="12.345.678-9" required>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label small fw-bold text-muted"><code>(*)</code> Correo Electrónico</label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-light border-end-0"><i class="fa fa-envelope text-muted"></i></span>
+                            <input type="email" class="form-control border-start-0" id="email_cliente" placeholder="ejemplo@correo.com" required>
+                        </div>
+                    </div>
+                    <div class="col-md-12">
+                        <label class="form-label small fw-bold text-muted"><code>(*)</code> Nombres</label>
+                        <input type="text" class="form-control" id="nombre" placeholder="Nombres" required>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label small fw-bold text-muted"><code>(*)</code> Primer Apellido</label>
+                        <input type="text" class="form-control" id="apellido1" placeholder="Apellido Paterno" required>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label small fw-bold text-muted">Segundo Apellido</label>
+                        <input type="text" class="form-control" id="apellido2" placeholder="Apellido Materno">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label small fw-bold text-muted">Estado</label>
+                        <select class="form-select" id="estado">
+                            <option value="1">Activo</option>
+                            <option value="0">Inactivo</option>
+                        </select>
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label small fw-bold text-muted"><code>(*)</code> Empresas Asociadas (Multiselección)</label>
+                        <select class="form-select select2-modal" multiple="multiple" style="width: 100%;">
+                            <option value="1">Copec S.A.</option>
+                            <option value="2">Abastible</option>
+                            <option value="3">Retail Express Ltda.</option>
+                            <option value="4">Distribuidora Norte</option>
+                            <option value="5">Inversiones ABC</option>
+                        </select>
+                    </div>
+                </div>
+            </form>
+        </div>
+        <div class="modal-footer bg-light border-top-0">
+            <button type="button" class="btn btn-secondary" onclick="CerrarModal()">Cancelar</button>
+            <button type="button" class="btn btn-primary px-4" onclick="guardarCliente()">
+                <i class="fa fa-save me-1"></i> Guardar Cliente
+            </button>
+        </div>
+    </div>
+</body>
+</html>

@@ -1,0 +1,135 @@
+<div class="modal-header bg-primary text-white">
+    <h5 class="modal-title fw-bold"> Turno</h5>
+    <button type="button" class="btn-close btn-close-white" onclick="CerrarModal()" aria-label="Close"></button>
+</div>
+
+<div class="modal-body p-4">
+    <form id="form_turno">
+        <input type="hidden" name="id_turno" id="id_turno" value="1">
+
+        <div class="row g-3">
+            <div class="col-md-6">
+                <label class="form-label small fw-bold text-muted"><code>(*)</code> Nombre</label>
+                <input type="text" class="form-control" name="nombre" id="t_nombre"
+                       placeholder="Ej: Mañana" value="Mañana"
+                        required>
+            </div>
+            <div class="col-md-6">
+                <label class="form-label small fw-bold text-muted"><code>(*)</code> Abreviación</label>
+                <input type="text" class="form-control" name="abreviacion" id="t_abreviacion"
+                       placeholder="Ej: M" maxlength="5" value="M"
+                        required>
+            </div>
+
+            <div class="col-md-6">
+                <label class="form-label small fw-bold text-muted"><code>(*)</code> Hora Inicio</label>
+                <div class="input-group">
+                    <span class="input-group-text bg-light border-end-0"><i class="fa fa-clock text-muted"></i></span>
+                    <input type="time" class="form-control border-start-0" name="hora_inicio" id="t_hora_inicio"
+                           value="08:00"
+                            required>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <label class="form-label small fw-bold text-muted"><code>(*)</code> Hora Fin</label>
+                <div class="input-group">
+                    <span class="input-group-text bg-light border-end-0"><i class="fa fa-clock text-muted"></i></span>
+                    <input type="time" class="form-control border-start-0" name="hora_fin" id="t_hora_fin"
+                           value="16:00"
+                            required>
+                </div>
+            </div>
+
+            <div class="col-md-6">
+                <label class="form-label small fw-bold text-muted"><code>(*)</code> Sucursal</label>
+                <select class="form-select" name="sucursal_id" id="t_sucursal"
+                         required>
+                    
+                    <option value="1" >
+                        Pronto Vitacura
+                    </option>
+                    
+                    <option value="2" >
+                        Bencinera Norte
+                    </option>
+                    
+                </select>
+            </div>
+            <div class="col-md-6">
+                <label class="form-label small fw-bold text-muted">Color en el cuadrante</label>
+                <div class="input-group">
+                    <span class="input-group-text bg-light border-end-0"><i class="fa fa-palette text-muted"></i></span>
+                    <input type="color" class="form-control border-start-0 p-1" name="color" id="t_color"
+                           value="#18bc9c"
+                           
+                           style="height: 38px; min-width: 60px;">
+                    <span class="input-group-text bg-light" id="color_preview">
+                        <span id="color_label" class="badge px-3"
+                              style="background-color: #18bc9c">
+                            M
+                        </span>
+                    </span>
+                </div>
+            </div>
+            
+            <div class="col-md-6">
+                <label class="form-label small fw-bold text-muted"><code>(*)</code> Dotación (Cobertura Diaria)</label>
+                <div class="input-group">
+                    <span class="input-group-text bg-light border-end-0"><i class="fa fa-users text-muted"></i></span>
+                    <input type="number" class="form-control border-start-0" name="dotacion" id="t_dotacion"
+                           placeholder="Ej: 2" min="0" max="20" value="1"
+                            required>
+                </div>
+                <small class="text-muted" style="font-size: 0.7rem;">Personas requeridas por día para este turno.</small>
+            </div>
+        </div>
+    </form>
+</div>
+
+<div class="modal-footer bg-light border-top-0">
+    <button type="button" class="btn btn-secondary px-4" onclick="CerrarModal()">Cancelar</button>
+    
+    <button type="button" class="btn btn-primary px-4" id="btn_guardar_turno">
+        <i class="fa fa-save me-1"></i> Guardar Turno
+    </button>
+    
+</div>
+
+<script>
+    // Preview del color en tiempo real
+    document.getElementById('t_color').addEventListener('input', function() {
+        document.getElementById('color_label').style.backgroundColor = this.value;
+    });
+    document.getElementById('t_abreviacion').addEventListener('input', function() {
+        document.getElementById('color_label').textContent = this.value || 'T';
+    });
+
+    $('#btn_guardar_turno').click(function() {
+        if (!$('#t_nombre').val() || !$('#t_hora_inicio').val() || !$('#t_hora_fin').val()) {
+            toastr.error('Por favor complete todos los campos obligatorios');
+            return;
+        }
+        const formData = $('#form_turno').serialize();
+        $('#fondo').fadeIn();
+        $.ajax({
+            url: '/turno/guardar',
+            type: 'POST',
+            data: formData,
+            success: function(res) {
+                $('#fondo').fadeOut();
+                if (res.status === 'success') {
+                    toastr.success(res.message);
+                    CerrarModal();
+                    setTimeout(() => location.reload(), 500);
+                } else {
+                    toastr.error(res.message);
+                }
+            },
+            error: function(xhr) {
+                $('#fondo').fadeOut();
+                const msg = xhr.responseJSON ? xhr.responseJSON.message : 'Error al guardar';
+                toastr.error(msg);
+            }
+        });
+    });
+</script>
