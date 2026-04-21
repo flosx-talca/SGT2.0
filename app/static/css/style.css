@@ -113,8 +113,8 @@ body {
     }
 
     .main-content {
-        margin-left: 0;
-        padding: 1.5rem;
+        margin-left: 0 !important;
+        padding: 1rem;
     }
 }
 
@@ -125,18 +125,7 @@ body {
     margin-bottom: 1.5rem;
 }
 
-#fondo {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(255, 255, 255, 0.8);
-    display: none;
-    justify-content: center;
-    align-items: center;
-    z-index: 10000;
-}
+/* El estilo de #fondo y spinner se movió a layout.html para mayor estabilidad */
 
 /* --- Cuadrante Matrix Styles --- */
 .cuadrante-wrapper {
