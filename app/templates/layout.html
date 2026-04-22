@@ -33,35 +33,53 @@
     </script>
     
     <style>
-        /* #fondo: solo aparece si la operación dura más de 400ms (evita parpadeo en navegación rápida) */
+        /* ── Overlay #fondo: spinner completo para operaciones lentas (modales AJAX) ── */
         #fondo {
             position: fixed;
             top: 0; left: 0;
             width: 100vw; height: 100vh;
-            background: rgba(255, 255, 255, 0.7);
-            z-index: 99999;
+            background: rgba(255, 255, 255, 0.75);
+            z-index: 100000; /* encima de Bootstrap modal (1050) y su backdrop (1040) */
             opacity: 0;
             pointer-events: none;
             transition: opacity 0.2s ease;
-            /* transition-delay hace que solo aparezca si tarda más de 400ms */
-            transition-delay: 400ms;
         }
-
-        /* HTMX lo activa via JS (fadeIn/fadeOut), no via clase HTMX automática */
         #fondo.visible {
             opacity: 1;
             pointer-events: all;
-            transition-delay: 0ms; /* Al mostrar, sin delay */
         }
-
         .spinner-wrapper {
             position: absolute;
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
-            display: flex;
-            justify-content: center;
-            align-items: center;
+        }
+
+        /* ── Barra de progreso en el tope para navegación HTMX ── */
+        #nav-progress {
+            position: fixed;
+            top: 0; left: 0;
+            height: 3px;
+            width: 0%;
+            background: linear-gradient(90deg, #3498db, #2ecc71);
+            z-index: 99999;
+            transition: width 0.3s ease, opacity 0.4s ease;
+            opacity: 0;
+        }
+        #nav-progress.active {
+            opacity: 1;
+            animation: nav-grow 1.5s ease forwards;
+        }
+        @keyframes nav-grow {
+            0%   { width: 0%; }
+            50%  { width: 70%; }
+            90%  { width: 90%; }
+            100% { width: 95%; }
+        }
+        #nav-progress.done {
+            width: 100% !important;
+            opacity: 0;
+            transition: width 0.1s ease, opacity 0.3s ease 0.1s;
         }
 
         /* Suavizar el swap del contenido al navegar con HTMX */
@@ -82,6 +100,10 @@
 </head>
 {# Sin hx-indicator en body: la navegación HTMX no activa el overlay automáticamente #}
 <body>
+    <!-- Barra de progreso para navegación HTMX (no bloquea el UI) -->
+    <div id="nav-progress"></div>
+
+    <!-- Overlay completo: solo para operaciones lentas como carga de modales -->
     <div id="fondo">
         <div class="spinner-wrapper">
             <div class="spinner-border text-primary" style="width: 3rem; height: 3rem;" role="status"></div>
@@ -311,21 +333,28 @@
     
     <script>
         $(document).ready(function() {
-            // Limpieza y preparación antes de traer nuevo contenido
+            // ── Barra de progreso en navegación HTMX ────────────────────────
             document.body.addEventListener('htmx:beforeRequest', function(evt) {
-                // Destruir DataTables activas para que no choquen con el nuevo contenido
+                // Destruir DataTables para que no choquen con el nuevo contenido
                 if ($.fn.DataTable) {
-                    $('.dataTable, table').each(function() {
-                        if ($.fn.DataTable.isDataTable(this)) {
-                            $(this).DataTable().destroy();
-                        }
+                    $('table').each(function() {
+                        if ($.fn.DataTable.isDataTable(this)) $(this).DataTable().destroy();
                     });
                 }
-                // NO mostramos #fondo aquí: la navegación HTMX es rápida y no necesita overlay
+                // Activar barra de progreso en la parte superior
+                const bar = document.getElementById('nav-progress');
+                bar.classList.remove('done');
+                bar.classList.add('active');
             });
 
-            // Actualizar clase active en sidebar al navegar con HTMX
             document.body.addEventListener('htmx:afterOnLoad', function(evt) {
+                // Completar barra de progreso
+                const bar = document.getElementById('nav-progress');
+                bar.classList.remove('active');
+                bar.classList.add('done');
+                setTimeout(() => bar.classList.remove('done'), 500);
+
+                // Actualizar active en sidebar
                 $('.sidebar-nav .nav-link').removeClass('active');
                 $(`.sidebar-nav .nav-link[href="${evt.detail.pathInfo.requestPath}"]`).addClass('active');
                 window.scrollTo(0, 0);
@@ -333,12 +362,11 @@
                 $('body').removeClass('modal-open').css('padding-right', '');
             });
 
-            // Fallback para links no-HTMX (navegación normal)
+            // Fallback para links no-HTMX (navegación completa)
             $(document).on('click', 'a:not([hx-get])', function(e) {
                 let href = $(this).attr('href');
                 if (href && href !== '#' && !href.startsWith('javascript:') && !$(this).attr('target')) {
                     e.preventDefault();
-                    // Sí mostramos fondo en navegación completa (no HTMX)
                     $('#fondo').addClass('visible');
                     window.location.href = href;
                 }
@@ -373,15 +401,19 @@
 
         function Modal(modo, id, url_base) {
             $('#modal_contenido .modal-content').html('');
-            $('#fondo').addClass('visible'); // Mostrar overlay para carga del modal (puede ser lento)
+            $('#fondo').addClass('visible');
             $.ajax({
                 url: url_base,
                 type: 'POST',
                 data: { 'modo': modo, 'id': id },
                 success: function(response) {
                     $('#modal_contenido .modal-content').html(response);
+                    // Ocultar el fondo SOLO después de que el modal esté COMPLETAMENTE visible
+                    // Evita que el spinner quede atrapado detrás del backdrop de Bootstrap
+                    $('#modal_contenido').one('shown.bs.modal', function() {
+                        $('#fondo').removeClass('visible');
+                    });
                     $('#modal_contenido').modal('show');
-                    $('#fondo').removeClass('visible');
                 },
                 error: function() {
                     $('#fondo').removeClass('visible');
