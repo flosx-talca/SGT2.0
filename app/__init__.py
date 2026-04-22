@@ -18,7 +18,9 @@ def create_app():
     # Registrar Blueprints
     from .controllers.main_bp import main_bp
     from .controllers.region_bp import region_bp
+    from .controllers.comuna_bp import comuna_bp
     app.register_blueprint(main_bp)
     app.register_blueprint(region_bp)
+    app.register_blueprint(comuna_bp)
 
     return app

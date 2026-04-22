@@ -59,9 +59,6 @@ def reglas():
     return render_template('reglas.html')
 
 
-@main_bp.route('/comunas')
-def comunas():
-    return render_template('comunas.html')
 
 @main_bp.route('/feriados')
 def feriados():

@@ -75,15 +75,15 @@
                 if (res.ok) {
                     toastr.success(res.msg);
                     CerrarModal();
-                    // Refresh parcial via HTMX: solo el tbody, sin recargar la página
                     refreshTablaRegiones();
                 } else {
                     toastr.error(res.msg);
-                    $('#fondo').removeClass('visible');
                 }
             })
             .fail(function() {
                 toastr.error('Error de comunicación con el servidor.');
+            })
+            .always(function() {
                 $('#fondo').removeClass('visible');
             });
     }

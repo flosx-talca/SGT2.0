@@ -53,16 +53,16 @@
 
     // ── Refresh parcial de la tabla via HTMX (sin recargar la página) ─────────
     function refreshTablaRegiones() {
-        htmx.ajax('GET', "{{ url_for('region.tabla') }}", {
-            target: '#tbody-regiones',
-            swap: 'innerHTML'
-        }).then(() => {
-            // Reinicializar DataTable con los nuevos datos
-            dtRegiones.destroy();
+        $('#fondo').addClass('visible');
+        $.get("{{ url_for('region.tabla') }}", function(html) {
+            if (dtRegiones) dtRegiones.destroy();
+            $('#tbody-regiones').html(html);
             dtRegiones = $('#tabla_regiones').DataTable({
                 responsive: true,
                 language: { url: '/static/i18n/es-ES.json' }
             });
+        }).always(function() {
+            $('#fondo').removeClass('visible');
         });
     }
 
