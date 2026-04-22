@@ -1,7 +1,7 @@
 venv/
 __pycache__/
 *.pyc
-.env
+# .env (Rastreado intencionalmente, repo privado según PROJECT_CONTEXT.md)
 .vscode/
 .idea/
 .DS_Store
