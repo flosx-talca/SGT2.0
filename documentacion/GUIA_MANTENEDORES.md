@@ -10,13 +10,15 @@ Está basado en la implementación de **Regiones** como caso de referencia.
 ```
 app/
 ├── controllers/
-│   └── {entidad}_bp.py       ← Rutas y lógica del mantenedor
+│   └── {entidad}_bp.py            ← Rutas y lógica del mantenedor
 ├── models/
-│   └── core.py / business.py ← Clase SQLAlchemy ya definida
+│   └── core.py / business.py      ← Clase SQLAlchemy ya definida
 ├── templates/
-│   ├── {entidad}s.html       ← Vista principal con tabla
-│   └── modal-{entidad}.html  ← Formulario del modal
-└── __init__.py               ← Registro del blueprint
+│   ├── {entidad}s.html            ← Vista principal con tabla
+│   ├── modal-{entidad}.html       ← Formulario del modal
+│   └── partials/
+│       └── {entidad}_rows.html    ← Solo el <tbody> para HTMX refresh
+└── __init__.py                    ← Registro del blueprint
 ```
 
 ---
@@ -28,11 +30,31 @@ Confirmar que la entidad tiene su clase SQLAlchemy en el archivo correspondiente
 - Entidades de negocio (Empresa, Trabajador, Turno, etc.) → `models/business.py`
 - Entidades de autenticación (Rol, Menú, Usuario) → `models/auth.py`
 
+### Agregar índices al modelo (Optimización de BD)
+
+Toda entidad debe declarar sus índices en `__table_args__` para que SQLAlchemy los cree automáticamente:
+
+```python
+class MiEntidad(db.Model):
+    __tablename__ = 'mi_entidad'
+    __table_args__ = (
+        db.Index('ix_mi_entidad_activo',    'activo'),      # siempre
+        db.Index('ix_mi_entidad_empresa_id','empresa_id'),  # si tiene FK a empresa
+        # agregar índice por cada columna de filtro frecuente
+    )
+    id     = db.Column(db.Integer, primary_key=True)
+    activo = db.Column(db.Boolean, default=True)
+    ...
+```
+
+> **Regla:** Toda columna usada en `WHERE`, `.filter_by()` o `.order_by()` frecuente debe tener índice.
+> También agregar el índice equivalente en `proyecto.sql` con `CREATE INDEX IF NOT EXISTS`.
+
 ---
 
 ## Paso 2: Crear el Blueprint `app/controllers/{entidad}_bp.py`
 
-### Patrón con 4 rutas obligatorias:
+### Patrón con 5 rutas (4 obligatorias + 1 HTMX partial):
 
 ```python
 from flask import Blueprint, render_template, request, jsonify
@@ -44,9 +66,16 @@ entidad_bp = Blueprint('entidad', __name__, url_prefix='/entidades')
 
 @entidad_bp.route('/')
 def index():
-    """Lista todos los registros. Los datos vienen del servidor."""
+    """Página completa: renderiza tabla con todos los registros."""
     registros = MiEntidad.query.order_by(MiEntidad.campo_orden).all()
     return render_template('entidades.html', registros=registros)
+
+
+@entidad_bp.route('/tabla')
+def tabla():
+    """Solo el <tbody> para HTMX partial refresh (no recarga la página)."""
+    registros = MiEntidad.query.order_by(MiEntidad.campo_orden).all()
+    return render_template('partials/entidad_rows.html', registros=registros)
 
 
 @entidad_bp.route('/modal', methods=['POST'])
@@ -65,18 +94,15 @@ def guardar():
     """Crea o actualiza en PostgreSQL."""
     registro_id = request.form.get('id', '').strip()
     campo1 = request.form.get('campo1', '').strip()
-    # ... otros campos
 
     if not campo1:
         return jsonify({'ok': False, 'msg': 'Campo1 es obligatorio.'}), 400
 
     if registro_id and registro_id != '0':
-        # Editar
         registro = MiEntidad.query.get_or_404(int(registro_id))
         registro.campo1 = campo1
         msg = f'"{campo1}" actualizado con éxito.'
     else:
-        # Crear
         registro = MiEntidad(campo1=campo1)
         db.session.add(registro)
         msg = f'"{campo1}" creado con éxito.'
@@ -109,12 +135,51 @@ def create_app():
 
 ---
 
-## Paso 4: Template principal `{entidad}s.html`
+## Paso 4: Partial HTMX `templates/partials/{entidad}_rows.html`
+
+Contiene **solo las filas** `<tr>` del tbody. Este archivo es el que HTMX usará para refrescar la tabla sin recargar la página.
+
+```html
+{% for r in registros %}
+<tr>
+    <td>{{ r.campo1 }}</td>
+    <td>
+        <span class="badge bg-{{ 'success' if r.activo else 'danger' }}-subtle
+                         text-{{ 'success' if r.activo else 'danger' }}">
+            {{ 'Activo' if r.activo else 'Inactivo' }}
+        </span>
+    </td>
+    <td class="text-center">
+        <div class="btn-group btn-group-sm">
+            <button class="btn btn-outline-info"
+                onclick="Modal('Visualizar', {{ r.id }}, '{{ url_for('entidad.modal') }}')">
+                <i class="fa fa-eye"></i>
+            </button>
+            <button class="btn btn-outline-warning"
+                onclick="Modal('Editar', {{ r.id }}, '{{ url_for('entidad.modal') }}')">
+                <i class="fa fa-edit"></i>
+            </button>
+            <button class="btn btn-outline-danger"
+                onclick="eliminarEntidad({{ r.id }}, '{{ r.campo1 }}')">
+                <i class="fa fa-ban"></i>
+            </button>
+        </div>
+    </td>
+</tr>
+{% else %}
+<tr><td colspan="3" class="text-center text-muted">Sin registros.</td></tr>
+{% endfor %}
+```
+
+---
+
+## Paso 5: Template principal `{entidad}s.html`
 
 ### Reglas críticas:
-1. La tabla usa `{% for registro in registros %}` — **datos ya vienen del servidor**.
-2. El botón de Agregar y los botones de acción llaman a `Modal()` — **la función global del layout**.
-3. El DataTable es solo para UI (búsqueda, paginación). **Nunca para cargar datos**.
+1. El `<tbody>` tiene `id="tbody-entidad"` para que HTMX sepa dónde inyectar.
+2. El tbody usa `{% include 'partials/entidad_rows.html' %}` — carga inicial desde servidor.
+3. Tras Guardar/Eliminar, se llama a `refreshTablaEntidad()` — **no a `location.reload()`**.
+4. `dtEntidad` se destruye y reinicializa para que DataTable vea los nuevos datos.
 
 ```html
 {% extends "layout.html" %}
@@ -127,50 +192,38 @@ def create_app():
 {% block content %}
 <table id="tabla_entidad" class="table table-hover dt-responsive nowrap w-100">
     <thead class="table-light">
-        <tr><th>Campo 1</th><th>Estado</th><th>Acciones</th></tr>
+        <tr><th>Campo 1</th><th>Estado</th><th class="text-center">Acciones</th></tr>
     </thead>
-    <tbody>
-        {% for r in registros %}
-        <tr>
-            <td>{{ r.campo1 }}</td>
-            <td>
-                <span class="badge bg-{{ 'success' if r.activo else 'danger' }}-subtle
-                             text-{{ 'success' if r.activo else 'danger' }}">
-                    {{ 'Activo' if r.activo else 'Inactivo' }}
-                </span>
-            </td>
-            <td class="text-center">
-                <div class="btn-group btn-group-sm">
-                    <button class="btn btn-outline-info"
-                        onclick="Modal('Visualizar', {{ r.id }}, '{{ url_for('entidad.modal') }}')">
-                        <i class="fa fa-eye"></i>
-                    </button>
-                    <button class="btn btn-outline-warning"
-                        onclick="Modal('Editar', {{ r.id }}, '{{ url_for('entidad.modal') }}')">
-                        <i class="fa fa-edit"></i>
-                    </button>
-                    <button class="btn btn-outline-danger"
-                        onclick="eliminarEntidad({{ r.id }}, '{{ r.campo1 }}')">
-                        <i class="fa fa-ban"></i>
-                    </button>
-                </div>
-            </td>
-        </tr>
-        {% else %}
-        <tr><td colspan="3" class="text-center text-muted">Sin registros.</td></tr>
-        {% endfor %}
+    <tbody id="tbody-entidad">
+        {% include 'partials/entidad_rows.html' %}
     </tbody>
 </table>
 {% endblock %}
 
 {% block scripts %}
 <script>
+let dtEntidad;
+
 $(document).ready(function() {
-    $('#tabla_entidad').DataTable({
+    dtEntidad = $('#tabla_entidad').DataTable({
         responsive: true,
         language: { url: '/static/i18n/es-ES.json' }
     });
 });
+
+// Refresh parcial: solo actualiza el tbody via HTMX, sin recargar la página
+function refreshTablaEntidad() {
+    htmx.ajax('GET', "{{ url_for('entidad.tabla') }}", {
+        target: '#tbody-entidad',
+        swap: 'innerHTML'
+    }).then(() => {
+        dtEntidad.destroy();
+        dtEntidad = $('#tabla_entidad').DataTable({
+            responsive: true,
+            language: { url: '/static/i18n/es-ES.json' }
+        });
+    });
+}
 
 function eliminarEntidad(id, nombre) {
     Swal.fire({
@@ -183,11 +236,13 @@ function eliminarEntidad(id, nombre) {
         confirmButtonColor: '#e74c3c'
     }).then(result => {
         if (!result.isConfirmed) return;
+        $('#fondo').fadeIn();
         $.post("{{ url_for('entidad.eliminar') }}", { id })
             .done(res => {
-                if (res.ok) { toastr.success(res.msg); setTimeout(() => location.reload(), 1000); }
+                if (res.ok) { toastr.success(res.msg); refreshTablaEntidad(); }
                 else toastr.error(res.msg);
-            });
+            })
+            .always(() => $('#fondo').fadeOut());
     });
 }
 </script>
@@ -196,13 +251,14 @@ function eliminarEntidad(id, nombre) {
 
 ---
 
-## Paso 5: Modal `modal-{entidad}.html`
+## Paso 6: Modal `modal-{entidad}.html`
 
 ### Reglas críticas:
-1. El título ya viene determinado por el modo (sin JS para cambiarlo).
-2. Los `value=""` de los campos usan Jinja: `{{ registro.campo if registro else '' }}`.
-3. El botón Guardar está oculto en modo `Visualizar` directamente en Jinja (no con JS).
-4. `guardarEntidad()` llama a `CerrarModal()` (función global del layout).
+1. El título viene del modo en Jinja (sin JS para cambiarlo).
+2. `value` de los campos usa Jinja: `{{ registro.campo if registro else '' }}`.
+3. Botón Guardar oculto en modo `Visualizar` via Jinja (no con JS).
+4. Tras guardar llama a `refreshTablaEntidad()` — **no a `location.reload()`**.
+5. `CerrarModal()` es la función global del layout.
 
 ```html
 <div class="modal-header bg-primary text-white">
@@ -221,7 +277,8 @@ function eliminarEntidad(id, nombre) {
         <div class="row g-3">
             <div class="col-md-12">
                 <label class="form-label small fw-bold text-muted"><code>(*)</code> Campo 1</label>
-                <input type="text" class="form-control {% if modo == 'Visualizar' %}bg-light{% endif %}"
+                <input type="text"
+                       class="form-control {% if modo == 'Visualizar' %}bg-light{% endif %}"
                        id="campo1_entidad"
                        value="{{ registro.campo1 if registro else '' }}"
                        {% if modo == 'Visualizar' %}readonly{% endif %}>
@@ -252,7 +309,7 @@ function guardarEntidad() {
             if (res.ok) {
                 toastr.success(res.msg);
                 CerrarModal();
-                setTimeout(() => location.reload(), 900);
+                refreshTablaEntidad(); // ← HTMX, no location.reload()
             } else {
                 toastr.error(res.msg);
                 $('#fondo').fadeOut();
@@ -265,9 +322,7 @@ function guardarEntidad() {
 
 ---
 
-## Paso 6: Actualizar el sidebar en `layout.html`
-
-Si el nuevo mantenedor tiene una ruta en el sidebar, actualizar el `url_for` al nuevo endpoint:
+## Paso 7: Actualizar el sidebar en `layout.html`
 
 ```html
 <!-- Cambiar 'main.entidades' por 'entidad.index' -->
@@ -277,18 +332,28 @@ hx-get="{{ url_for('entidad.index') }}"
 
 ---
 
-## Resumen del flujo de datos (Regla de Renderizado)
+## Resumen del flujo completo
 
+### Apertura de modal (sin reload)
 ```
-Usuario click "Editar" → abrirModal/Modal(modo, id, url)
-    → POST /entidad/modal con {modo, id}
-    → Backend consulta BD, inyecta datos en template Jinja
-    → Devuelve HTML ya relleno
-    → layout.js inserta HTML en #modal_contenido .modal-content
-    → .modal('show')   ← Solo aquí aparece el modal
+Click "Editar" → Modal(modo, id, url)
+    → POST /entidad/modal
+    → Backend: BD → Jinja → HTML relleno
+    → layout.js: inserta en #modal_contenido → .modal('show')
 ```
 
-**Nunca:** abrir modal → luego cargar datos → luego rellenar campos.
+### Guardar / Eliminar (sin reload)
+```
+Click "Guardar" → $.post(/entidad/guardar)
+    → Backend: UPDATE/INSERT en PostgreSQL → jsonify({ok: True})
+    → JS: CerrarModal() + refreshTablaEntidad()
+        → htmx.ajax GET /entidad/tabla
+        → Backend: SELECT → Jinja → solo <tbody>
+        → HTMX: reemplaza innerHTML de #tbody-entidad
+        → JS: destroy() + reinit DataTable
+```
+
+**Nunca usar `location.reload()`** — siempre HTMX partial refresh.
 
 ---
 
@@ -298,6 +363,8 @@ Usuario click "Editar" → abrirModal/Modal(modo, id, url)
 |---|---|
 | Usar `$('#modalPrincipal')` | Usar la función global `Modal()` del layout |
 | Usar `$('#modalContent')` | El contenedor correcto es `#modal_contenido .modal-content` |
-| Hardcodear `readonly` o `disabled` con JS | Usar Jinja: `{% if modo == 'Visualizar' %}readonly{% endif %}` |
-| Quitar la ruta del `main_bp` sin redirigir el sidebar | Siempre actualizar `layout.html` al mismo tiempo |
+| `readonly`/`disabled` con JS | Usar Jinja: `{% if modo == 'Visualizar' %}readonly{% endif %}` |
+| `location.reload()` tras guardar | Usar `refreshTablaEntidad()` con HTMX |
+| Quitar ruta del `main_bp` sin actualizar sidebar | Siempre actualizar `layout.html` al mismo tiempo |
 | Olvidar registrar el blueprint en `__init__.py` | Siempre terminar con este paso |
+| Olvidar crear `partials/{entidad}_rows.html` | Necesario para que HTMX pueda refrescar el tbody |

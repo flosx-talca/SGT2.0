@@ -12,6 +12,13 @@ def index():
     return render_template('regiones.html', regiones=regiones)
 
 
+@region_bp.route('/tabla')
+def tabla():
+    """Devuelve solo el <tbody> de la tabla (para HTMX partial refresh)."""
+    regiones = Region.query.order_by(Region.codigo).all()
+    return render_template('partials/region_rows.html', regiones=regiones)
+
+
 @region_bp.route('/modal', methods=['POST'])
 def modal():
     """Devuelve el HTML del modal ya relleno con datos de la BD."""

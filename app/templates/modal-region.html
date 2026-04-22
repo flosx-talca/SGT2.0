@@ -75,7 +75,8 @@
                 if (res.ok) {
                     toastr.success(res.msg);
                     CerrarModal();
-                    setTimeout(() => location.reload(), 900);
+                    // Refresh parcial via HTMX: solo el tbody, sin recargar la página
+                    refreshTablaRegiones();
                 } else {
                     toastr.error(res.msg);
                     $('#fondo').fadeOut();

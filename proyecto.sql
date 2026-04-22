@@ -13,6 +13,8 @@ CREATE TABLE IF NOT EXISTS region (
     creado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     actualizado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+CREATE INDEX IF NOT EXISTS ix_region_activo ON region(activo);
+CREATE INDEX IF NOT EXISTS ix_region_codigo ON region(codigo);
 
 -- ==========================================
 -- 2. COMUNA
@@ -26,6 +28,8 @@ CREATE TABLE IF NOT EXISTS comuna (
     creado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     actualizado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+CREATE INDEX IF NOT EXISTS ix_comuna_activo ON comuna(activo);
+CREATE INDEX IF NOT EXISTS ix_comuna_region_id ON comuna(region_id);
 
 -- ==========================================
 -- 3. ROL
@@ -219,5 +223,15 @@ CREATE TABLE IF NOT EXISTS turno (
     actualizado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- Indices Fase 4
-CREATE INDEX idx_turno_empresa ON turno(empresa_id);
+-- ==========================================
+-- ÍNDICES DE RENDIMIENTO
+-- ==========================================
+-- Índices globales para columnas de filtro frecuente
+CREATE INDEX IF NOT EXISTS ix_turno_empresa     ON turno(empresa_id);
+CREATE INDEX IF NOT EXISTS ix_turno_activo      ON turno(activo);
+CREATE INDEX IF NOT EXISTS ix_trabajador_empresa ON trabajador(empresa_id);
+CREATE INDEX IF NOT EXISTS ix_trabajador_activo  ON trabajador(activo);
+CREATE INDEX IF NOT EXISTS ix_empresa_activo     ON empresa(activo);
+CREATE INDEX IF NOT EXISTS ix_empresa_cliente    ON empresa(cliente_id);
+CREATE INDEX IF NOT EXISTS ix_usuario_rol        ON usuario(rol_id);
+CREATE INDEX IF NOT EXISTS ix_usuario_activo     ON usuario(activo);

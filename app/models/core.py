@@ -3,6 +3,10 @@ from datetime import datetime
 
 class Region(db.Model):
     __tablename__ = 'region'
+    __table_args__ = (
+        db.Index('ix_region_activo', 'activo'),
+        db.Index('ix_region_codigo', 'codigo'),
+    )
     id = db.Column(db.Integer, primary_key=True)
     codigo = db.Column(db.String(10), nullable=False, unique=True)
     descripcion = db.Column(db.String(150), nullable=False)
@@ -13,8 +17,13 @@ class Region(db.Model):
     comunas = db.relationship('Comuna', backref='region', lazy=True)
     feriados = db.relationship('Feriado', backref='region_asociada', lazy=True)
 
+
 class Comuna(db.Model):
     __tablename__ = 'comuna'
+    __table_args__ = (
+        db.Index('ix_comuna_activo', 'activo'),
+        db.Index('ix_comuna_region_id', 'region_id'),
+    )
     id = db.Column(db.Integer, primary_key=True)
     codigo = db.Column(db.String(20), nullable=False, unique=True)
     descripcion = db.Column(db.String(150), nullable=False)

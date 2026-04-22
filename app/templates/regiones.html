@@ -28,38 +28,9 @@
                             <th class="text-center">Acciones</th>
                         </tr>
                     </thead>
-                    <tbody>
-                        {% for region in regiones %}
-                        <tr>
-                            <td class="fw-bold">{{ region.codigo }}</td>
-                            <td>{{ region.descripcion }}</td>
-                            <td>
-                                {% if region.activo %}
-                                    <span class="badge bg-success-subtle text-success">Activo</span>
-                                {% else %}
-                                    <span class="badge bg-danger-subtle text-danger">Inactivo</span>
-                                {% endif %}
-                            </td>
-                            <td class="text-center">
-                                <div class="btn-group btn-group-sm">
-                                    <button class="btn btn-outline-info" title="Visualizar"
-                                        onclick="abrirModalRegion('Visualizar', {{ region.id }})">
-                                        <i class="fa fa-eye"></i>
-                                    </button>
-                                    <button class="btn btn-outline-warning" title="Editar"
-                                        onclick="abrirModalRegion('Editar', {{ region.id }})">
-                                        <i class="fa fa-edit"></i>
-                                    </button>
-                                    <button class="btn btn-outline-danger" title="Desactivar"
-                                        onclick="eliminarRegion({{ region.id }}, '{{ region.descripcion }}')">
-                                        <i class="fa fa-ban"></i>
-                                    </button>
-                                </div>
-                            </td>
-                        </tr>
-                        {% else %}
-                        <tr><td colspan="4" class="text-center text-muted">No hay regiones registradas.</td></tr>
-                        {% endfor %}
+                    {# El tbody tiene id y el atributo hx-swap-oob para ser reemplazado por HTMX #}
+                    <tbody id="tbody-regiones">
+                        {% include 'partials/region_rows.html' %}
                     </tbody>
                 </table>
             </div>
@@ -70,21 +41,37 @@
 
 {% block scripts %}
 <script>
-    // ── DataTable (solo UI, datos ya vienen del servidor) ────────────────────
+    let dtRegiones;
+
+    // ── DataTable ──────────────────────────────────────────────────────────────
     $(document).ready(function () {
-        $('#tabla_regiones').DataTable({
+        dtRegiones = $('#tabla_regiones').DataTable({
             responsive: true,
             language: { url: '/static/i18n/es-ES.json' }
         });
     });
 
-    // ── Abrir modal: usa la función Modal() global del layout ─────────────────
-    // Carga los datos ANTES de hacer .modal('show') - respeta la regla de renderizado
+    // ── Refresh parcial de la tabla via HTMX (sin recargar la página) ─────────
+    function refreshTablaRegiones() {
+        htmx.ajax('GET', "{{ url_for('region.tabla') }}", {
+            target: '#tbody-regiones',
+            swap: 'innerHTML'
+        }).then(() => {
+            // Reinicializar DataTable con los nuevos datos
+            dtRegiones.destroy();
+            dtRegiones = $('#tabla_regiones').DataTable({
+                responsive: true,
+                language: { url: '/static/i18n/es-ES.json' }
+            });
+        });
+    }
+
+    // ── Abrir modal ────────────────────────────────────────────────────────────
     function abrirModalRegion(modo, id) {
         Modal(modo, id, "{{ url_for('region.modal') }}");
     }
 
-    // ── Eliminar (lógico) ─────────────────────────────────────────────────────
+    // ── Eliminar (lógico) ──────────────────────────────────────────────────────
     function eliminarRegion(id, nombre) {
         Swal.fire({
             title: '¿Desactivar región?',
@@ -96,15 +83,17 @@
             confirmButtonColor: '#e74c3c'
         }).then(result => {
             if (!result.isConfirmed) return;
-            $.post("{{ url_for('region.eliminar') }}", { id: id })
-                .done(function(res) {
+            $('#fondo').fadeIn();
+            $.post("{{ url_for('region.eliminar') }}", { id })
+                .done(res => {
                     if (res.ok) {
                         toastr.success(res.msg);
-                        setTimeout(() => location.reload(), 1000);
+                        refreshTablaRegiones();
                     } else {
                         toastr.error(res.msg);
                     }
-                });
+                })
+                .always(() => $('#fondo').fadeOut());
         });
     }
 </script>
