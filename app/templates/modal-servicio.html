@@ -1,60 +1,74 @@
 <div class="modal-header bg-primary text-white">
-<h5 class="modal-title fw-bold">(Demo) Tipo de Servicio</h5>
-<button aria-label="Close" class="btn-close btn-close-white" onclick="CerrarModal()" type="button"></button>
+    <h5 class="modal-title fw-bold">Tipo de Servicio</h5>
+    <button type="button" class="btn-close btn-close-white" onclick="CerrarModal()" aria-label="Close"></button>
 </div>
+
 <div class="modal-body p-4">
-<form id="form_servicio">
-<input id="id_servicio" name="id_servicio" type="hidden" value="0"/>
-<div class="row g-3">
-<div class="col-md-12">
-<label class="form-label small fw-bold text-muted"><code>(*)</code> Nombre del Servicio</label>
-<div class="input-group">
-<span class="input-group-text bg-light border-end-0"><i class="fa fa-concierge-bell text-muted"></i></span>
-<input class="form-control border-start-0" id="nombre_servicio" name="nombre_servicio" placeholder="Ej: Pronto, Gasolinera, Lavado" required="" type="text" value=""/>
+    <form id="form_servicio">
+        <div class="row g-3">
+            <div class="col-md-12">
+                <label class="form-label small fw-bold text-muted"><code>(*)</code> Descripción del Servicio</label>
+                <div class="input-group">
+                    <span class="input-group-text bg-light border-end-0"><i class="fa fa-concierge-bell text-muted"></i></span>
+                    <input type="text" class="form-control border-start-0 bg-light" id="desc_servicio" value="Pronto" readonly required>
+                </div>
+            </div>
+
+            <div class="col-md-12">
+                <label class="form-label small fw-bold text-muted">Empresas Asociadas (Multiselect)</label>
+                <select class="form-select bg-light" id="empresas_servicio" multiple disabled>
+                    <option value="1" selected>Copec S.A.</option>
+                    <option value="2">Abastible</option>
+                    <option value="3" selected>Franquicias del Norte</option>
+                    <option value="4">Retail Express</option>
+                </select>
+                <small class="text-muted" style="font-size: 0.7rem;">Mantenga presionado Ctrl (o Cmd) para seleccionar múltiples.</small>
+            </div>
+            
+            <div class="col-md-12 mt-4">
+                <div class="form-check form-switch">
+                    <input class="form-check-input" type="checkbox" id="activo_servicio" checked disabled>
+                    <label class="form-check-label small fw-bold text-muted" for="activo_servicio">Servicio Activo</label>
+                </div>
+            </div>
+        </div>
+    </form>
 </div>
-</div>
-<div class="col-md-6">
-<label class="form-label small fw-bold text-muted"><code>(*)</code> Empresa Corresponsal</label>
-<select class="form-select" id="m_empresa_servicio" name="empresa_id" required="">
-<option disabled="" selected="" value="">Seleccione empresa...</option>
-<option value="1">Copec S.A.</option>
-<option value="2">Abastible</option>
-<option value="3">Enex</option>
-</select>
-</div>
-<div class="col-md-6">
-<label class="form-label small fw-bold text-muted">Estado</label>
-<select class="form-select" id="estado_servicio" name="estado">
-<option selected="" value="1">Activo</option>
-<option value="0">Inactivo</option>
-</select>
-</div>
-</div>
-</form>
-</div>
+
 <div class="modal-footer bg-light border-top-0">
-<button class="btn btn-secondary" onclick="CerrarModal()" type="button">
-<i class="fa fa-times me-1"></i> Cerrar
-    </button>
-<button class="btn btn-primary" id="btnGuardarServicio" onclick="guardarServicio()" type="button">
-<i class="fa fa-save me-1"></i> Guardar
+    <button type="button" class="btn btn-secondary" onclick="CerrarModal()">Cancelar</button>
+    <button type="button" class="btn btn-primary px-4" id="btn-guardar-servicio" onclick="guardarServicio()">
+        <i class="fa fa-save me-1"></i> Guardar Servicio
     </button>
 </div>
+
 <script>
-function guardarServicio() {
-    Swal.fire({
-        title: '¿Guardar Tipo de Servicio?',
-        text: "Modo Prototipo Estático: Los datos no se guardarán en BD.",
-        icon: 'info',
-        showCancelButton: true,
-        confirmButtonColor: '#18bc9c',
-        cancelButtonColor: '#d33',
-        confirmButtonText: 'Simular Guardado'
-    }).then((result) => {
-        if (result.isConfirmed) {
-            toastr.success('Servicio guardado exitosamente (Simulación).');
+    function guardarServicio() {
+        $('#fondo').fadeIn();
+        setTimeout(() => {
+            $('#fondo').fadeOut();
+            toastr.success('Servicio guardado con éxito');
             CerrarModal();
-        }
+        }, 800);
+    }
+    
+    {% if modo == 'Agregar' %}
+    $(document).ready(function() {
+        $('.modal-title').text('Nuevo Tipo de Servicio');
+        $('#desc_servicio').val('').prop('readonly', false).removeClass('bg-light');
+        $('#empresas_servicio').val([]).prop('disabled', false).removeClass('bg-light');
+        $('#activo_servicio').prop('checked', true).prop('disabled', false);
     });
-}
+    {% elif modo == 'Visualizar' %}
+    $(document).ready(function() {
+        $('#btn-guardar-servicio').hide();
+    });
+    {% elif modo == 'Editar' %}
+    $(document).ready(function() {
+        $('.modal-title').text('Editar Tipo de Servicio');
+        $('#desc_servicio').prop('readonly', false).removeClass('bg-light');
+        $('#empresas_servicio').prop('disabled', false).removeClass('bg-light');
+        $('#activo_servicio').prop('disabled', false);
+    });
+    {% endif %}
 </script>

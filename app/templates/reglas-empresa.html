@@ -10,7 +10,9 @@
 {% block page_title %}Mis Reglas{% endblock %}
 
 {% block actions %}
-
+<button class="btn btn-primary shadow-sm" onclick="Modal('Agregar', 0, '/modal-regla-empresa')">
+    <i class="fa fa-plus me-1"></i> Agregar Regla
+</button>
 {% endblock %}
 
 {% block content %}
@@ -35,7 +37,7 @@
                                         <th>Descripción</th>
                                         <th>Configuración Actual</th>
                                         <th>Estado</th>
-                                        <th class="text-end">Acciones</th>
+                                        <th class="text-center">Acciones</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -44,14 +46,13 @@
                                         <td>Define el máximo de días seguidos que un trabajador puede ser asignado.</td>
                                         <td><span class="badge bg-light text-dark border"><i class="fa fa-history me-1"></i>Máx: 6 días</span></td>
                                         <td>
-                                            <div class="form-check form-switch p-0" style="min-height: auto;">
-                                                <input class="form-check-input ms-0" type="checkbox" checked onclick="toastr.info('Estado actualizado para su empresa')">
-                                            </div>
+                                            <span class="badge bg-success-subtle text-success">Activo</span>
                                         </td>
-                                        <td class="text-end">
-                                            <button class="btn btn-outline-primary btn-sm px-3 shadow-sm" onclick="Modal('Editar', 1, '/modal-regla-empresa')">
-                                                <i class="fa fa-edit me-1"></i> Personalizar
-                                            </button>
+                                        <td class="text-center">
+                                            <div class="btn-group btn-group-sm">
+                                                <button class="btn btn-outline-info" onclick="Modal('Visualizar', 1, '/modal-regla-empresa')"><i class="fa fa-eye"></i></button>
+                                                <button class="btn btn-outline-warning" onclick="Modal('Editar', 1, '/modal-regla-empresa')"><i class="fa fa-edit"></i></button>
+                                            </div>
                                         </td>
                                     </tr>
                                     <tr>
@@ -59,14 +60,13 @@
                                         <td>Horas mínimas de descanso entre el fin de un turno y el inicio del siguiente.</td>
                                         <td><span class="badge bg-light text-dark border"><i class="fa fa-clock me-1"></i>Mín: 12 horas</span></td>
                                         <td>
-                                            <div class="form-check form-switch p-0" style="min-height: auto;">
-                                                <input class="form-check-input ms-0" type="checkbox" checked onclick="toastr.info('Estado actualizado para su empresa')">
-                                            </div>
+                                            <span class="badge bg-success-subtle text-success">Activo</span>
                                         </td>
-                                        <td class="text-end">
-                                            <button class="btn btn-outline-primary btn-sm px-3 shadow-sm" onclick="Modal('Editar', 2, '/modal-regla-empresa')">
-                                                <i class="fa fa-edit me-1"></i> Personalizar
-                                            </button>
+                                        <td class="text-center">
+                                            <div class="btn-group btn-group-sm">
+                                                <button class="btn btn-outline-info" onclick="Modal('Visualizar', 2, '/modal-regla-empresa')"><i class="fa fa-eye"></i></button>
+                                                <button class="btn btn-outline-warning" onclick="Modal('Editar', 2, '/modal-regla-empresa')"><i class="fa fa-edit"></i></button>
+                                            </div>
                                         </td>
                                     </tr>
                                     <tr>
@@ -74,14 +74,13 @@
                                         <td>Evaluación de domingos legales trabajados por mes.</td>
                                         <td><span class="badge bg-light text-dark border"><i class="fa fa-calendar-day me-1"></i>Eval: Domingos</span></td>
                                         <td>
-                                            <div class="form-check form-switch p-0" style="min-height: auto;">
-                                                <input class="form-check-input ms-0" type="checkbox" onclick="toastr.info('Estado actualizado para su empresa')">
-                                            </div>
+                                            <span class="badge bg-danger-subtle text-danger">Inactivo</span>
                                         </td>
-                                        <td class="text-end">
-                                            <button class="btn btn-outline-primary btn-sm px-3 shadow-sm" onclick="Modal('Editar', 4, '/modal-regla-empresa')">
-                                                <i class="fa fa-edit me-1"></i> Personalizar
-                                            </button>
+                                        <td class="text-center">
+                                            <div class="btn-group btn-group-sm">
+                                                <button class="btn btn-outline-info" onclick="Modal('Visualizar', 4, '/modal-regla-empresa')"><i class="fa fa-eye"></i></button>
+                                                <button class="btn btn-outline-warning" onclick="Modal('Editar', 4, '/modal-regla-empresa')"><i class="fa fa-edit"></i></button>
+                                            </div>
                                         </td>
                                     </tr>
                                 </tbody>
@@ -93,5 +92,14 @@
 {% endblock %}
 
 {% block scripts %}
-
+<script>
+    $(document).ready(function () {
+        $('#tabla_reglas_empresa').DataTable({
+            responsive: true,
+            language: {
+                url: '/static/i18n/es-ES.json'
+            }
+        });
+    });
+</script>
 {% endblock %}

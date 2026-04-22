@@ -1,17 +1,17 @@
 {% extends "layout.html" %}
 
-{% block title %}Tipos de Servicio{% endblock %}
+{% block title %}Roles{% endblock %}
 
 {% block head %}
 
 {% endblock %}
 
-{% block header %}Gestión de Tipos de Servicio{% endblock %}
-{% block page_title %}Tipos de Servicio{% endblock %}
+{% block header %}Gestión de Roles{% endblock %}
+{% block page_title %}Roles{% endblock %}
 
 {% block actions %}
-<button class="btn btn-primary shadow-sm" onclick="Modal('Agregar', 0, '/modal-servicio')">
-    <i class="fa fa-plus me-1"></i> Agregar Servicio
+<button class="btn btn-primary shadow-sm" onclick="Modal('Agregar', 0, '/modal-rol')">
+    <i class="fa fa-plus me-1"></i> Agregar Rol
 </button>
 {% endblock %}
 
@@ -20,14 +20,13 @@
     <div class="col-12">
         <div class="card shadow-sm border-0">
             <div class="card-header bg-white py-3 border-bottom">
-                <h5 class="mb-0 fw-bold text-dark"><i class="fa fa-concierge-bell me-2 text-primary"></i>Configuración de Unidades de Negocio</h5>
+                <h5 class="mb-0 fw-bold text-dark"><i class="fa fa-id-badge me-2 text-primary"></i>Directorio de Roles</h5>
             </div>
             <div class="card-body">
-                <table id="tabla_servicios" class="table table-hover dt-responsive nowrap w-100 align-middle">
+                <table id="tabla_roles" class="table table-hover dt-responsive nowrap w-100 align-middle">
                     <thead class="table-light">
                         <tr>
                             <th>Descripción</th>
-                            <th>Empresas Asociadas</th>
                             <th>Estado</th>
                             <th class="text-center">Acciones</th>
                         </tr>
@@ -35,48 +34,60 @@
                     <tbody>
                         <!-- Mock Static Data -->
                         <tr>
-                            <td class="fw-bold">Pronto</td>
-                            <td><span class="badge bg-secondary me-1">Copec S.A.</span><span class="badge bg-secondary">Franquicias del Norte</span></td>
+                            <td class="fw-bold">Super Admin</td>
                             <td><span class="badge bg-success-subtle text-success">Activo</span></td>
                             <td class="text-center">
                                 <div class="btn-group btn-group-sm">
                                     <button class="btn btn-outline-info" title="Visualizar"
-                                        onclick="Modal('Visualizar', 1, '/modal-servicio')"><i
+                                        onclick="Modal('Visualizar', 1, '/modal-rol')"><i
                                             class="fa fa-eye"></i></button>
                                     <button class="btn btn-outline-warning" title="Editar"
-                                        onclick="Modal('Editar', 1, '/modal-servicio')"><i
+                                        onclick="Modal('Editar', 1, '/modal-rol')"><i
                                             class="fa fa-edit"></i></button>
                                     <button class="btn btn-outline-danger" title="Eliminar"><i class="fa fa-trash"></i></button>
                                 </div>
                             </td>
                         </tr>
                         <tr>
-                            <td class="fw-bold">Gasolinera (Pista)</td>
-                            <td><span class="badge bg-secondary">Copec S.A.</span></td>
+                            <td class="fw-bold">Administrador</td>
                             <td><span class="badge bg-success-subtle text-success">Activo</span></td>
                             <td class="text-center">
                                 <div class="btn-group btn-group-sm">
                                     <button class="btn btn-outline-info" title="Visualizar"
-                                        onclick="Modal('Visualizar', 2, '/modal-servicio')"><i
+                                        onclick="Modal('Visualizar', 2, '/modal-rol')"><i
                                             class="fa fa-eye"></i></button>
                                     <button class="btn btn-outline-warning" title="Editar"
-                                        onclick="Modal('Editar', 2, '/modal-servicio')"><i
+                                        onclick="Modal('Editar', 2, '/modal-rol')"><i
                                             class="fa fa-edit"></i></button>
                                     <button class="btn btn-outline-danger" title="Eliminar"><i class="fa fa-trash"></i></button>
                                 </div>
                             </td>
                         </tr>
                         <tr>
-                            <td class="fw-bold">Lavado</td>
-                            <td><span class="badge bg-secondary">Abastible</span></td>
+                            <td class="fw-bold">Cliente</td>
+                            <td><span class="badge bg-success-subtle text-success">Activo</span></td>
+                            <td class="text-center">
+                                <div class="btn-group btn-group-sm">
+                                    <button class="btn btn-outline-info" title="Visualizar"
+                                        onclick="Modal('Visualizar', 3, '/modal-rol')"><i
+                                            class="fa fa-eye"></i></button>
+                                    <button class="btn btn-outline-warning" title="Editar"
+                                        onclick="Modal('Editar', 3, '/modal-rol')"><i
+                                            class="fa fa-edit"></i></button>
+                                    <button class="btn btn-outline-danger" title="Eliminar"><i class="fa fa-trash"></i></button>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td class="fw-bold">Usuario Solo Lectura</td>
                             <td><span class="badge bg-danger-subtle text-danger">Inactivo</span></td>
                             <td class="text-center">
                                 <div class="btn-group btn-group-sm">
                                     <button class="btn btn-outline-info" title="Visualizar"
-                                        onclick="Modal('Visualizar', 3, '/modal-servicio')"><i
+                                        onclick="Modal('Visualizar', 4, '/modal-rol')"><i
                                             class="fa fa-eye"></i></button>
                                     <button class="btn btn-outline-warning" title="Editar"
-                                        onclick="Modal('Editar', 3, '/modal-servicio')"><i
+                                        onclick="Modal('Editar', 4, '/modal-rol')"><i
                                             class="fa fa-edit"></i></button>
                                     <button class="btn btn-outline-danger" title="Eliminar"><i class="fa fa-trash"></i></button>
                                 </div>
@@ -93,7 +104,7 @@
 {% block scripts %}
 <script>
     $(document).ready(function () {
-        $('#tabla_servicios').DataTable({
+        $('#tabla_roles').DataTable({
             responsive: true,
             language: {
                 url: '/static/i18n/es-ES.json'

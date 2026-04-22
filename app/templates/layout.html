@@ -144,6 +144,31 @@
                        hx-get="{{ url_for('servicios') }}" hx-target="#body-content" hx-push-url="true" hx-select="#body-content" hx-swap="outerHTML">
                         <i class="fa fa-concierge-bell"></i> Servicios
                     </a>
+                    <a class="nav-link {{ 'active' if request.endpoint == 'regiones' else '' }}" 
+                       href="{{ url_for('regiones') }}"
+                       hx-get="{{ url_for('regiones') }}" hx-target="#body-content" hx-push-url="true" hx-select="#body-content" hx-swap="outerHTML">
+                        <i class="fa fa-map-marked-alt"></i> Regiones
+                    </a>
+                    <a class="nav-link {{ 'active' if request.endpoint == 'comunas' else '' }}" 
+                       href="{{ url_for('comunas') }}"
+                       hx-get="{{ url_for('comunas') }}" hx-target="#body-content" hx-push-url="true" hx-select="#body-content" hx-swap="outerHTML">
+                        <i class="fa fa-map-pin"></i> Comunas
+                    </a>
+                    <a class="nav-link {{ 'active' if request.endpoint == 'feriados' else '' }}" 
+                       href="{{ url_for('feriados') }}"
+                       hx-get="{{ url_for('feriados') }}" hx-target="#body-content" hx-push-url="true" hx-select="#body-content" hx-swap="outerHTML">
+                        <i class="fa fa-umbrella-beach"></i> Feriados
+                    </a>
+                    <a class="nav-link {{ 'active' if request.endpoint == 'roles' else '' }}" 
+                       href="{{ url_for('roles') }}"
+                       hx-get="{{ url_for('roles') }}" hx-target="#body-content" hx-push-url="true" hx-select="#body-content" hx-swap="outerHTML">
+                        <i class="fa fa-id-badge"></i> Roles
+                    </a>
+                    <a class="nav-link {{ 'active' if request.endpoint == 'menus' else '' }}" 
+                       href="{{ url_for('menus') }}"
+                       hx-get="{{ url_for('menus') }}" hx-target="#body-content" hx-push-url="true" hx-select="#body-content" hx-swap="outerHTML">
+                        <i class="fa fa-list"></i> Menús
+                    </a>
 
                     <div class="sidebar-heading text-muted small fw-bold px-4 py-2 mt-2 text-uppercase" style="font-size: 0.65rem; letter-spacing: 1px;">Soporte y Configuración</div>
                     <a class="nav-link {{ 'active' if request.endpoint == 'simulacion' else '' }}" 

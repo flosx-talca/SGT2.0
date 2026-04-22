@@ -1,0 +1,97 @@
+<div class="modal-header bg-primary text-white">
+    <h5 class="modal-title fw-bold">Feriado</h5>
+    <button type="button" class="btn-close btn-close-white" onclick="CerrarModal()" aria-label="Close"></button>
+</div>
+
+<div class="modal-body p-4">
+    <form id="form_feriado">
+        <div class="row g-3">
+            <div class="col-md-4">
+                <label class="form-label small fw-bold text-muted"><code>(*)</code> Fecha</label>
+                <div class="input-group">
+                    <span class="input-group-text bg-light border-end-0"><i class="fa fa-calendar-day text-muted"></i></span>
+                    <input type="date" class="form-control border-start-0 bg-light" id="fecha_feriado" value="2026-06-07" readonly required>
+                </div>
+            </div>
+
+            <div class="col-md-8">
+                <label class="form-label small fw-bold text-muted"><code>(*)</code> Descripción</label>
+                <div class="input-group">
+                    <span class="input-group-text bg-light border-end-0"><i class="fa fa-info-circle text-muted"></i></span>
+                    <input type="text" class="form-control border-start-0 bg-light" id="desc_feriado" value="Asalto y Toma del Morro de Arica" readonly required>
+                </div>
+            </div>
+
+            <div class="col-md-12 mt-4 mb-2">
+                <div class="form-check form-switch">
+                    <input class="form-check-input" type="checkbox" id="es_regional" checked disabled>
+                    <label class="form-check-label small fw-bold text-muted" for="es_regional">Feriado Regional</label>
+                </div>
+                <small class="text-muted" style="font-size: 0.75rem;">Si está activo, este feriado solo aplicará a la región seleccionada.</small>
+            </div>
+
+            <div class="col-md-12" id="contenedor_region">
+                <label class="form-label small fw-bold text-muted">Región Asociada</label>
+                <select class="form-select bg-light" id="region_feriado" disabled>
+                    <option value="" disabled>Seleccione una Región...</option>
+                    <option value="XV" selected>XV - Arica y Parinacota</option>
+                    <option value="RM">RM - Región Metropolitana de Santiago</option>
+                    <option value="V">V - Región de Valparaíso</option>
+                    <option value="VIII">VIII - Región del Biobío</option>
+                </select>
+            </div>
+        </div>
+    </form>
+</div>
+
+<div class="modal-footer bg-light border-top-0">
+    <button type="button" class="btn btn-secondary" onclick="CerrarModal()">Cancelar</button>
+    <button type="button" class="btn btn-primary px-4" id="btn-guardar-feriado" onclick="guardarFeriado()">
+        <i class="fa fa-save me-1"></i> Guardar Feriado
+    </button>
+</div>
+
+<script>
+    function guardarFeriado() {
+        $('#fondo').fadeIn();
+        setTimeout(() => {
+            $('#fondo').fadeOut();
+            toastr.success('Feriado guardado con éxito');
+            CerrarModal();
+        }, 800);
+    }
+
+    // Manejo dinámico del checkbox "Regional"
+    $('#es_regional').change(function() {
+        if ($(this).is(':checked')) {
+            $('#region_feriado').prop('disabled', false).removeClass('bg-light');
+        } else {
+            $('#region_feriado').prop('disabled', true).addClass('bg-light').val('');
+        }
+    });
+    
+    {% if modo == 'Agregar' %}
+    $(document).ready(function() {
+        $('.modal-title').text('Nuevo Feriado');
+        $('#fecha_feriado').val('').prop('readonly', false).removeClass('bg-light');
+        $('#desc_feriado').val('').prop('readonly', false).removeClass('bg-light');
+        
+        // Estado por defecto: Nacional
+        $('#es_regional').prop('checked', false).prop('disabled', false).trigger('change');
+    });
+    {% elif modo == 'Visualizar' %}
+    $(document).ready(function() {
+        $('#btn-guardar-feriado').hide();
+    });
+    {% elif modo == 'Editar' %}
+    $(document).ready(function() {
+        $('.modal-title').text('Editar Feriado');
+        $('#fecha_feriado').prop('readonly', false).removeClass('bg-light');
+        $('#desc_feriado').prop('readonly', false).removeClass('bg-light');
+        
+        let regionalSelect = $('#es_regional').prop('disabled', false);
+        // Desencadenar el evento 'change' para asegurar que el select inicie con el estado correcto
+        regionalSelect.trigger('change');
+    });
+    {% endif %}
+</script>

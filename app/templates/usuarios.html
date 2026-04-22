@@ -90,5 +90,14 @@
 {% endblock %}
 
 {% block scripts %}
-
+<script>
+    $(document).ready(function () {
+        $('#tabla_usuarios').DataTable({
+            responsive: true,
+            language: {
+                url: '/static/i18n/es-ES.json'
+            }
+        });
+    });
+</script>
 {% endblock %}

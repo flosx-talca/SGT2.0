@@ -58,6 +58,26 @@ def init_routes(app):
     def reglas():
         return render_template('reglas.html')
 
+    @app.route('/regiones')
+    def regiones():
+        return render_template('regiones.html')
+
+    @app.route('/comunas')
+    def comunas():
+        return render_template('comunas.html')
+
+    @app.route('/feriados')
+    def feriados():
+        return render_template('feriados.html')
+
+    @app.route('/roles')
+    def roles():
+        return render_template('roles.html')
+
+    @app.route('/menus')
+    def menus():
+        return render_template('menus.html')
+
     # Endpoints para modales (retornan HTML parcial)
     @app.route('/modal-<name>', methods=['POST'])
     def render_modal(name):

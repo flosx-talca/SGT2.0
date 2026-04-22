@@ -1,0 +1,86 @@
+<div class="modal-header bg-primary text-white">
+    <h5 class="modal-title fw-bold">Regla de Empresa</h5>
+    <button type="button" class="btn-close btn-close-white" onclick="CerrarModal()" aria-label="Close"></button>
+</div>
+
+<div class="modal-body p-4">
+    <form id="form_regla_empresa">
+        <!-- Banner Informativo -->
+        <div class="alert alert-info border-0 shadow-sm mb-4">
+            <div class="d-flex align-items-center">
+                <i class="fa fa-info-circle fa-2x me-3 opacity-50"></i>
+                <div>
+                    <h6 class="fw-bold mb-1">Personalización de Regla</h6>
+                    <p class="mb-0 small">Estás modificando el comportamiento de una regla base para tu empresa. Los valores deben estar dentro de los límites permitidos por el sistema central.</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="row g-3">
+            <div class="col-md-12">
+                <label class="form-label small fw-bold text-muted">Nombre de la Regla</label>
+                <div class="input-group">
+                    <span class="input-group-text bg-light border-end-0"><i class="fa fa-tag text-muted"></i></span>
+                    <input type="text" class="form-control border-start-0 bg-light" id="nombre_regla" value="max_consecutive_days" readonly>
+                </div>
+            </div>
+            
+            <div class="col-md-12">
+                <label class="form-label small fw-bold text-muted">Descripción</label>
+                <textarea class="form-control bg-light" id="desc_regla" rows="2" readonly>Define el máximo de días seguidos que un trabajador puede ser asignado.</textarea>
+            </div>
+
+            <div class="col-md-6">
+                <label class="form-label small fw-bold text-muted"><code>(*)</code> Valor Configurado</label>
+                <div class="input-group">
+                    <span class="input-group-text bg-light border-end-0"><i class="fa fa-cog text-muted"></i></span>
+                    <input type="number" class="form-control border-start-0" id="valor_regla" value="6" required>
+                </div>
+                <div class="form-text small">Ej: 6 (días)</div>
+            </div>
+
+            <div class="col-md-6">
+                <label class="form-label small fw-bold text-muted">Estado en la Empresa</label>
+                <select class="form-select" id="estado_regla">
+                    <option value="1" selected>Activa</option>
+                    <option value="0">Inactiva (Ignorar regla)</option>
+                </select>
+            </div>
+        </div>
+    </form>
+</div>
+
+<div class="modal-footer bg-light border-top-0">
+    <button type="button" class="btn btn-secondary" onclick="CerrarModal()">Cancelar</button>
+    <!-- Ocultamos el botón guardar si el modo es "Visualizar" (esto se maneja generalmente por JS, pero aquí lo dejamos funcional para el prototipo) -->
+    <button type="button" class="btn btn-primary px-4" onclick="guardarReglaEmpresa()">
+        <i class="fa fa-save me-1"></i> Guardar Configuración
+    </button>
+</div>
+
+<script>
+    function guardarReglaEmpresa() {
+        // Simulación de guardado
+        $('#fondo').fadeIn();
+        setTimeout(() => {
+            $('#fondo').fadeOut();
+            toastr.success('Configuración de la regla guardada con éxito');
+            CerrarModal();
+        }, 800);
+    }
+    
+    // Lógica dinámica según el modo recibido desde Flask
+    {% if modo == 'Agregar' %}
+    $(document).ready(function() {
+        $('.modal-title').text('Nueva Regla de Empresa');
+        $('#nombre_regla').val('').prop('readonly', false).removeClass('bg-light');
+        $('#desc_regla').val('').prop('readonly', false).removeClass('bg-light');
+        $('#valor_regla').val('');
+    });
+    {% elif modo == 'Visualizar' %}
+    $(document).ready(function() {
+        $('#form_regla_empresa input, #form_regla_empresa select, #form_regla_empresa textarea').prop('disabled', true);
+        $('.btn-primary').hide();
+    });
+    {% endif %}
+</script>

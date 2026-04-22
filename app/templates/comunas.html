@@ -1,17 +1,17 @@
 {% extends "layout.html" %}
 
-{% block title %}Tipos de Servicio{% endblock %}
+{% block title %}Comunas{% endblock %}
 
 {% block head %}
 
 {% endblock %}
 
-{% block header %}Gestión de Tipos de Servicio{% endblock %}
-{% block page_title %}Tipos de Servicio{% endblock %}
+{% block header %}Gestión de Comunas{% endblock %}
+{% block page_title %}Comunas{% endblock %}
 
 {% block actions %}
-<button class="btn btn-primary shadow-sm" onclick="Modal('Agregar', 0, '/modal-servicio')">
-    <i class="fa fa-plus me-1"></i> Agregar Servicio
+<button class="btn btn-primary shadow-sm" onclick="Modal('Agregar', 0, '/modal-comuna')">
+    <i class="fa fa-plus me-1"></i> Agregar Comuna
 </button>
 {% endblock %}
 
@@ -20,14 +20,15 @@
     <div class="col-12">
         <div class="card shadow-sm border-0">
             <div class="card-header bg-white py-3 border-bottom">
-                <h5 class="mb-0 fw-bold text-dark"><i class="fa fa-concierge-bell me-2 text-primary"></i>Configuración de Unidades de Negocio</h5>
+                <h5 class="mb-0 fw-bold text-dark"><i class="fa fa-map-pin me-2 text-primary"></i>Directorio de Comunas</h5>
             </div>
             <div class="card-body">
-                <table id="tabla_servicios" class="table table-hover dt-responsive nowrap w-100 align-middle">
+                <table id="tabla_comunas" class="table table-hover dt-responsive nowrap w-100 align-middle">
                     <thead class="table-light">
                         <tr>
+                            <th>Código</th>
                             <th>Descripción</th>
-                            <th>Empresas Asociadas</th>
+                            <th>Región</th>
                             <th>Estado</th>
                             <th class="text-center">Acciones</th>
                         </tr>
@@ -35,48 +36,51 @@
                     <tbody>
                         <!-- Mock Static Data -->
                         <tr>
-                            <td class="fw-bold">Pronto</td>
-                            <td><span class="badge bg-secondary me-1">Copec S.A.</span><span class="badge bg-secondary">Franquicias del Norte</span></td>
+                            <td class="fw-bold">13101</td>
+                            <td>Santiago</td>
+                            <td><span class="badge bg-secondary">RM</span></td>
                             <td><span class="badge bg-success-subtle text-success">Activo</span></td>
                             <td class="text-center">
                                 <div class="btn-group btn-group-sm">
                                     <button class="btn btn-outline-info" title="Visualizar"
-                                        onclick="Modal('Visualizar', 1, '/modal-servicio')"><i
+                                        onclick="Modal('Visualizar', 1, '/modal-comuna')"><i
                                             class="fa fa-eye"></i></button>
                                     <button class="btn btn-outline-warning" title="Editar"
-                                        onclick="Modal('Editar', 1, '/modal-servicio')"><i
+                                        onclick="Modal('Editar', 1, '/modal-comuna')"><i
                                             class="fa fa-edit"></i></button>
                                     <button class="btn btn-outline-danger" title="Eliminar"><i class="fa fa-trash"></i></button>
                                 </div>
                             </td>
                         </tr>
                         <tr>
-                            <td class="fw-bold">Gasolinera (Pista)</td>
-                            <td><span class="badge bg-secondary">Copec S.A.</span></td>
+                            <td class="fw-bold">13114</td>
+                            <td>Las Condes</td>
+                            <td><span class="badge bg-secondary">RM</span></td>
                             <td><span class="badge bg-success-subtle text-success">Activo</span></td>
                             <td class="text-center">
                                 <div class="btn-group btn-group-sm">
                                     <button class="btn btn-outline-info" title="Visualizar"
-                                        onclick="Modal('Visualizar', 2, '/modal-servicio')"><i
+                                        onclick="Modal('Visualizar', 2, '/modal-comuna')"><i
                                             class="fa fa-eye"></i></button>
                                     <button class="btn btn-outline-warning" title="Editar"
-                                        onclick="Modal('Editar', 2, '/modal-servicio')"><i
+                                        onclick="Modal('Editar', 2, '/modal-comuna')"><i
                                             class="fa fa-edit"></i></button>
                                     <button class="btn btn-outline-danger" title="Eliminar"><i class="fa fa-trash"></i></button>
                                 </div>
                             </td>
                         </tr>
                         <tr>
-                            <td class="fw-bold">Lavado</td>
-                            <td><span class="badge bg-secondary">Abastible</span></td>
+                            <td class="fw-bold">05101</td>
+                            <td>Valparaíso</td>
+                            <td><span class="badge bg-secondary">V</span></td>
                             <td><span class="badge bg-danger-subtle text-danger">Inactivo</span></td>
                             <td class="text-center">
                                 <div class="btn-group btn-group-sm">
                                     <button class="btn btn-outline-info" title="Visualizar"
-                                        onclick="Modal('Visualizar', 3, '/modal-servicio')"><i
+                                        onclick="Modal('Visualizar', 3, '/modal-comuna')"><i
                                             class="fa fa-eye"></i></button>
                                     <button class="btn btn-outline-warning" title="Editar"
-                                        onclick="Modal('Editar', 3, '/modal-servicio')"><i
+                                        onclick="Modal('Editar', 3, '/modal-comuna')"><i
                                             class="fa fa-edit"></i></button>
                                     <button class="btn btn-outline-danger" title="Eliminar"><i class="fa fa-trash"></i></button>
                                 </div>
@@ -93,7 +97,7 @@
 {% block scripts %}
 <script>
     $(document).ready(function () {
-        $('#tabla_servicios').DataTable({
+        $('#tabla_comunas').DataTable({
             responsive: true,
             language: {
                 url: '/static/i18n/es-ES.json'
