@@ -60,9 +60,9 @@
 <script>
     function guardarReglaFamilia() {
         // Simulación de guardado
-        $('#fondo').fadeIn();
+        $('#fondo').addClass('visible');
         setTimeout(() => {
-            $('#fondo').fadeOut();
+            $('#fondo').removeClass('visible');
             toastr.success('Familia de reglas guardada con éxito');
             CerrarModal();
         }, 800);

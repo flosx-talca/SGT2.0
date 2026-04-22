@@ -44,9 +44,9 @@
 
 <script>
     function guardarServicio() {
-        $('#fondo').fadeIn();
+        $('#fondo').addClass('visible');
         setTimeout(() => {
-            $('#fondo').fadeOut();
+            $('#fondo').removeClass('visible');
             toastr.success('Servicio guardado con éxito');
             CerrarModal();
         }, 800);

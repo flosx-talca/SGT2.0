@@ -69,7 +69,7 @@
             return;
         }
 
-        $('#fondo').fadeIn();
+        $('#fondo').addClass('visible');
         $.post("{{ url_for('region.guardar') }}", { id, codigo, descripcion, activo })
             .done(function(res) {
                 if (res.ok) {
@@ -79,12 +79,12 @@
                     refreshTablaRegiones();
                 } else {
                     toastr.error(res.msg);
-                    $('#fondo').fadeOut();
+                    $('#fondo').removeClass('visible');
                 }
             })
             .fail(function() {
                 toastr.error('Error de comunicación con el servidor.');
-                $('#fondo').fadeOut();
+                $('#fondo').removeClass('visible');
             });
     }
 </script>

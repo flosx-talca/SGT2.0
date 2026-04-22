@@ -33,9 +33,9 @@
 
 <script>
     function guardarRol() {
-        $('#fondo').fadeIn();
+        $('#fondo').addClass('visible');
         setTimeout(() => {
-            $('#fondo').fadeOut();
+            $('#fondo').removeClass('visible');
             toastr.success('Rol guardado con éxito');
             CerrarModal();
         }, 800);

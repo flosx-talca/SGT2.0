@@ -33,13 +33,25 @@
     </script>
     
     <style>
+        /* #fondo: solo aparece si la operación dura más de 400ms (evita parpadeo en navegación rápida) */
         #fondo {
             position: fixed;
             top: 0; left: 0;
             width: 100vw; height: 100vh;
             background: rgba(255, 255, 255, 0.7);
-            z-index: 99999; /* Por encima de TODO */
-            display: none;
+            z-index: 99999;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.2s ease;
+            /* transition-delay hace que solo aparezca si tarda más de 400ms */
+            transition-delay: 400ms;
+        }
+
+        /* HTMX lo activa via JS (fadeIn/fadeOut), no via clase HTMX automática */
+        #fondo.visible {
+            opacity: 1;
+            pointer-events: all;
+            transition-delay: 0ms; /* Al mostrar, sin delay */
         }
 
         .spinner-wrapper {
@@ -52,19 +64,14 @@
             align-items: center;
         }
 
-        #fondo.htmx-request, .htmx-request #fondo {
-            display: block !important;
-        }
-        
-        /* Ocultar el contenido viejo INMEDIATAMENTE al empezar la carga */
-        .htmx-request#body-content {
-            opacity: 0;
-        }
-
-        /* Suavizar el swap */
+        /* Suavizar el swap del contenido al navegar con HTMX */
         .htmx-swapping #body-content {
             opacity: 0;
             transition: opacity 0.1s ease-out;
+        }
+        .htmx-settling #body-content {
+            opacity: 1;
+            transition: opacity 0.15s ease-in;
         }
     </style>
     
@@ -73,7 +80,8 @@
     
     {% block head %}{% endblock %}
 </head>
-<body hx-indicator="#fondo">
+{# Sin hx-indicator en body: la navegación HTMX no activa el overlay automáticamente #}
+<body>
     <div id="fondo">
         <div class="spinner-wrapper">
             <div class="spinner-border text-primary" style="width: 3rem; height: 3rem;" role="status"></div>
@@ -303,14 +311,9 @@
     
     <script>
         $(document).ready(function() {
-            // Ocultar spinner al cargar la página
-            setTimeout(() => {
-                $('#fondo').fadeOut(400);
-            }, 50);
-
             // Limpieza y preparación antes de traer nuevo contenido
             document.body.addEventListener('htmx:beforeRequest', function(evt) {
-                // 1. Destruir SOLO las DataTables activas (evita inicializar tablas normales por error)
+                // Destruir DataTables activas para que no choquen con el nuevo contenido
                 if ($.fn.DataTable) {
                     $('.dataTable, table').each(function() {
                         if ($.fn.DataTable.isDataTable(this)) {
@@ -318,37 +321,26 @@
                         }
                     });
                 }
-                
-                // 2. Mostrar el spinner (HTMX lo hará vía CSS, pero aseguramos con JS)
-                $('#fondo').fadeIn(100);
+                // NO mostramos #fondo aquí: la navegación HTMX es rápida y no necesita overlay
             });
 
             // Actualizar clase active en sidebar al navegar con HTMX
             document.body.addEventListener('htmx:afterOnLoad', function(evt) {
                 $('.sidebar-nav .nav-link').removeClass('active');
                 $(`.sidebar-nav .nav-link[href="${evt.detail.pathInfo.requestPath}"]`).addClass('active');
-                
-                // Reset scroll to top
                 window.scrollTo(0, 0);
-                
-                // Cerrar cualquier modal que haya quedado abierto
                 $('.modal-backdrop').remove();
                 $('body').removeClass('modal-open').css('padding-right', '');
-
-                // OCULTAR EL SPINNER que mostramos en htmx:beforeRequest
-                setTimeout(() => {
-                    $('#fondo').fadeOut(400);
-                }, 100);
             });
 
-            // Fallback para links no-HTMX
+            // Fallback para links no-HTMX (navegación normal)
             $(document).on('click', 'a:not([hx-get])', function(e) {
                 let href = $(this).attr('href');
                 if (href && href !== '#' && !href.startsWith('javascript:') && !$(this).attr('target')) {
                     e.preventDefault();
-                    $('#fondo').fadeIn(150, function() {
-                        window.location.href = href;
-                    });
+                    // Sí mostramos fondo en navegación completa (no HTMX)
+                    $('#fondo').addClass('visible');
+                    window.location.href = href;
                 }
             });
 
@@ -381,7 +373,7 @@
 
         function Modal(modo, id, url_base) {
             $('#modal_contenido .modal-content').html('');
-            $('#fondo').fadeIn(150);
+            $('#fondo').addClass('visible'); // Mostrar overlay para carga del modal (puede ser lento)
             $.ajax({
                 url: url_base,
                 type: 'POST',
@@ -389,12 +381,10 @@
                 success: function(response) {
                     $('#modal_contenido .modal-content').html(response);
                     $('#modal_contenido').modal('show');
-                    setTimeout(() => {
-                        $('#fondo').fadeOut(200);
-                    }, 100);
+                    $('#fondo').removeClass('visible');
                 },
                 error: function() {
-                    $('#fondo').fadeOut(150);
+                    $('#fondo').removeClass('visible');
                     toastr.error('Error al cargar el modal');
                 }
             });
@@ -405,9 +395,9 @@
         }
 
         function cambiarSucursal(nombre) {
-            $('#fondo').fadeIn();
+            $('#fondo').addClass('visible');
             setTimeout(() => {
-                $('#fondo').fadeOut();
+                $('#fondo').removeClass('visible');
                 $('#currentBranchName').text(nombre);
                 $('#mobileSidebar #currentBranchName').text(nombre);
                 toastr.success('Sucursal cambiada a: ' + nombre);

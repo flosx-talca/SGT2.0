@@ -68,11 +68,11 @@
     <script>
         $(document).ready(function() {
             // Ocultar spinner al cargar la página
-            $('#fondo').fadeOut(300);
+            $('#fondo').removeClass('visible');
 
             // Mostrar spinner al iniciar sesión
             $('form').on('submit', function() {
-                $('#fondo').fadeIn(200);
+                $('#fondo').addClass('visible');
             });
         });
 

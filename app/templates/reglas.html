@@ -80,14 +80,14 @@
 {% block scripts %}
 <script>
     function toggleRegla(ruleId, empresaId, isEnabled) {
-        $('#fondo').fadeIn();
+        $('#fondo').addClass('visible');
         $.ajax({
             url: '/reglas/toggle',
             type: 'POST',
             contentType: 'application/json',
             data: JSON.stringify({ rule_id: ruleId, empresa_id: empresaId, enabled: isEnabled }),
             success: function(res) {
-                $('#fondo').fadeOut();
+                $('#fondo').removeClass('visible');
                 if (res.status === 'success') {
                     const badge = $(`#row-regla-${ruleId} td:nth-child(4)`);
                     if (isEnabled) {
@@ -102,7 +102,7 @@
                 }
             },
             error: function() {
-                $('#fondo').fadeOut();
+                $('#fondo').removeClass('visible');
                 toastr.error('Error al cambiar el estado de la regla');
             }
         });
@@ -161,14 +161,14 @@
             else config[key] = $(this).val();
         });
 
-        $('#fondo').fadeIn();
+        $('#fondo').addClass('visible');
         $.ajax({
             url: '/reglas/parametros',
             type: 'POST',
             contentType: 'application/json',
             data: JSON.stringify({ rule_id: ruleId, empresa_id: empresaId, config: config }),
             success: function(res) {
-                $('#fondo').fadeOut();
+                $('#fondo').removeClass('visible');
                 if (res.status === 'success') {
                     toastr.success('Parámetros actualizados');
                     $('#modalEditarRegla').modal('hide');
@@ -178,7 +178,7 @@
                 }
             },
             error: function() {
-                $('#fondo').fadeOut();
+                $('#fondo').removeClass('visible');
                 toastr.error('Error al guardar parámetros');
             }
         });
@@ -195,14 +195,14 @@
 
             const formData = $('#form_trabajador').serialize();
             
-            $('#fondo').fadeIn();
+            $('#fondo').addClass('visible');
             
             $.ajax({
                 url: '/trabajador/guardar',
                 type: 'POST',
                 data: formData,
                 success: function(res) {
-                    $('#fondo').fadeOut();
+                    $('#fondo').removeClass('visible');
                     if(res.status === 'success') {
                         toastr.success(res.message);
                         CerrarModal();
@@ -214,7 +214,7 @@
                     }
                 },
                 error: function(xhr) {
-                    $('#fondo').fadeOut();
+                    $('#fondo').removeClass('visible');
                     const msg = xhr.responseJSON ? xhr.responseJSON.message : 'Error al guardar';
                     toastr.error(msg);
                 }
@@ -300,13 +300,13 @@
             return;
         }
         const formData = $('#form_turno').serialize();
-        $('#fondo').fadeIn();
+        $('#fondo').addClass('visible');
         $.ajax({
             url: '/turno/guardar',
             type: 'POST',
             data: formData,
             success: function(res) {
-                $('#fondo').fadeOut();
+                $('#fondo').removeClass('visible');
                 if (res.status === 'success') {
                     toastr.success(res.message);
                     CerrarModal();
@@ -316,7 +316,7 @@
                 }
             },
             error: function(xhr) {
-                $('#fondo').fadeOut();
+                $('#fondo').removeClass('visible');
                 const msg = xhr.responseJSON ? xhr.responseJSON.message : 'Error al guardar';
                 toastr.error(msg);
             }

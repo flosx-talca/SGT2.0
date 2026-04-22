@@ -187,13 +187,13 @@
             cancelButtonText: 'Cancelar'
         }).then((result) => {
             if (result.isConfirmed) {
-                $('#fondo').fadeIn();
+                $('#fondo').addClass('visible');
                 $.ajax({
                     url: '/trabajador/eliminar',
                     type: 'POST',
                     data: { id: id },
                     success: function (res) {
-                        $('#fondo').fadeOut();
+                        $('#fondo').removeClass('visible');
                         if (res.status === 'success') {
                             toastr.warning(res.message);
                             setTimeout(() => location.reload(), 500);
@@ -202,7 +202,7 @@
                         }
                     },
                     error: function () {
-                        $('#fondo').fadeOut();
+                        $('#fondo').removeClass('visible');
                         toastr.error('Error al procesar la solicitud');
                     }
                 });
@@ -220,13 +220,13 @@
             cancelButtonText: 'Cancelar'
         }).then((result) => {
             if (result.isConfirmed) {
-                $('#fondo').fadeIn();
+                $('#fondo').addClass('visible');
                 $.ajax({
                     url: '/trabajador/activar',
                     type: 'POST',
                     data: { id: id },
                     success: function (res) {
-                        $('#fondo').fadeOut();
+                        $('#fondo').removeClass('visible');
                         if (res.status === 'success') {
                             toastr.success(res.message);
                             setTimeout(() => location.reload(), 500);
@@ -235,7 +235,7 @@
                         }
                     },
                     error: function () {
-                        $('#fondo').fadeOut();
+                        $('#fondo').removeClass('visible');
                         toastr.error('Error al procesar la solicitud');
                     }
                 });
@@ -272,14 +272,14 @@
 
             const formData = $('#form_trabajador').serialize();
             
-            $('#fondo').fadeIn();
+            $('#fondo').addClass('visible');
             
             $.ajax({
                 url: '/trabajador/guardar',
                 type: 'POST',
                 data: formData,
                 success: function(res) {
-                    $('#fondo').fadeOut();
+                    $('#fondo').removeClass('visible');
                     if(res.status === 'success') {
                         toastr.success(res.message);
                         CerrarModal();
@@ -291,7 +291,7 @@
                     }
                 },
                 error: function(xhr) {
-                    $('#fondo').fadeOut();
+                    $('#fondo').removeClass('visible');
                     const msg = xhr.responseJSON ? xhr.responseJSON.message : 'Error al guardar';
                     toastr.error(msg);
                 }
@@ -377,13 +377,13 @@
             return;
         }
         const formData = $('#form_turno').serialize();
-        $('#fondo').fadeIn();
+        $('#fondo').addClass('visible');
         $.ajax({
             url: '/turno/guardar',
             type: 'POST',
             data: formData,
             success: function(res) {
-                $('#fondo').fadeOut();
+                $('#fondo').removeClass('visible');
                 if (res.status === 'success') {
                     toastr.success(res.message);
                     CerrarModal();
@@ -393,7 +393,7 @@
                 }
             },
             error: function(xhr) {
-                $('#fondo').fadeOut();
+                $('#fondo').removeClass('visible');
                 const msg = xhr.responseJSON ? xhr.responseJSON.message : 'Error al guardar';
                 toastr.error(msg);
             }

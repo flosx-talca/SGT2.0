@@ -53,9 +53,9 @@
 
 <script>
     function guardarFeriado() {
-        $('#fondo').fadeIn();
+        $('#fondo').addClass('visible');
         setTimeout(() => {
-            $('#fondo').fadeOut();
+            $('#fondo').removeClass('visible');
             toastr.success('Feriado guardado con éxito');
             CerrarModal();
         }, 800);

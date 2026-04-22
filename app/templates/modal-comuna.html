@@ -51,9 +51,9 @@
 
 <script>
     function guardarComuna() {
-        $('#fondo').fadeIn();
+        $('#fondo').addClass('visible');
         setTimeout(() => {
-            $('#fondo').fadeOut();
+            $('#fondo').removeClass('visible');
             toastr.success('Comuna guardada con éxito');
             CerrarModal();
         }, 800);

@@ -83,7 +83,7 @@
             confirmButtonColor: '#e74c3c'
         }).then(result => {
             if (!result.isConfirmed) return;
-            $('#fondo').fadeIn();
+            $('#fondo').addClass('visible');
             $.post("{{ url_for('region.eliminar') }}", { id })
                 .done(res => {
                     if (res.ok) {
@@ -93,7 +93,7 @@
                         toastr.error(res.msg);
                     }
                 })
-                .always(() => $('#fondo').fadeOut());
+                .always(() => $('#fondo').removeClass('visible'));
         });
     }
 </script>

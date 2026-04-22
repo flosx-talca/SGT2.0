@@ -41,9 +41,9 @@
 
 <script>
     function guardarMenu() {
-        $('#fondo').fadeIn();
+        $('#fondo').addClass('visible');
         setTimeout(() => {
-            $('#fondo').fadeOut();
+            $('#fondo').removeClass('visible');
             toastr.success('Menú guardado con éxito');
             CerrarModal();
         }, 800);
