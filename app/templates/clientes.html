@@ -1,85 +1,97 @@
 {% extends "_partial.html" if is_htmx else "layout.html" %}
 
-{% block title %}Página{% endblock %}
-
-{% block head %}
-
-{% endblock %}
-
+{% block title %}Clientes{% endblock %}
 {% block header %}Gestión de Clientes{% endblock %}
-{% block page_title %}Página{% endblock %}
+{% block page_title %}Clientes{% endblock %}
 
 {% block actions %}
-<button class="btn btn-primary shadow-sm" onclick="Modal('Agregar', 0, '/modal-cliente')">
-    <i class="fa fa-plus me-1"></i> Agregar Cliente
+<button class="btn btn-primary shadow-sm" onclick="Modal('Agregar', 0, '{{ url_for('cliente.modal') }}')">
+    <i class="fa fa-user-plus me-1"></i> Nuevo Cliente
 </button>
 {% endblock %}
 
 {% block content %}
 <div class="row">
-                <div class="col-12">
-                    <div class="card shadow-sm border-0">
-                        <div class="card-header bg-white py-3 border-bottom">
-                            <h5 class="mb-0 fw-bold text-dark"><i class="fa fa-user-tie me-2 text-primary"></i>Directorio de Clientes</h5>
-                        </div>
-                        <div class="card-body">
-                            <table id="tabla_clientes" class="table table-hover dt-responsive nowrap w-100 align-middle">
-                                <thead class="table-light">
-                                    <tr>
-                                        <th>RUT</th>
-                                        <th>Nombre Completo</th>
-                                        <th>Email</th>
-                                        <th>Empresas</th>
-                                        <th>Estado</th>
-                                        <th class="text-center">Acciones</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <tr>
-                                        <td class="fw-bold">12.345.678-9</td>
-                                        <td>Ricardo Soto Mayor</td>
-                                        <td>rsoto@petroleum.cl</td>
-                                        <td><span class="badge bg-primary">Copec</span> <span class="badge bg-primary">Abastible</span></td>
-                                        <td><span class="badge bg-success-subtle text-success">Activo</span></td>
-                                        <td class="text-center">
-                                            <div class="btn-group btn-group-sm">
-                                                <button class="btn btn-outline-info" onclick="Modal('Visualizar', 1, '/modal-cliente')"><i class="fa fa-eye"></i></button>
-                                                <button class="btn btn-outline-warning" onclick="Modal('Editar', 1, '/modal-cliente')"><i class="fa fa-edit"></i></button>
-                                                <button class="btn btn-outline-danger"><i class="fa fa-trash"></i></button>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                    <tr>
-                                        <td class="fw-bold">15.987.654-3</td>
-                                        <td>Claudia Herrera Lynch</td>
-                                        <td>claudia.herrera@retail.com</td>
-                                        <td><span class="badge bg-primary">Retail Express</span></td>
-                                        <td><span class="badge bg-success-subtle text-success">Activo</span></td>
-                                        <td class="text-center">
-                                            <div class="btn-group btn-group-sm">
-                                                <button class="btn btn-outline-info" onclick="Modal('Visualizar', 2, '/modal-cliente')"><i class="fa fa-eye"></i></button>
-                                                <button class="btn btn-outline-warning" onclick="Modal('Editar', 2, '/modal-cliente')"><i class="fa fa-edit"></i></button>
-                                                <button class="btn btn-outline-danger"><i class="fa fa-trash"></i></button>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
+    <div class="col-12">
+        <div class="card shadow-sm border-0">
+            <div class="card-header bg-white py-3">
+                <h5 class="mb-0 fw-bold text-dark"><i class="fa fa-users me-2 text-primary"></i>Directorio de Clientes</h5>
             </div>
+            <div class="card-body">
+                <table id="tabla_clientes" class="table table-hover align-middle w-100">
+                    <thead class="table-light">
+                        <tr>
+                            <th>RUT</th>
+                            <th>Nombre Completo</th>
+                            <th>Email</th>
+                            <th>Estado</th>
+                            <th class="text-center">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tbody-clientes">
+                        {% include 'partials/cliente_rows.html' %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
 {% endblock %}
 
 {% block scripts %}
 <script>
-    $(document).ready(function () {
-        $('#tabla_clientes').DataTable({
-            responsive: true,
-            language: {
-                url: '/static/i18n/es-ES.json'
-            }
-        });
+let dtClientes;
+
+function initDataTable() {
+    dtClientes = $('#tabla_clientes').DataTable({
+        responsive: true,
+        order: [[1, 'asc']],
+        language: { url: '/static/i18n/es-ES.json' },
+        columnDefs: [ { targets: [4], orderable: false, searchable: false } ]
     });
+}
+
+$(document).ready(function() {
+    initDataTable();
+});
+
+function refreshTablaClientes() {
+    $('#fondo').addClass('visible');
+    $.get("{{ url_for('cliente.tabla') }}", function(html) {
+        if (dtClientes) dtClientes.destroy();
+        $('#tbody-clientes').html(html);
+        initDataTable();
+    }).always(function() {
+        $('#fondo').removeClass('visible');
+    });
+}
+
+function eliminarCliente(id, nombre) {
+    Swal.fire({
+        title: '¿Desactivar Cliente?',
+        text: `"${nombre}" ya no podrá gestionar nuevas empresas.`,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonText: 'Sí, desactivar',
+        cancelButtonText: 'Cancelar',
+        confirmButtonColor: '#e74c3c'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            $('#fondo').addClass('visible');
+            $.post("{{ url_for('cliente.eliminar') }}", { id: id })
+                .done(function(res) {
+                    if (res.ok) {
+                        toastr.success(res.msg);
+                        refreshTablaClientes();
+                    } else {
+                        toastr.error(res.msg);
+                    }
+                })
+                .always(function() {
+                    $('#fondo').removeClass('visible');
+                });
+        }
+    });
+}
 </script>
 {% endblock %}

@@ -1,44 +1,71 @@
 <div class="modal-header bg-primary text-white">
-    <h5 class="modal-title fw-bold">Feriado</h5>
-    <button type="button" class="btn-close btn-close-white" onclick="CerrarModal()" aria-label="Close"></button>
+    <h5 class="modal-title fw-bold">
+        {% if modo == 'Agregar' %}Nuevo Feriado
+        {% elif modo == 'Editar' %}Editar Feriado
+        {% else %}Detalle de Feriado
+        {% endif %}
+    </h5>
+    <button type="button" class="btn-close btn-close-white" onclick="CerrarModal()"></button>
 </div>
 
 <div class="modal-body p-4">
     <form id="form_feriado">
+        <input type="hidden" id="id_feriado" value="{{ registro.id if registro else 0 }}">
         <div class="row g-3">
-            <div class="col-md-4">
+            <div class="col-md-5">
                 <label class="form-label small fw-bold text-muted"><code>(*)</code> Fecha</label>
                 <div class="input-group">
-                    <span class="input-group-text bg-light border-end-0"><i class="fa fa-calendar-day text-muted"></i></span>
-                    <input type="date" class="form-control border-start-0 bg-light" id="fecha_feriado" value="2026-06-07" readonly required>
+                    <span class="input-group-text bg-light border-end-0"><i class="fa fa-calendar text-muted"></i></span>
+                    <input type="date" class="form-control border-start-0 {% if modo == 'Visualizar' %}bg-light{% endif %}" 
+                           id="fecha_feriado" value="{{ registro.fecha if registro else '' }}"
+                           {% if modo == 'Visualizar' %}readonly{% endif %}>
                 </div>
             </div>
 
-            <div class="col-md-8">
+            <div class="col-md-7">
                 <label class="form-label small fw-bold text-muted"><code>(*)</code> Descripción</label>
                 <div class="input-group">
                     <span class="input-group-text bg-light border-end-0"><i class="fa fa-info-circle text-muted"></i></span>
-                    <input type="text" class="form-control border-start-0 bg-light" id="desc_feriado" value="Asalto y Toma del Morro de Arica" readonly required>
+                    <input type="text" class="form-control border-start-0 {% if modo == 'Visualizar' %}bg-light{% endif %}" 
+                           id="desc_feriado" value="{{ registro.descripcion if registro else '' }}"
+                           {% if modo == 'Visualizar' %}readonly{% endif %} placeholder="Ej: Año Nuevo">
                 </div>
             </div>
 
-            <div class="col-md-12 mt-4 mb-2">
+            <div class="col-md-12">
+                <div class="form-check form-switch mt-2">
+                    <input class="form-check-input" type="checkbox" id="es_regional_feriado" 
+                           {% if registro and registro.es_regional %}checked{% endif %}
+                           {% if modo == 'Visualizar' %}disabled{% endif %}
+                           onchange="toggleRegionSelector()">
+                    <label class="form-check-label small fw-bold text-muted" for="es_regional_feriado">¿Es feriado regional?</label>
+                </div>
+            </div>
+
+            <div id="wrapper_region" class="col-md-12 {% if not (registro and registro.es_regional) %}d-none{% endif %}">
+                <label class="form-label small fw-bold text-muted"><code>(*)</code> Región Asociada</label>
+                <div class="input-group">
+                    <span class="input-group-text bg-light border-end-0"><i class="fa fa-map-marker-alt text-muted"></i></span>
+                    <select id="region_id_feriado" class="form-select border-start-0 {% if modo == 'Visualizar' %}bg-light{% endif %}"
+                            {% if modo == 'Visualizar' %}disabled{% endif %}>
+                        <option value="">-- Seleccione Región --</option>
+                        {% for r in regiones %}
+                        <option value="{{ r.id }}" {% if registro and registro.region_id == r.id %}selected{% endif %}>
+                            {{ r.descripcion }} ({{ r.codigo }})
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+
+            <div class="col-md-12">
+                <hr class="my-3">
                 <div class="form-check form-switch">
-                    <input class="form-check-input" type="checkbox" id="es_regional" checked disabled>
-                    <label class="form-check-label small fw-bold text-muted" for="es_regional">Feriado Regional</label>
+                    <input class="form-check-input" type="checkbox" id="activo_feriado" 
+                           {% if registro is none or registro.activo %}checked{% endif %}
+                           {% if modo == 'Visualizar' %}disabled{% endif %}>
+                    <label class="form-check-label small fw-bold text-muted" for="activo_feriado">Feriado Vigente</label>
                 </div>
-                <small class="text-muted" style="font-size: 0.75rem;">Si está activo, este feriado solo aplicará a la región seleccionada.</small>
-            </div>
-
-            <div class="col-md-12" id="contenedor_region">
-                <label class="form-label small fw-bold text-muted">Región Asociada</label>
-                <select class="form-select bg-light" id="region_feriado" disabled>
-                    <option value="" disabled>Seleccione una Región...</option>
-                    <option value="XV" selected>XV - Arica y Parinacota</option>
-                    <option value="RM">RM - Región Metropolitana de Santiago</option>
-                    <option value="V">V - Región de Valparaíso</option>
-                    <option value="VIII">VIII - Región del Biobío</option>
-                </select>
             </div>
         </div>
     </form>
@@ -46,52 +73,70 @@
 
 <div class="modal-footer bg-light border-top-0">
     <button type="button" class="btn btn-secondary" onclick="CerrarModal()">Cancelar</button>
-    <button type="button" class="btn btn-primary px-4" id="btn-guardar-feriado" onclick="guardarFeriado()">
-        <i class="fa fa-save me-1"></i> Guardar Feriado
+    {% if modo != 'Visualizar' %}
+    <button type="button" id="btnGuardarFeriado" class="btn btn-primary px-4" onclick="guardarFeriado()">
+        <i class="fa fa-save me-1"></i> Guardar Cambios
     </button>
+    {% endif %}
 </div>
 
 <script>
-    function guardarFeriado() {
-        $('#fondo').addClass('visible');
-        setTimeout(() => {
-            $('#fondo').removeClass('visible');
-            toastr.success('Feriado guardado con éxito');
-            CerrarModal();
-        }, 800);
+function toggleRegionSelector() {
+    const checked = $('#es_regional_feriado').is(':checked');
+    if (checked) {
+        $('#wrapper_region').removeClass('d-none');
+    } else {
+        $('#wrapper_region').addClass('d-none');
+        $('#region_id_feriado').val('');
+    }
+}
+
+function guardarFeriado() {
+    const id = $('#id_feriado').val();
+    const fecha = $('#fecha_feriado').val();
+    const descripcion = $('#desc_feriado').val().trim();
+    const es_regional = $('#es_regional_feriado').is(':checked');
+    const region_id = $('#region_id_feriado').val();
+    const activo = $('#activo_feriado').is(':checked');
+
+    if (!fecha || !descripcion) {
+        toastr.warning('Fecha y descripción son obligatorios.');
+        return;
     }
 
-    // Manejo dinámico del checkbox "Regional"
-    $('#es_regional').change(function() {
-        if ($(this).is(':checked')) {
-            $('#region_feriado').prop('disabled', false).removeClass('bg-light');
+    if (es_regional && !region_id) {
+        toastr.warning('Debe seleccionar una región para feriados regionales.');
+        return;
+    }
+
+    const $btn = $('#btnGuardarFeriado');
+    $btn.prop('disabled', true).html('<i class="fa fa-spinner fa-spin me-1"></i> Guardando...');
+    $('#fondo').addClass('visible');
+
+    $.post("{{ url_for('feriado.guardar') }}", {
+        id: id,
+        fecha: fecha,
+        descripcion: descripcion,
+        es_regional: es_regional ? 'true' : 'false',
+        region_id: region_id,
+        activo: activo ? 'true' : 'false'
+    })
+    .done(function(res) {
+        if (res.ok) {
+            toastr.success(res.msg);
+            CerrarModal();
+            if (typeof refreshTablaFeriados === 'function') refreshTablaFeriados();
         } else {
-            $('#region_feriado').prop('disabled', true).addClass('bg-light').val('');
+            toastr.error(res.msg);
+            $btn.prop('disabled', false).html('<i class="fa fa-save me-1"></i> Guardar Cambios');
         }
+    })
+    .fail(function() {
+        toastr.error('Error al conectar con el servidor.');
+        $btn.prop('disabled', false).html('<i class="fa fa-save me-1"></i> Guardar Cambios');
+    })
+    .always(function() {
+        $('#fondo').removeClass('visible');
     });
-    
-    {% if modo == 'Agregar' %}
-    $(document).ready(function() {
-        $('.modal-title').text('Nuevo Feriado');
-        $('#fecha_feriado').val('').prop('readonly', false).removeClass('bg-light');
-        $('#desc_feriado').val('').prop('readonly', false).removeClass('bg-light');
-        
-        // Estado por defecto: Nacional
-        $('#es_regional').prop('checked', false).prop('disabled', false).trigger('change');
-    });
-    {% elif modo == 'Visualizar' %}
-    $(document).ready(function() {
-        $('#btn-guardar-feriado').hide();
-    });
-    {% elif modo == 'Editar' %}
-    $(document).ready(function() {
-        $('.modal-title').text('Editar Feriado');
-        $('#fecha_feriado').prop('readonly', false).removeClass('bg-light');
-        $('#desc_feriado').prop('readonly', false).removeClass('bg-light');
-        
-        let regionalSelect = $('#es_regional').prop('disabled', false);
-        // Desencadenar el evento 'change' para asegurar que el select inicie con el estado correcto
-        regionalSelect.trigger('change');
-    });
-    {% endif %}
+}
 </script>

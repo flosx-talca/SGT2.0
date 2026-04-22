@@ -1,0 +1,32 @@
+{% for r in registros %}
+<tr>
+    <td class="small fw-bold text-muted">{{ r.rut }}</td>
+    <td>{{ r.nombre }} {{ r.apellidos }}</td>
+    <td class="small">{{ r.email }}</td>
+    <td>
+        <span class="badge bg-{{ 'success' if r.activo else 'danger' }}-subtle 
+                         text-{{ 'success' if r.activo else 'danger' }} 
+                         border border-{{ 'success' if r.activo else 'danger' }}">
+            {{ 'Activo' if r.activo else 'Inactivo' }}
+        </span>
+    </td>
+    <td class="text-center">
+        <div class="btn-group btn-group-sm">
+            <button class="btn btn-outline-info" title="Ver"
+                onclick="Modal('Visualizar', {{ r.id }}, '{{ url_for('cliente.modal') }}')">
+                <i class="fa fa-eye"></i>
+            </button>
+            <button class="btn btn-outline-warning" title="Editar"
+                onclick="Modal('Editar', {{ r.id }}, '{{ url_for('cliente.modal') }}')">
+                <i class="fa fa-edit"></i>
+            </button>
+            <button class="btn btn-outline-danger" title="Desactivar"
+                onclick="eliminarCliente({{ r.id }}, '{{ r.nombre }} {{ r.apellidos }}')">
+                <i class="fa fa-ban"></i>
+            </button>
+        </div>
+    </td>
+</tr>
+{% else %}
+<tr><td colspan="5" class="text-center text-muted py-4">No hay clientes registrados.</td></tr>
+{% endfor %}

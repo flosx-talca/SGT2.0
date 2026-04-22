@@ -1,17 +1,12 @@
 {% extends "_partial.html" if is_htmx else "layout.html" %}
 
 {% block title %}Trabajadores{% endblock %}
-
-{% block head %}
-
-{% endblock %}
-
-{% block header %}Gestión de Trabajadores{% endblock %}
+{% block header %}Ficha de Personal{% endblock %}
 {% block page_title %}Trabajadores{% endblock %}
 
 {% block actions %}
-<button class="btn btn-primary shadow-sm" onclick="Modal('Agregar', 0, '/modal-trabajador')">
-    <i class="fa fa-plus me-1"></i> Agregar Trabajador
+<button class="btn btn-primary shadow-sm" onclick="Modal('Agregar', 0, '{{ url_for('trabajador.modal') }}')">
+    <i class="fa fa-user-plus me-1"></i> Nuevo Trabajador
 </button>
 {% endblock %}
 
@@ -20,142 +15,22 @@
     <div class="col-12">
         <div class="card shadow-sm border-0">
             <div class="card-header bg-white py-3 border-bottom">
-                <h5 class="mb-0 fw-bold text-dark"><i class="fa fa-users me-2 text-primary"></i>Gestión de Personal</h5>
+                <h5 class="mb-0 fw-bold text-dark"><i class="fa fa-users me-2 text-primary"></i>Listado de Trabajadores</h5>
             </div>
             <div class="card-body">
-                <table id="tabla_trabajadores" class="table table-hover dt-responsive nowrap w-100 align-middle">
+                <table id="tabla_trabajadores" class="table table-hover align-middle w-100">
                     <thead class="table-light">
                         <tr>
                             <th>RUT</th>
-                            <th>Nombre Completo</th>
-                            <th>Cargo</th>
-                            <th>Sucursal</th>
+                            <th>Trabajador / Cargo</th>
+                            <th>Empresa / Servicio</th>
+                            <th>Contacto</th>
                             <th>Estado</th>
                             <th class="text-center">Acciones</th>
                         </tr>
                     </thead>
-                    <tbody>
-                        
-                        <tr>
-                            <td class="fw-bold">11.111.111-1</td>
-                            <td>Juan Pérez</td>
-                            <td>Atendedor</td>
-                            <td>Pronto Vitacura</td>
-                            <td>
-                                
-                                <span class="badge bg-success-subtle text-success">Activo</span>
-                                
-                            </td>
-                            <td class="text-center">
-                                <div class="btn-group btn-group-sm">
-                                    <button class="btn btn-outline-info" title="Visualizar"
-                                        onclick="Modal('Visualizar', 1, '/modal-trabajador')"><i
-                                            class="fa fa-eye"></i></button>
-                                    <button class="btn btn-outline-warning" title="Editar"
-                                        onclick="Modal('Editar', 1, '/modal-trabajador')"><i
-                                            class="fa fa-edit"></i></button>
-                                    <button class="btn btn-outline-danger" title="Eliminar"
-                                        onclick="switchEliminar(1)"><i class="fa fa-trash"></i></button>
-                                </div>
-                            </td>
-                        </tr>
-                        
-                        <tr>
-                            <td class="fw-bold">22.222.222-2</td>
-                            <td>María Gómez</td>
-                            <td>Jefe de Turno</td>
-                            <td>Bencinera Norte</td>
-                            <td>
-                                
-                                <span class="badge bg-success-subtle text-success">Activo</span>
-                                
-                            </td>
-                            <td class="text-center">
-                                <div class="btn-group btn-group-sm">
-                                    <button class="btn btn-outline-info" title="Visualizar"
-                                        onclick="Modal('Visualizar', 2, '/modal-trabajador')"><i
-                                            class="fa fa-eye"></i></button>
-                                    <button class="btn btn-outline-warning" title="Editar"
-                                        onclick="Modal('Editar', 2, '/modal-trabajador')"><i
-                                            class="fa fa-edit"></i></button>
-                                    <button class="btn btn-outline-danger" title="Eliminar"
-                                        onclick="switchEliminar(2)"><i class="fa fa-trash"></i></button>
-                                </div>
-                            </td>
-                        </tr>
-                        
-                        <tr>
-                            <td class="fw-bold">33.333.333-3</td>
-                            <td>Carlos Ruiz</td>
-                            <td>Cajero</td>
-                            <td>Estación Central Copec</td>
-                            <td>
-                                
-                                <span class="badge bg-danger-subtle text-danger">Inactivo</span>
-                                
-                            </td>
-                            <td class="text-center">
-                                <div class="btn-group btn-group-sm">
-                                    <button class="btn btn-outline-info" title="Visualizar"
-                                        onclick="Modal('Visualizar', 3, '/modal-trabajador')"><i
-                                            class="fa fa-eye"></i></button>
-                                    <button class="btn btn-outline-warning" title="Editar"
-                                        onclick="Modal('Editar', 3, '/modal-trabajador')"><i
-                                            class="fa fa-edit"></i></button>
-                                    <button class="btn btn-outline-danger" title="Eliminar"
-                                        onclick="switchEliminar(3)"><i class="fa fa-trash"></i></button>
-                                </div>
-                            </td>
-                        </tr>
-                        
-                        <tr>
-                            <td class="fw-bold">44.444.444-4</td>
-                            <td>Ana López</td>
-                            <td>Atendedor</td>
-                            <td>Global</td>
-                            <td>
-                                
-                                <span class="badge bg-success-subtle text-success">Activo</span>
-                                
-                            </td>
-                            <td class="text-center">
-                                <div class="btn-group btn-group-sm">
-                                    <button class="btn btn-outline-info" title="Visualizar"
-                                        onclick="Modal('Visualizar', 4, '/modal-trabajador')"><i
-                                            class="fa fa-eye"></i></button>
-                                    <button class="btn btn-outline-warning" title="Editar"
-                                        onclick="Modal('Editar', 4, '/modal-trabajador')"><i
-                                            class="fa fa-edit"></i></button>
-                                    <button class="btn btn-outline-danger" title="Eliminar"
-                                        onclick="switchEliminar(4)"><i class="fa fa-trash"></i></button>
-                                </div>
-                            </td>
-                        </tr>
-                        
-                        <tr>
-                            <td class="fw-bold">55.555.555-5</td>
-                            <td>Pedro Sanhueza</td>
-                            <td>Limpieza</td>
-                            <td>Pronto Vitacura</td>
-                            <td>
-                                
-                                <span class="badge bg-success-subtle text-success">Activo</span>
-                                
-                            </td>
-                            <td class="text-center">
-                                <div class="btn-group btn-group-sm">
-                                    <button class="btn btn-outline-info" title="Visualizar"
-                                        onclick="Modal('Visualizar', 5, '/modal-trabajador')"><i
-                                            class="fa fa-eye"></i></button>
-                                    <button class="btn btn-outline-warning" title="Editar"
-                                        onclick="Modal('Editar', 5, '/modal-trabajador')"><i
-                                            class="fa fa-edit"></i></button>
-                                    <button class="btn btn-outline-danger" title="Eliminar"
-                                        onclick="switchEliminar(5)"><i class="fa fa-trash"></i></button>
-                                </div>
-                            </td>
-                        </tr>
-                        
+                    <tbody id="tbody-trabajadores">
+                        {% include 'partials/trabajador_rows.html' %}
                     </tbody>
                 </table>
             </div>
@@ -166,303 +41,56 @@
 
 {% block scripts %}
 <script>
-    $(document).ready(function () {
-        $('#tabla_trabajadores').DataTable({
-            responsive: true,
-            language: {
-                url: '/static/i18n/es-ES.json'
-            }
-        });
-    });
+let dtTrabajadores;
 
-    function switchEliminar(id) {
-        Swal.fire({
-            title: '¿Está seguro de continuar?',
-            text: "El trabajador será desactivado del sistema.",
-            icon: 'warning',
-            showCancelButton: true,
-            confirmButtonColor: '#e74c3c',
-            cancelButtonColor: '#95a5a6',
-            confirmButtonText: 'Sí, desactivar',
-            cancelButtonText: 'Cancelar'
-        }).then((result) => {
-            if (result.isConfirmed) {
-                $('#fondo').addClass('visible');
-                $.ajax({
-                    url: '/trabajador/eliminar',
-                    type: 'POST',
-                    data: { id: id },
-                    success: function (res) {
-                        $('#fondo').removeClass('visible');
-                        if (res.status === 'success') {
-                            toastr.warning(res.message);
-                            setTimeout(() => location.reload(), 500);
-                        } else {
-                            toastr.error(res.message);
-                        }
-                    },
-                    error: function () {
-                        $('#fondo').removeClass('visible');
-                        toastr.error('Error al procesar la solicitud');
-                    }
-                });
-            }
-        });
-    }
-
-    function Activar(id) {
-        Swal.fire({
-            title: '¿Desea activar este trabajador?',
-            icon: 'question',
-            showCancelButton: true,
-            confirmButtonText: 'Sí, activar',
-            confirmButtonColor: '#18bc9c',
-            cancelButtonText: 'Cancelar'
-        }).then((result) => {
-            if (result.isConfirmed) {
-                $('#fondo').addClass('visible');
-                $.ajax({
-                    url: '/trabajador/activar',
-                    type: 'POST',
-                    data: { id: id },
-                    success: function (res) {
-                        $('#fondo').removeClass('visible');
-                        if (res.status === 'success') {
-                            toastr.success(res.message);
-                            setTimeout(() => location.reload(), 500);
-                        } else {
-                            toastr.error(res.message);
-                        }
-                    },
-                    error: function () {
-                        $('#fondo').removeClass('visible');
-                        toastr.error('Error al procesar la solicitud');
-                    }
-                });
-            }
-        });
-    }
-</script>
-
-<script>
-            $(document).ready(function() {
-                // Poblado de 1 a 44
-                let options = "";
-                for(let i=1; i<=44; i++) {
-                    options += `<option value="${i}">${i} horas</option>`;
-                }
-                $('#horas_semanales').html(options).val(30);
-
-                $('#tipo_contrato_modal').on('change', function() {
-                    if($(this).val() === 'part-time') {
-                        $('#div_horas_part_time').fadeIn();
-                    } else {
-                        $('#div_horas_part_time').fadeOut();
-                    }
-                }).trigger('change');
-            });
-        </script>
-<script>
-    $(document).ready(function() {
-        $('#btn_guardar_trabajador').click(function() {
-            if(!$('#rut').val() || !$('#nombre').val()) {
-                toastr.error('Por favor complete los campos obligatorios');
-                return;
-            }
-
-            const formData = $('#form_trabajador').serialize();
-            
-            $('#fondo').addClass('visible');
-            
-            $.ajax({
-                url: '/trabajador/guardar',
-                type: 'POST',
-                data: formData,
-                success: function(res) {
-                    $('#fondo').removeClass('visible');
-                    if(res.status === 'success') {
-                        toastr.success(res.message);
-                        CerrarModal();
-                        setTimeout(() => {
-                            location.reload(); 
-                        }, 500);
-                    } else {
-                        toastr.error(res.message);
-                    }
-                },
-                error: function(xhr) {
-                    $('#fondo').removeClass('visible');
-                    const msg = xhr.responseJSON ? xhr.responseJSON.message : 'Error al guardar';
-                    toastr.error(msg);
-                }
-            });
-        });
-
-        // Lógica de Ausencias
-        $('#btn_add_ausencia').click(function() {
-            const f_ini = $('#fecha_inicio').val();
-            const f_fin = $('#fecha_fin').val();
-            const motivo = $('#motivo_ausencia').val();
-
-            if(!f_ini || !f_fin || !motivo) {
-                toastr.warning('Por favor complete rango de fechas y motivo');
-                return;
-            }
-            if(f_ini > f_fin) {
-                toastr.warning('La fecha de inicio no puede ser posterior a la de fin');
-                return;
-            }
-
-            $('#row_no_data').hide();
-
-            let badgeClass = 'bg-secondary';
-            if(motivo === 'VAC') badgeClass = 'bg-success';
-            if(motivo === 'LM') badgeClass = 'bg-danger';
-            if(motivo === 'PER') badgeClass = 'bg-info text-dark';
-            if(motivo === 'OTR') badgeClass = 'bg-warning text-dark';
-
-            const formatF = (d) => d.split('-').reverse().join('/');
-            
-            const tr = `
-                <tr>
-                    <td class="text-start ps-3 fw-bold text-secondary">
-                        <i class="fa fa-calendar-day me-2 text-muted"></i> ${formatF(f_ini)} - ${formatF(f_fin)}
-                        <input type="hidden" name="ausencia_ini[]" value="${f_ini}">
-                        <input type="hidden" name="ausencia_fin[]" value="${f_fin}">
-                        <input type="hidden" name="ausencia_motivo[]" value="${motivo}">
-                    </td>
-                    <td class="text-center align-middle">
-                        <span class="badge ${badgeClass} px-2">${motivo}</span>
-                    </td>
-                    <td class="text-end pe-3 align-middle">
-                        <button type="button" class="btn btn-sm btn-outline-danger btn-remove-ausencia" style="padding: 0.1rem 0.3rem;"><i class="fa fa-times"></i></button>
-                    </td>
-                </tr>
-            `;
-
-            $('#tabla_ausencias tbody').append(tr);
-
-            $('#fecha_inicio').val('');
-            $('#fecha_fin').val('');
-            $('#motivo_ausencia').val('');
-        });
-
-        $(document).on('click', '.btn-remove-ausencia', function() {
-            $(this).closest('tr').remove();
-            if($('#tabla_ausencias tbody tr').length === 1) {
-                $('#row_no_data').show();
-            }
-        });
-
-        // Rotar icono de collapse
-        $('#collapsePreferencias, #collapseAusencias').on('show.bs.collapse', function () {
-            $(this).prev('h6').find('i.fa-chevron-down').removeClass('fa-chevron-down').addClass('fa-chevron-up');
-        }).on('hide.bs.collapse', function () {
-            $(this).prev('h6').find('i.fa-chevron-up').removeClass('fa-chevron-up').addClass('fa-chevron-down');
-        });
-    });
-</script>
-<script>
-    // Preview del color en tiempo real
-    document.getElementById('t_color').addEventListener('input', function() {
-        document.getElementById('color_label').style.backgroundColor = this.value;
-    });
-    document.getElementById('t_abreviacion').addEventListener('input', function() {
-        document.getElementById('color_label').textContent = this.value || 'T';
-    });
-
-    $('#btn_guardar_turno').click(function() {
-        if (!$('#t_nombre').val() || !$('#t_hora_inicio').val() || !$('#t_hora_fin').val()) {
-            toastr.error('Por favor complete todos los campos obligatorios');
-            return;
-        }
-        const formData = $('#form_turno').serialize();
-        $('#fondo').addClass('visible');
-        $.ajax({
-            url: '/turno/guardar',
-            type: 'POST',
-            data: formData,
-            success: function(res) {
-                $('#fondo').removeClass('visible');
-                if (res.status === 'success') {
-                    toastr.success(res.message);
-                    CerrarModal();
-                    setTimeout(() => location.reload(), 500);
-                } else {
-                    toastr.error(res.message);
-                }
-            },
-            error: function(xhr) {
-                $('#fondo').removeClass('visible');
-                const msg = xhr.responseJSON ? xhr.responseJSON.message : 'Error al guardar';
-                toastr.error(msg);
-            }
-        });
-    });
-</script>
-<script>
-    $(document).ready(function() {
-        $('#empresa').change(function() {
-            if($(this).val()) {
-                $('#sucursal').prop('disabled', false).html('<option value="1">Bencinera Norte</option><option value="2">Bencinera Centro</option>');
-            } else {
-                $('#sucursal').prop('disabled', true).html('<option value="">Seleccione empresa primero...</option>');
-            }
-        });
-
-        $('#btn_generar').click(function() {
-            Swal.fire({
-                title: '¿Desea generar la simulación?',
-                text: "Esto procesará las reglas configuradas para la sucursal.",
-                icon: 'question',
-                showCancelButton: true,
-                confirmButtonText: 'Sí, generar',
-                cancelButtonText: 'No, revisar'
-            }).then((result) => {
-                if (result.isConfirmed) {
-                    toastr.info('Procesando simulación...');
-                    setTimeout(() => {
-                        toastr.success('Simulación generada con éxito');
-                        CerrarModal();
-                        location.reload();
-                    }, 2000);
-                }
-            });
-        });
-    });
-</script>
-<script>
-function guardarEmpresa() {
-    Swal.fire({
-        title: '¿Guardar Empresa?',
-        text: "Modo Prototipo Estático: Los datos no se guardarán en BD.",
-        icon: 'info',
-        showCancelButton: true,
-        confirmButtonColor: '#18bc9c',
-        cancelButtonColor: '#d33',
-        confirmButtonText: 'Simular Guardado'
-    }).then((result) => {
-        if (result.isConfirmed) {
-            toastr.success('Empresa guardada exitosamente (Simulación).');
-            CerrarModal();
-        }
+function initDataTable() {
+    dtTrabajadores = $('#tabla_trabajadores').DataTable({
+        responsive: true,
+        order: [[1, 'asc']],
+        language: { url: '/static/i18n/es-ES.json' },
+        columnDefs: [ { targets: [5], orderable: false, searchable: false } ]
     });
 }
-</script>
-<script>
-function guardarServicio() {
+
+$(document).ready(function() {
+    initDataTable();
+});
+
+function refreshTablaTrabajadores() {
+    $('#fondo').addClass('visible');
+    $.get("{{ url_for('trabajador.tabla') }}", function(html) {
+        if (dtTrabajadores) dtTrabajadores.destroy();
+        $('#tbody-trabajadores').html(html);
+        initDataTable();
+    }).always(function() {
+        $('#fondo').removeClass('visible');
+    });
+}
+
+function eliminarTrabajador(id, nombre) {
     Swal.fire({
-        title: '¿Guardar Tipo de Servicio?',
-        text: "Modo Prototipo Estático: Los datos no se guardarán en BD.",
-        icon: 'info',
+        title: '¿Desactivar Ficha?',
+        text: `El trabajador "${nombre}" pasará a estado inactivo.`,
+        icon: 'warning',
         showCancelButton: true,
-        confirmButtonColor: '#18bc9c',
-        cancelButtonColor: '#d33',
-        confirmButtonText: 'Simular Guardado'
+        confirmButtonText: 'Sí, desactivar',
+        cancelButtonText: 'Cancelar',
+        confirmButtonColor: '#e74c3c'
     }).then((result) => {
         if (result.isConfirmed) {
-            toastr.success('Servicio guardado exitosamente (Simulación).');
-            CerrarModal();
+            $('#fondo').addClass('visible');
+            $.post("{{ url_for('trabajador.eliminar') }}", { id: id })
+                .done(function(res) {
+                    if (res.ok) {
+                        toastr.success(res.msg);
+                        refreshTablaTrabajadores();
+                    } else {
+                        toastr.error(res.msg);
+                    }
+                })
+                .always(function() {
+                    $('#fondo').removeClass('visible');
+                });
         }
     });
 }

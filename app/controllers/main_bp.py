@@ -10,14 +10,6 @@ def index():
 def login():
     return render_template('login.html')
 
-@main_bp.route('/trabajadores')
-def trabajadores():
-    return render_template('trabajadores.html')
-
-@main_bp.route('/turnos')
-def turnos():
-    return render_template('turnos.html')
-
 @main_bp.route('/planificacion')
 def planificacion():
     return render_template('simulacion.html') 
@@ -25,22 +17,6 @@ def planificacion():
 @main_bp.route('/reglas-empresa')
 def reglas_empresa():
     return render_template('reglas-empresa.html')
-
-@main_bp.route('/clientes')
-def clientes():
-    return render_template('clientes.html')
-
-@main_bp.route('/usuarios')
-def usuarios():
-    return render_template('usuarios.html')
-
-@main_bp.route('/empresas')
-def empresas():
-    return render_template('empresas.html')
-
-@main_bp.route('/servicios')
-def servicios():
-    return render_template('servicios.html')
 
 @main_bp.route('/reglas-familias')
 def reglas_familias():
@@ -58,19 +34,6 @@ def simulacion():
 def reglas():
     return render_template('reglas.html')
 
-
-
-@main_bp.route('/feriados')
-def feriados():
-    return render_template('feriados.html')
-
-@main_bp.route('/roles')
-def roles():
-    return render_template('roles.html')
-
-@main_bp.route('/menus')
-def menus():
-    return render_template('menus.html')
 
 # Endpoints para modales (retornan HTML parcial)
 @main_bp.route('/modal-<name>', methods=['POST'])

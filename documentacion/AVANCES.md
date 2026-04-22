@@ -9,39 +9,27 @@ Se basa directamente en `especificacion-funcional-sistema-turnos.md`.
 
 *Nota: Todos los Features e Issues aquí listados deben ser negociados y aprobados con el usuario antes de su ejecución.*
 
-### Fase 1: Integración con Base de Datos y Autenticación (Actual)
+### Fase 1: Integración con Base de Datos y Autenticación (Completada)
 - [x] **Feature 1:** Conexión y Modelado Base de Datos PostgreSQL
-  - [x] Issue 1.1: Configuración de conexión y ORM (SQLAlchemy + psycopg2 + python-dotenv).
-  - [x] Issue 1.2: Modelado completo de tablas (15 entidades en `proyecto.sql` y `app/models/`).
-  - [x] Issue 1.3: Refactorización a arquitectura MVT (Application Factory + Blueprints).
-  - [x] Issue 1.4: Creación de script `seed.py` con datos de prueba (4 Regiones, 7 Comunas, 3 Clientes, 4 Empresas, 5 Servicios, 10 Turnos, 11 Trabajadores).
-  - [x] Issue 1.5: Regla de renderizado de frontend documentada en `PROJECT_CONTEXT.md` (datos antes de mostrar modal/tabla).
-- [ ] **Feature 2:** Refactorización de Mantenedores a Base de Datos (En progreso)
-  - [x] Issue 2.1: Mantenedor de Regiones (CRUD real contra PostgreSQL + Optimización HTMX).
-  - [x] Issue 2.2: Mantenedor de Comunas.
-  - [ ] Issue 2.3: Mantenedor de Feriados.
-  - [ ] Issue 2.4: Mantenedor de Servicios.
-  - [ ] Issue 2.5: Mantenedor de Empresas, Clientes y Usuarios.
+- [x] **Feature 2:** Estandarización de Mantenedores a HTMX + PostgreSQL (Finalizado)
+  - [x] Issue 2.1: Mantenedores de Geografía (Regiones/Comunas).
+  - [x] Issue 2.2: Mantenedores de Operación (Feriados, Servicios, Turnos).
+  - [x] Issue 2.3: Mantenedores de Estructura (Roles, Menús).
+  - [x] Issue 2.4: Mantenedores de Negocio (Clientes, Empresas).
+  - [x] Issue 2.5: Mantenedores de Personal y Seguridad (Trabajadores, Usuarios).
 
-### Fase 2: Configuración de Negocio (Multiempresa)
-- [ ] **Feature 3:** Gestión de Trabajadores y Perfiles
-- [ ] **Feature 4:** Motor de Reglas (REGLAS)
-  - *Alta importancia: Requiere profundo análisis de la lógica de negocio.*
-
----
-
-## 🗄️ Modelado de Base de Datos (Propuestas)
-
-*Antes de crear cualquier tabla real en `proyecto.sql` o en el código, se propondrá aquí su estructura para revisión y observaciones del usuario.*
-
-### Propuestas Actuales:
-*(Esperando definición para iniciar con el modelo de Usuarios, Roles, Empresas...)*
+### Fase 2: Configuración de Negocio y Planificación (Siguiente)
+- [ ] **Feature 3:** Motor de Reglas (REGLAS) - Lógica de cumplimiento legal y descansos.
+- [ ] **Feature 4:** Cuadrante de Planificación - Interfaz de asignación de turnos.
+- [ ] **Feature 5:** Autenticación Real - Sistema de Login funcional con Flask-Login.
 
 ---
 
 ## 📝 Bitácora de Avances
 - **[2026-04-22]**: 
-  - Se completó la migración de **Regiones** y **Comunas** a CRUD real con PostgreSQL.
-  - Se implementó **Optimización HTMX**: Refresco parcial de tablas (tbody) y navegación tipo SPA (barra de progreso superior, carga de fragmentos de contenido).
-  - Se establecieron índices en la BD para optimizar el rendimiento.
-  - Se actualizó la `GUIA_MANTENEDORES.md` con el estándar de alto rendimiento.
+  - **Gran Migración**: Se completaron los 9 mantenedores principales del sistema bajo el estándar SGT 2.0.
+  - **Arquitectura**: Desacoplamiento total mediante Blueprints dedicados por entidad.
+  - **UX/UI**: Implementación de tarjetas premium para Turnos, refrescos parciales con HTMX (`_rows.html`) y Smart Spinner (delay 400ms).
+  - **Seguridad**: Integración de hashing de contraseñas en el mantenedor de usuarios.
+  - **Integridad**: Validaciones de RUT, Email y campos obligatorios en todos los controladores.
+

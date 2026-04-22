@@ -1,103 +1,98 @@
 {% extends "_partial.html" if is_htmx else "layout.html" %}
 
-{% block title %}Página{% endblock %}
-
-{% block head %}
-
-{% endblock %}
-
-{% block header %}Gestión de Usuarios{% endblock %}
-{% block page_title %}Página{% endblock %}
+{% block title %}Usuarios{% endblock %}
+{% block header %}Seguridad y Usuarios{% endblock %}
+{% block page_title %}Usuarios{% endblock %}
 
 {% block actions %}
-<button class="btn btn-primary shadow-sm" onclick="Modal('Agregar', 0, '/modal-usuario')">
-    <i class="fa fa-plus me-1"></i> Agregar Usuario
+<button class="btn btn-primary shadow-sm" onclick="Modal('Agregar', 0, '{{ url_for('usuario.modal') }}')">
+    <i class="fa fa-user-shield me-1"></i> Nuevo Usuario
 </button>
 {% endblock %}
 
 {% block content %}
 <div class="row">
-                <div class="col-12">
-                    <div class="card shadow-sm border-0">
-                        <div class="card-header bg-white py-3 border-bottom">
-                            <h5 class="mb-0 fw-bold text-dark"><i class="fa fa-users me-2 text-primary"></i>Directorio de Usuarios</h5>
-                        </div>
-                        <div class="card-body">
-                            <table id="tabla_usuarios" class="table table-hover dt-responsive nowrap w-100 align-middle">
-                                <thead class="table-light">
-                                    <tr>
-                                        <th>RUT</th>
-                                        <th>Nombre Completo</th>
-                                        <th>Email</th>
-                                        <th>Rol</th>
-                                        <th>Empresas</th>
-                                        <th>Estado</th>
-                                        <th class="text-center">Acciones</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <tr>
-                                        <td class="fw-bold">12.345.678-9</td>
-                                        <td>Ricardo Soto Mayor</td>
-                                        <td>rsoto@petroleum.cl</td>
-                                        <td><span class="badge bg-secondary">Cliente</span></td>
-                                        <td><span class="badge bg-primary">Copec</span> <span class="badge bg-primary">Abastible</span></td>
-                                        <td><span class="badge bg-success-subtle text-success">Activo</span></td>
-                                        <td class="text-center">
-                                            <div class="btn-group btn-group-sm">
-                                                <button class="btn btn-outline-info" onclick="Modal('Visualizar', 1, '/modal-usuario')"><i class="fa fa-eye"></i></button>
-                                                <button class="btn btn-outline-warning" onclick="Modal('Editar', 1, '/modal-usuario')"><i class="fa fa-edit"></i></button>
-                                                <button class="btn btn-outline-danger"><i class="fa fa-trash"></i></button>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                    <tr>
-                                        <td class="fw-bold">15.987.654-3</td>
-                                        <td>Claudia Herrera Lynch</td>
-                                        <td>claudia.herrera@retail.com</td>
-                                        <td><span class="badge bg-danger">Super Admin</span></td>
-                                        <td><span class="badge bg-primary">Retail Express</span></td>
-                                        <td><span class="badge bg-success-subtle text-success">Activo</span></td>
-                                        <td class="text-center">
-                                            <div class="btn-group btn-group-sm">
-                                                <button class="btn btn-outline-info" onclick="Modal('Visualizar', 2, '/modal-usuario')"><i class="fa fa-eye"></i></button>
-                                                <button class="btn btn-outline-warning" onclick="Modal('Editar', 2, '/modal-usuario')"><i class="fa fa-edit"></i></button>
-                                                <button class="btn btn-outline-danger"><i class="fa fa-trash"></i></button>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                    <tr>
-                                        <td class="fw-bold">11.222.333-4</td>
-                                        <td>Juan Pérez Gonzalez</td>
-                                        <td>jperez@admin.com</td>
-                                        <td><span class="badge bg-info text-dark">Administrador</span></td>
-                                        <td><span class="badge bg-primary">Distribuidora Norte</span></td>
-                                        <td><span class="badge bg-success-subtle text-success">Activo</span></td>
-                                        <td class="text-center">
-                                            <div class="btn-group btn-group-sm">
-                                                <button class="btn btn-outline-info" onclick="Modal('Visualizar', 3, '/modal-usuario')"><i class="fa fa-eye"></i></button>
-                                                <button class="btn btn-outline-warning" onclick="Modal('Editar', 3, '/modal-usuario')"><i class="fa fa-edit"></i></button>
-                                                <button class="btn btn-outline-danger"><i class="fa fa-trash"></i></button>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
+    <div class="col-12">
+        <div class="card shadow-sm border-0">
+            <div class="card-header bg-white py-3 border-bottom">
+                <h5 class="mb-0 fw-bold text-dark"><i class="fa fa-users-cog me-2 text-primary"></i>Gestión de Cuentas</h5>
             </div>
+            <div class="card-body">
+                <table id="tabla_usuarios" class="table table-hover align-middle w-100">
+                    <thead class="table-light">
+                        <tr>
+                            <th>RUT</th>
+                            <th>Usuario / Email</th>
+                            <th>Rol</th>
+                            <th>Cliente Asociado</th>
+                            <th>Estado</th>
+                            <th class="text-center">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tbody-usuarios">
+                        {% include 'partials/usuario_rows.html' %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
 {% endblock %}
 
 {% block scripts %}
 <script>
-    $(document).ready(function () {
-        $('#tabla_usuarios').DataTable({
-            responsive: true,
-            language: {
-                url: '/static/i18n/es-ES.json'
-            }
-        });
+let dtUsuarios;
+
+function initDataTable() {
+    dtUsuarios = $('#tabla_usuarios').DataTable({
+        responsive: true,
+        order: [[1, 'asc']],
+        language: { url: '/static/i18n/es-ES.json' },
+        columnDefs: [ { targets: [5], orderable: false, searchable: false } ]
     });
+}
+
+$(document).ready(function() {
+    initDataTable();
+});
+
+function refreshTablaUsuarios() {
+    $('#fondo').addClass('visible');
+    $.get("{{ url_for('usuario.tabla') }}", function(html) {
+        if (dtUsuarios) dtUsuarios.destroy();
+        $('#tbody-usuarios').html(html);
+        initDataTable();
+    }).always(function() {
+        $('#fondo').removeClass('visible');
+    });
+}
+
+function eliminarUsuario(id, nombre) {
+    Swal.fire({
+        title: '¿Desactivar Cuenta?',
+        text: `"${nombre}" ya no podrá iniciar sesión en el sistema.`,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonText: 'Sí, desactivar',
+        cancelButtonText: 'Cancelar',
+        confirmButtonColor: '#e74c3c'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            $('#fondo').addClass('visible');
+            $.post("{{ url_for('usuario.eliminar') }}", { id: id })
+                .done(function(res) {
+                    if (res.ok) {
+                        toastr.success(res.msg);
+                        refreshTablaUsuarios();
+                    } else {
+                        toastr.error(res.msg);
+                    }
+                })
+                .always(function() {
+                    $('#fondo').removeClass('visible');
+                });
+        }
+    });
+}
 </script>
 {% endblock %}

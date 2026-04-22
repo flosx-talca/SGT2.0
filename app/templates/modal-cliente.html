@@ -1,53 +1,58 @@
 <div class="modal-header bg-primary text-white">
-    <h5 class="modal-title fw-bold">Cliente</h5>
-    <button type="button" class="btn-close btn-close-white" onclick="CerrarModal()" aria-label="Close"></button>
+    <h5 class="modal-title fw-bold">
+        {% if modo == 'Agregar' %}Nuevo Cliente
+        {% elif modo == 'Editar' %}Editar Cliente
+        {% else %}Detalle de Cliente
+        {% endif %}
+    </h5>
+    <button type="button" class="btn-close btn-close-white" onclick="CerrarModal()"></button>
 </div>
 
 <div class="modal-body p-4">
     <form id="form_cliente">
+        <input type="hidden" id="id_cliente" value="{{ registro.id if registro else 0 }}">
         <div class="row g-3">
-            <div class="col-md-6">
+            <div class="col-md-4">
                 <label class="form-label small fw-bold text-muted"><code>(*)</code> RUT</label>
                 <div class="input-group">
                     <span class="input-group-text bg-light border-end-0"><i class="fa fa-id-card text-muted"></i></span>
-                    <input type="text" class="form-control border-start-0" id="rut_cliente" placeholder="12.345.678-9" required>
+                    <input type="text" class="form-control border-start-0 {% if modo == 'Visualizar' %}bg-light{% endif %}" 
+                           id="rut_cliente" value="{{ registro.rut if registro else '' }}"
+                           {% if modo == 'Visualizar' %}readonly{% endif %} placeholder="12.345.678-9">
                 </div>
             </div>
-            <div class="col-md-6">
-                <label class="form-label small fw-bold text-muted"><code>(*)</code> Correo Electrónico</label>
+
+            <div class="col-md-4">
+                <label class="form-label small fw-bold text-muted"><code>(*)</code> Nombre</label>
+                <input type="text" class="form-control {% if modo == 'Visualizar' %}bg-light{% endif %}" 
+                       id="nombre_cliente" value="{{ registro.nombre if registro else '' }}"
+                       {% if modo == 'Visualizar' %}readonly{% endif %}>
+            </div>
+
+            <div class="col-md-4">
+                <label class="form-label small fw-bold text-muted"><code>(*)</code> Apellidos</label>
+                <input type="text" class="form-control {% if modo == 'Visualizar' %}bg-light{% endif %}" 
+                       id="apellidos_cliente" value="{{ registro.apellidos if registro else '' }}"
+                       {% if modo == 'Visualizar' %}readonly{% endif %}>
+            </div>
+
+            <div class="col-md-12">
+                <label class="form-label small fw-bold text-muted"><code>(*)</code> Email</label>
                 <div class="input-group">
                     <span class="input-group-text bg-light border-end-0"><i class="fa fa-envelope text-muted"></i></span>
-                    <input type="email" class="form-control border-start-0" id="email_cliente" placeholder="ejemplo@correo.com" required>
+                    <input type="email" class="form-control border-start-0 {% if modo == 'Visualizar' %}bg-light{% endif %}" 
+                           id="email_cliente" value="{{ registro.email if registro else '' }}"
+                           {% if modo == 'Visualizar' %}readonly{% endif %} placeholder="ejemplo@correo.com">
                 </div>
             </div>
-            <div class="col-md-12">
-                <label class="form-label small fw-bold text-muted"><code>(*)</code> Nombres</label>
-                <input type="text" class="form-control" id="nombre" placeholder="Nombres" required>
-            </div>
-            <div class="col-md-6">
-                <label class="form-label small fw-bold text-muted"><code>(*)</code> Primer Apellido</label>
-                <input type="text" class="form-control" id="apellido1" placeholder="Apellido Paterno" required>
-            </div>
-            <div class="col-md-6">
-                <label class="form-label small fw-bold text-muted">Segundo Apellido</label>
-                <input type="text" class="form-control" id="apellido2" placeholder="Apellido Materno">
-            </div>
-            <div class="col-md-6">
-                <label class="form-label small fw-bold text-muted">Estado</label>
-                <select class="form-select" id="estado">
-                    <option value="1">Activo</option>
-                    <option value="0">Inactivo</option>
-                </select>
-            </div>
-            <div class="col-12">
-                <label class="form-label small fw-bold text-muted"><code>(*)</code> Empresas Asociadas (Multiselección)</label>
-                <select class="form-select select2-modal" multiple="multiple" style="width: 100%;">
-                    <option value="1">Copec S.A.</option>
-                    <option value="2">Abastible</option>
-                    <option value="3">Retail Express Ltda.</option>
-                    <option value="4">Distribuidora Norte</option>
-                    <option value="5">Inversiones ABC</option>
-                </select>
+
+            <div class="col-md-12 mt-3">
+                <div class="form-check form-switch">
+                    <input class="form-check-input" type="checkbox" id="activo_cliente" 
+                           {% if registro is none or registro.activo %}checked{% endif %}
+                           {% if modo == 'Visualizar' %}disabled{% endif %}>
+                    <label class="form-check-label small fw-bold text-muted" for="activo_cliente">Cliente Activo</label>
+                </div>
             </div>
         </div>
     </form>
@@ -55,7 +60,55 @@
 
 <div class="modal-footer bg-light border-top-0">
     <button type="button" class="btn btn-secondary" onclick="CerrarModal()">Cancelar</button>
-    <button type="button" class="btn btn-primary px-4" onclick="guardarCliente()">
-        <i class="fa fa-save me-1"></i> Guardar Cliente
+    {% if modo != 'Visualizar' %}
+    <button type="button" id="btnGuardarCliente" class="btn btn-primary px-4" onclick="guardarCliente()">
+        <i class="fa fa-save me-1"></i> Guardar
     </button>
+    {% endif %}
 </div>
+
+<script>
+function guardarCliente() {
+    const id = $('#id_cliente').val();
+    const rut = $('#rut_cliente').val().trim();
+    const nombre = $('#nombre_cliente').val().trim();
+    const apellidos = $('#apellidos_cliente').val().trim();
+    const email = $('#email_cliente').val().trim();
+    const activo = $('#activo_cliente').is(':checked');
+
+    if (!rut || !nombre || !apellidos || !email) {
+        toastr.warning('Todos los campos marcados con (*) son obligatorios.');
+        return;
+    }
+
+    const $btn = $('#btnGuardarCliente');
+    $btn.prop('disabled', true).html('<i class="fa fa-spinner fa-spin me-1"></i> Guardando...');
+    $('#fondo').addClass('visible');
+
+    $.post("{{ url_for('cliente.guardar') }}", {
+        id: id,
+        rut: rut,
+        nombre: nombre,
+        apellidos: apellidos,
+        email: email,
+        activo: activo ? 'true' : 'false'
+    })
+    .done(function(res) {
+        if (res.ok) {
+            toastr.success(res.msg);
+            CerrarModal();
+            if (typeof refreshTablaClientes === 'function') refreshTablaClientes();
+        } else {
+            toastr.error(res.msg);
+            $btn.prop('disabled', false).html('<i class="fa fa-save me-1"></i> Guardar');
+        }
+    })
+    .fail(function() {
+        toastr.error('Error de comunicación con el servidor.');
+        $btn.prop('disabled', false).html('<i class="fa fa-save me-1"></i> Guardar');
+    })
+    .always(function() {
+        $('#fondo').removeClass('visible');
+    });
+}
+</script>

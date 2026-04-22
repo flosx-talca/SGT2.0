@@ -2,15 +2,11 @@
 
 {% block title %}Turnos{% endblock %}
 
-{% block head %}
-
-{% endblock %}
-
 {% block header %}Gestión de Turnos{% endblock %}
 {% block page_title %}Turnos{% endblock %}
 
 {% block actions %}
-<button class="btn btn-primary shadow-sm" onclick="Modal('Agregar', 0, '/modal-turno')">
+<button class="btn btn-primary shadow-sm" onclick="Modal('Agregar', 0, '{{ url_for('turno.modal') }}')">
     <i class="fa fa-plus me-1"></i> Nuevo Turno
 </button>
 {% endblock %}
@@ -24,247 +20,63 @@
                     <h5 class="mb-0 fw-bold text-dark"><i class="fa fa-clock me-2 text-primary"></i>Gestión de Turnos</h5>
                     <small class="text-muted">Define los turnos disponibles por sucursal</small>
                 </div>
-                <select class="form-select w-auto shadow-sm">
-                    <option value="1">Pronto Vitacura</option>
-                    <option value="2">Bencinera Norte</option>
+                <!-- Este selector podría ser funcional en el futuro para filtrar la vista -->
+                <select id="filtro_empresa_turnos" class="form-select w-auto shadow-sm" onchange="refreshTablaTurnos()">
+                    <option value="0">Todas las Sucursales</option>
+                    {% for e in empresas_filtro %}
+                    <option value="{{ e.id }}">{{ e.razon_social }}</option>
+                    {% endfor %}
                 </select>
             </div>
-            <div class="card-body">
-
-
-        <div class="row g-0 p-3">
-            
-            <div class="col-md-6 col-lg-4 p-2">
-                <div class="border rounded-3 p-3 h-100 d-flex flex-column gap-2" 
-                     style="border-left: 5px solid #18bc9c !important;">
-                    <div class="d-flex justify-content-between align-items-start">
-                        <div>
-                            <span class="badge fs-6 fw-bold px-3 py-2" 
-                                  style="background-color: #18bc9c; color: white;">
-                                M
-                            </span>
-                            <h5 class="fw-bold mt-2 mb-0">Mañana</h5>
-                        </div>
-                        <div class="d-flex gap-1">
-                            <button class="btn btn-outline-warning" title="Editar"
-                                onclick="Modal('Editar', 1, '/modal-turno')">
-                                <i class="fa fa-edit"></i>
-                            </button>
-                            <button class="btn btn-outline-danger" title="Eliminar"
-                                onclick="eliminarTurno(1, 'Mañana')">
-                                <i class="fa fa-trash"></i>
-                            </button>
-                        </div>
-                    </div>
-                    <div class="mt-auto">
-                        <div class="d-flex gap-3 text-muted small mb-1">
-                            <span><i class="fa fa-clock me-1"></i>
-                                08:00 → 16:00
-                            </span>
-                            <span><i class="fa fa-users me-1"></i>
-                                1 req.
-                            </span>
-                        </div>
-                        <small class="text-muted">
-                            <i class="fa fa-building me-1"></i>Pronto Vitacura
-                        </small>
-                    </div>
+            <div class="card-body p-0">
+                <div id="contenedor-turnos" class="row g-0 p-3">
+                    {% include 'partials/turno_cards.html' %}
                 </div>
             </div>
-            
-            <div class="col-md-6 col-lg-4 p-2">
-                <div class="border rounded-3 p-3 h-100 d-flex flex-column gap-2" 
-                     style="border-left: 5px solid #f39c12 !important;">
-                    <div class="d-flex justify-content-between align-items-start">
-                        <div>
-                            <span class="badge fs-6 fw-bold px-3 py-2" 
-                                  style="background-color: #f39c12; color: white;">
-                                I
-                            </span>
-                            <h5 class="fw-bold mt-2 mb-0">Intermedio</h5>
-                        </div>
-                        <div class="d-flex gap-1">
-                            <button class="btn btn-outline-warning" title="Editar"
-                                onclick="Modal('Editar', 2, '/modal-turno')">
-                                <i class="fa fa-edit"></i>
-                            </button>
-                            <button class="btn btn-outline-danger" title="Eliminar"
-                                onclick="eliminarTurno(2, 'Intermedio')">
-                                <i class="fa fa-trash"></i>
-                            </button>
-                        </div>
-                    </div>
-                    <div class="mt-auto">
-                        <div class="d-flex gap-3 text-muted small mb-1">
-                            <span><i class="fa fa-clock me-1"></i>
-                                12:00 → 20:00
-                            </span>
-                            <span><i class="fa fa-users me-1"></i>
-                                1 req.
-                            </span>
-                        </div>
-                        <small class="text-muted">
-                            <i class="fa fa-building me-1"></i>Pronto Vitacura
-                        </small>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="col-md-6 col-lg-4 p-2">
-                <div class="border rounded-3 p-3 h-100 d-flex flex-column gap-2" 
-                     style="border-left: 5px solid #3498db !important;">
-                    <div class="d-flex justify-content-between align-items-start">
-                        <div>
-                            <span class="badge fs-6 fw-bold px-3 py-2" 
-                                  style="background-color: #3498db; color: white;">
-                                T
-                            </span>
-                            <h5 class="fw-bold mt-2 mb-0">Tarde</h5>
-                        </div>
-                        <div class="d-flex gap-1">
-                            <button class="btn btn-outline-warning" title="Editar"
-                                onclick="Modal('Editar', 3, '/modal-turno')">
-                                <i class="fa fa-edit"></i>
-                            </button>
-                            <button class="btn btn-outline-danger" title="Eliminar"
-                                onclick="eliminarTurno(3, 'Tarde')">
-                                <i class="fa fa-trash"></i>
-                            </button>
-                        </div>
-                    </div>
-                    <div class="mt-auto">
-                        <div class="d-flex gap-3 text-muted small mb-1">
-                            <span><i class="fa fa-clock me-1"></i>
-                                16:00 → 00:00
-                            </span>
-                            <span><i class="fa fa-users me-1"></i>
-                                2 req.
-                            </span>
-                        </div>
-                        <small class="text-muted">
-                            <i class="fa fa-building me-1"></i>Pronto Vitacura
-                        </small>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="col-md-6 col-lg-4 p-2">
-                <div class="border rounded-3 p-3 h-100 d-flex flex-column gap-2" 
-                     style="border-left: 5px solid #2c3e50 !important;">
-                    <div class="d-flex justify-content-between align-items-start">
-                        <div>
-                            <span class="badge fs-6 fw-bold px-3 py-2" 
-                                  style="background-color: #2c3e50; color: white;">
-                                N
-                            </span>
-                            <h5 class="fw-bold mt-2 mb-0">Noche</h5>
-                        </div>
-                        <div class="d-flex gap-1">
-                            <button class="btn btn-outline-warning" title="Editar"
-                                onclick="Modal('Editar', 4, '/modal-turno')">
-                                <i class="fa fa-edit"></i>
-                            </button>
-                            <button class="btn btn-outline-danger" title="Eliminar"
-                                onclick="eliminarTurno(4, 'Noche')">
-                                <i class="fa fa-trash"></i>
-                            </button>
-                        </div>
-                    </div>
-                    <div class="mt-auto">
-                        <div class="d-flex gap-3 text-muted small mb-1">
-                            <span><i class="fa fa-clock me-1"></i>
-                                00:00 → 08:00
-                            </span>
-                            <span><i class="fa fa-users me-1"></i>
-                                1 req.
-                            </span>
-                        </div>
-                        <small class="text-muted">
-                            <i class="fa fa-building me-1"></i>Pronto Vitacura
-                        </small>
-                    </div>
-                </div>
-            </div>
-            
         </div>
     </div>
-</div>
-</div>
 </div>
 {% endblock %}
 
 {% block scripts %}
 <script>
-    function eliminarTurno(id, nombre) {
-        Swal.fire({
-            title: `¿Eliminar turno "${nombre}"?`,
-            text: 'Esta acción no se puede deshacer.',
-            icon: 'warning',
-            showCancelButton: true,
-            confirmButtonColor: '#e74c3c',
-            cancelButtonColor: '#95a5a6',
-            confirmButtonText: 'Sí, eliminar',
-            cancelButtonText: 'Cancelar'
-        }).then((result) => {
-            if (result.isConfirmed) {
-                $('#fondo').addClass('visible');
-                $.ajax({
-                    url: '/turno/eliminar',
-                    type: 'POST',
-                    data: { id: id },
-                    success: function(res) {
-                        $('#fondo').removeClass('visible');
-                        if (res.status === 'success') {
-                            toastr.success(res.message);
-                            setTimeout(() => location.reload(), 500);
-                        } else {
-                            toastr.error(res.message);
-                        }
-                    },
-                    error: function() {
-                        $('#fondo').removeClass('visible');
-                        toastr.error('Error al eliminar el turno');
+function refreshTablaTurnos() {
+    const empresa_id = $('#filtro_empresa_turnos').val() || 0;
+    $('#fondo').addClass('visible');
+    $.get("{{ url_for('turno.tabla') }}", { empresa_id: empresa_id }, function(html) {
+        $('#contenedor-turnos').html(html);
+    }).always(function() {
+        $('#fondo').removeClass('visible');
+    });
+}
+
+function eliminarTurno(id, nombre) {
+    Swal.fire({
+        title: `¿Eliminar turno "${nombre}"?`,
+        text: 'Esta acción desactivará el turno del sistema.',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#e74c3c',
+        cancelButtonColor: '#95a5a6',
+        confirmButtonText: 'Sí, desactivar',
+        cancelButtonText: 'Cancelar'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            $('#fondo').addClass('visible');
+            $.post("{{ url_for('turno.eliminar') }}", { id: id })
+                .done(function(res) {
+                    if (res.ok) {
+                        toastr.success(res.msg);
+                        refreshTablaTurnos();
+                    } else {
+                        toastr.error(res.msg);
                     }
+                })
+                .always(function() {
+                    $('#fondo').removeClass('visible');
                 });
-            }
-        });
-    }
-
-    // Preview del color en tiempo real
-    $(document).on('input', '#t_color', function() {
-        $('#color_label').css('background-color', this.value);
-    });
-    $(document).on('input', '#t_abreviacion', function() {
-        $('#color_label').text(this.value || 'T');
-    });
-
-    $(document).on('click', '#btn_guardar_turno', function() {
-        if (!$('#t_nombre').val() || !$('#t_hora_inicio').val() || !$('#t_hora_fin').val()) {
-            toastr.error('Por favor complete todos los campos obligatorios');
-            return;
         }
-        const formData = $('#form_turno').serialize();
-        $('#fondo').addClass('visible');
-        $.ajax({
-            url: '/turno/guardar',
-            type: 'POST',
-            data: formData,
-            success: function(res) {
-                $('#fondo').removeClass('visible');
-                if (res.status === 'success') {
-                    toastr.success(res.message);
-                    CerrarModal();
-                    setTimeout(() => location.reload(), 500);
-                } else {
-                    toastr.error(res.message);
-                }
-            },
-            error: function(xhr) {
-                $('#fondo').removeClass('visible');
-                const msg = xhr.responseJSON ? xhr.responseJSON.message : 'Error al guardar';
-                toastr.error(msg);
-            }
-        });
     });
+}
 </script>
 {% endblock %}

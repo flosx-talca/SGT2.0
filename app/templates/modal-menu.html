@@ -1,30 +1,42 @@
 <div class="modal-header bg-primary text-white">
-    <h5 class="modal-title fw-bold">Menú</h5>
-    <button type="button" class="btn-close btn-close-white" onclick="CerrarModal()" aria-label="Close"></button>
+    <h5 class="modal-title fw-bold">
+        {% if modo == 'Agregar' %}Nuevo Menú
+        {% elif modo == 'Editar' %}Editar Menú
+        {% else %}Detalle de Menú
+        {% endif %}
+    </h5>
+    <button type="button" class="btn-close btn-close-white" onclick="CerrarModal()"></button>
 </div>
 
 <div class="modal-body p-4">
     <form id="form_menu">
+        <input type="hidden" id="id_menu" value="{{ registro.id if registro else 0 }}">
         <div class="row g-3">
-            <div class="col-md-4">
+            <div class="col-md-6">
                 <label class="form-label small fw-bold text-muted"><code>(*)</code> Nombre del Menú</label>
                 <div class="input-group">
                     <span class="input-group-text bg-light border-end-0"><i class="fa fa-list text-muted"></i></span>
-                    <input type="text" class="form-control border-start-0 bg-light" id="nombre_menu" value="Dashboard" readonly required>
+                    <input type="text" class="form-control border-start-0 {% if modo == 'Visualizar' %}bg-light{% endif %}" 
+                           id="nombre_menu" value="{{ registro.nombre if registro else '' }}"
+                           {% if modo == 'Visualizar' %}readonly{% endif %} placeholder="Ej: Usuarios, Reportes...">
                 </div>
             </div>
 
-            <div class="col-md-8">
-                <label class="form-label small fw-bold text-muted"><code>(*)</code> Descripción</label>
+            <div class="col-md-12">
+                <label class="form-label small fw-bold text-muted">Descripción / Nota</label>
                 <div class="input-group">
-                    <span class="input-group-text bg-light border-end-0"><i class="fa fa-info-circle text-muted"></i></span>
-                    <input type="text" class="form-control border-start-0 bg-light" id="desc_menu" value="Vista principal de indicadores y métricas" readonly required>
+                    <span class="input-group-text bg-light border-end-0"><i class="fa fa-align-left text-muted"></i></span>
+                    <input type="text" class="form-control border-start-0 {% if modo == 'Visualizar' %}bg-light{% endif %}" 
+                           id="desc_menu" value="{{ registro.descripcion if registro else '' }}"
+                           {% if modo == 'Visualizar' %}readonly{% endif %} placeholder="Opcional: Breve descripción del módulo">
                 </div>
             </div>
-            
-            <div class="col-md-12 mt-4">
+
+            <div class="col-md-12 mt-3">
                 <div class="form-check form-switch">
-                    <input class="form-check-input" type="checkbox" id="activo_menu" checked disabled>
+                    <input class="form-check-input" type="checkbox" id="activo_menu" 
+                           {% if registro is none or registro.activo %}checked{% endif %}
+                           {% if modo == 'Visualizar' %}disabled{% endif %}>
                     <label class="form-check-label small fw-bold text-muted" for="activo_menu">Menú Activo</label>
                 </div>
             </div>
@@ -34,38 +46,51 @@
 
 <div class="modal-footer bg-light border-top-0">
     <button type="button" class="btn btn-secondary" onclick="CerrarModal()">Cancelar</button>
-    <button type="button" class="btn btn-primary px-4" id="btn-guardar-menu" onclick="guardarMenu()">
-        <i class="fa fa-save me-1"></i> Guardar Menú
+    {% if modo != 'Visualizar' %}
+    <button type="button" id="btnGuardarMenu" class="btn btn-primary px-4" onclick="guardarMenu()">
+        <i class="fa fa-save me-1"></i> Guardar
     </button>
+    {% endif %}
 </div>
 
 <script>
-    function guardarMenu() {
-        $('#fondo').addClass('visible');
-        setTimeout(() => {
-            $('#fondo').removeClass('visible');
-            toastr.success('Menú guardado con éxito');
-            CerrarModal();
-        }, 800);
+function guardarMenu() {
+    const id = $('#id_menu').val();
+    const nombre = $('#nombre_menu').val().trim();
+    const descripcion = $('#desc_menu').val().trim();
+    const activo = $('#activo_menu').is(':checked');
+
+    if (!nombre) {
+        toastr.warning('El nombre es obligatorio.');
+        return;
     }
-    
-    {% if modo == 'Agregar' %}
-    $(document).ready(function() {
-        $('.modal-title').text('Nuevo Menú');
-        $('#nombre_menu').val('').prop('readonly', false).removeClass('bg-light');
-        $('#desc_menu').val('').prop('readonly', false).removeClass('bg-light');
-        $('#activo_menu').prop('checked', true).prop('disabled', false);
+
+    const $btn = $('#btnGuardarMenu');
+    $btn.prop('disabled', true).html('<i class="fa fa-spinner fa-spin me-1"></i> Guardando...');
+    $('#fondo').addClass('visible');
+
+    $.post("{{ url_for('menu.guardar') }}", {
+        id: id,
+        nombre: nombre,
+        descripcion: descripcion,
+        activo: activo ? 'true' : 'false'
+    })
+    .done(function(res) {
+        if (res.ok) {
+            toastr.success(res.msg);
+            CerrarModal();
+            if (typeof refreshTablaMenus === 'function') refreshTablaMenus();
+        } else {
+            toastr.error(res.msg);
+            $btn.prop('disabled', false).html('<i class="fa fa-save me-1"></i> Guardar');
+        }
+    })
+    .fail(function() {
+        toastr.error('Error de comunicación con el servidor.');
+        $btn.prop('disabled', false).html('<i class="fa fa-save me-1"></i> Guardar');
+    })
+    .always(function() {
+        $('#fondo').removeClass('visible');
     });
-    {% elif modo == 'Visualizar' %}
-    $(document).ready(function() {
-        $('#btn-guardar-menu').hide();
-    });
-    {% elif modo == 'Editar' %}
-    $(document).ready(function() {
-        $('.modal-title').text('Editar Menú');
-        $('#nombre_menu').prop('readonly', false).removeClass('bg-light');
-        $('#desc_menu').prop('readonly', false).removeClass('bg-light');
-        $('#activo_menu').prop('disabled', false);
-    });
-    {% endif %}
+}
 </script>

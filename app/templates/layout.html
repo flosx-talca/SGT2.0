@@ -140,14 +140,14 @@
                        hx-get="{{ url_for('main.index') }}" hx-target="#body-content" hx-push-url="true" hx-select="#body-content" hx-swap="outerHTML">
                         <i class="fa fa-th-large"></i> Dashboard
                     </a>
-                    <a class="nav-link {{ 'active' if request.endpoint == 'trabajadores' else '' }}" 
-                       href="{{ url_for('main.trabajadores') }}"
-                       hx-get="{{ url_for('main.trabajadores') }}" hx-target="#body-content" hx-push-url="true" hx-select="#body-content" hx-swap="outerHTML">
+                    <a class="nav-link {{ 'active' if request.endpoint == 'trabajador.index' else '' }}" 
+                       href="{{ url_for('trabajador.index') }}"
+                       hx-get="{{ url_for('trabajador.index') }}" hx-target="#body-content" hx-push-url="true" hx-select="#body-content" hx-swap="outerHTML">
                         <i class="fa fa-users"></i> Trabajadores
                     </a>
-                    <a class="nav-link {{ 'active' if request.endpoint == 'turnos' else '' }}" 
-                       href="{{ url_for('main.turnos') }}"
-                       hx-get="{{ url_for('main.turnos') }}" hx-target="#body-content" hx-push-url="true" hx-select="#body-content" hx-swap="outerHTML">
+                    <a class="nav-link {{ 'active' if request.endpoint == 'turno.index' else '' }}" 
+                       href="{{ url_for('turno.index') }}"
+                       hx-get="{{ url_for('turno.index') }}" hx-target="#body-content" hx-push-url="true" hx-select="#body-content" hx-swap="outerHTML">
                         <i class="fa fa-clock"></i> Turnos
                     </a>
                     <a class="nav-link {{ 'active' if request.endpoint == 'planificacion' else '' }}" 
@@ -157,24 +157,24 @@
                     </a>
 
                     <div class="sidebar-heading text-muted small fw-bold px-4 py-2 mt-2 text-uppercase" style="font-size: 0.65rem; letter-spacing: 1px;">Administración Local</div>
-                    <a class="nav-link {{ 'active' if request.endpoint == 'clientes' else '' }}" 
-                       href="{{ url_for('main.clientes') }}"
-                       hx-get="{{ url_for('main.clientes') }}" hx-target="#body-content" hx-push-url="true" hx-select="#body-content" hx-swap="outerHTML">
+                    <a class="nav-link {{ 'active' if request.endpoint == 'cliente.index' else '' }}" 
+                       href="{{ url_for('cliente.index') }}"
+                       hx-get="{{ url_for('cliente.index') }}" hx-target="#body-content" hx-push-url="true" hx-select="#body-content" hx-swap="outerHTML">
                         <i class="fa fa-handshake"></i> Clientes
                     </a>
-                    <a class="nav-link {{ 'active' if request.endpoint == 'usuarios' else '' }}" 
-                       href="{{ url_for('main.usuarios') }}"
-                       hx-get="{{ url_for('main.usuarios') }}" hx-target="#body-content" hx-push-url="true" hx-select="#body-content" hx-swap="outerHTML">
+                    <a class="nav-link {{ 'active' if request.endpoint == 'usuario.index' else '' }}" 
+                       href="{{ url_for('usuario.index') }}"
+                       hx-get="{{ url_for('usuario.index') }}" hx-target="#body-content" hx-push-url="true" hx-select="#body-content" hx-swap="outerHTML">
                         <i class="fa fa-users-cog"></i> Usuarios
                     </a>
-                    <a class="nav-link {{ 'active' if request.endpoint == 'empresas' else '' }}" 
-                       href="{{ url_for('main.empresas') }}"
-                       hx-get="{{ url_for('main.empresas') }}" hx-target="#body-content" hx-push-url="true" hx-select="#body-content" hx-swap="outerHTML">
+                    <a class="nav-link {{ 'active' if request.endpoint == 'empresa.index' else '' }}" 
+                       href="{{ url_for('empresa.index') }}"
+                       hx-get="{{ url_for('empresa.index') }}" hx-target="#body-content" hx-push-url="true" hx-select="#body-content" hx-swap="outerHTML">
                         <i class="fa fa-building"></i> Empresas
                     </a>
-                    <a class="nav-link {{ 'active' if request.endpoint == 'servicios' else '' }}" 
-                       href="{{ url_for('main.servicios') }}"
-                       hx-get="{{ url_for('main.servicios') }}" hx-target="#body-content" hx-push-url="true" hx-select="#body-content" hx-swap="outerHTML">
+                    <a class="nav-link {{ 'active' if request.endpoint == 'servicio.index' else '' }}" 
+                       href="{{ url_for('servicio.index') }}"
+                       hx-get="{{ url_for('servicio.index') }}" hx-target="#body-content" hx-push-url="true" hx-select="#body-content" hx-swap="outerHTML">
                         <i class="fa fa-concierge-bell"></i> Servicios
                     </a>
                     <a class="nav-link {{ 'active' if request.endpoint == 'region.index' else '' }}" 
@@ -187,19 +187,19 @@
                        hx-get="{{ url_for('comuna.index') }}" hx-target="#body-content" hx-push-url="true" hx-select="#body-content" hx-swap="outerHTML">
                         <i class="fa fa-map-pin"></i> Comunas
                     </a>
-                    <a class="nav-link {{ 'active' if request.endpoint == 'feriados' else '' }}" 
-                       href="{{ url_for('main.feriados') }}"
-                       hx-get="{{ url_for('main.feriados') }}" hx-target="#body-content" hx-push-url="true" hx-select="#body-content" hx-swap="outerHTML">
+                    <a class="nav-link {{ 'active' if request.endpoint == 'feriado.index' else '' }}" 
+                       href="{{ url_for('feriado.index') }}"
+                       hx-get="{{ url_for('feriado.index') }}" hx-target="#body-content" hx-push-url="true" hx-select="#body-content" hx-swap="outerHTML">
                         <i class="fa fa-umbrella-beach"></i> Feriados
                     </a>
-                    <a class="nav-link {{ 'active' if request.endpoint == 'roles' else '' }}" 
-                       href="{{ url_for('main.roles') }}"
-                       hx-get="{{ url_for('main.roles') }}" hx-target="#body-content" hx-push-url="true" hx-select="#body-content" hx-swap="outerHTML">
+                    <a class="nav-link {{ 'active' if request.endpoint == 'rol.index' else '' }}" 
+                       href="{{ url_for('rol.index') }}"
+                       hx-get="{{ url_for('rol.index') }}" hx-target="#body-content" hx-push-url="true" hx-select="#body-content" hx-swap="outerHTML">
                         <i class="fa fa-id-badge"></i> Roles
                     </a>
-                    <a class="nav-link {{ 'active' if request.endpoint == 'menus' else '' }}" 
-                       href="{{ url_for('main.menus') }}"
-                       hx-get="{{ url_for('main.menus') }}" hx-target="#body-content" hx-push-url="true" hx-select="#body-content" hx-swap="outerHTML">
+                    <a class="nav-link {{ 'active' if request.endpoint == 'menu.index' else '' }}" 
+                       href="{{ url_for('menu.index') }}"
+                       hx-get="{{ url_for('menu.index') }}" hx-target="#body-content" hx-push-url="true" hx-select="#body-content" hx-swap="outerHTML">
                         <i class="fa fa-list"></i> Menús
                     </a>
 

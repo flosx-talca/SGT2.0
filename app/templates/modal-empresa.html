@@ -1,86 +1,135 @@
 <div class="modal-header bg-primary text-white">
-<h5 class="modal-title fw-bold">(Demo) Empresa</h5>
-<button aria-label="Close" class="btn-close btn-close-white" onclick="CerrarModal()" type="button"></button>
+    <h5 class="modal-title fw-bold">
+        {% if modo == 'Agregar' %}Nueva Empresa
+        {% elif modo == 'Editar' %}Editar Empresa
+        {% else %}Detalle de Empresa
+        {% endif %}
+    </h5>
+    <button type="button" class="btn-close btn-close-white" onclick="CerrarModal()"></button>
 </div>
+
 <div class="modal-body p-4">
-<form id="form_empresa">
-<input id="id_empresa" name="id_empresa" type="hidden" value="0"/>
-<div class="row g-3">
-<div class="col-md-6">
-<label class="form-label small fw-bold text-muted"><code>(*)</code> RUT</label>
-<div class="input-group">
-<span class="input-group-text bg-light border-end-0"><i class="fa fa-id-card text-muted"></i></span>
-<input class="form-control border-start-0" id="rut_empresa" name="rut" placeholder="76.543.210-K" required="" type="text" value=""/>
+    <form id="form_empresa">
+        <input type="hidden" id="id_empresa" value="{{ registro.id if registro else 0 }}">
+        <div class="row g-3">
+            <div class="col-md-4">
+                <label class="form-label small fw-bold text-muted"><code>(*)</code> RUT Empresa</label>
+                <div class="input-group">
+                    <span class="input-group-text bg-light border-end-0"><i class="fa fa-id-card text-muted"></i></span>
+                    <input type="text" class="form-control border-start-0 {% if modo == 'Visualizar' %}bg-light{% endif %}" 
+                           id="rut_empresa" value="{{ registro.rut if registro else '' }}"
+                           {% if modo == 'Visualizar' %}readonly{% endif %} placeholder="12.345.678-9">
+                </div>
+            </div>
+
+            <div class="col-md-8">
+                <label class="form-label small fw-bold text-muted"><code>(*)</code> Razón Social</label>
+                <input type="text" class="form-control {% if modo == 'Visualizar' %}bg-light{% endif %}" 
+                       id="razon_social_empresa" value="{{ registro.razon_social if registro else '' }}"
+                       {% if modo == 'Visualizar' %}readonly{% endif %} placeholder="Nombre legal de la empresa">
+            </div>
+
+            <div class="col-md-6">
+                <label class="form-label small fw-bold text-muted"><code>(*)</code> Cliente / Dueño</label>
+                <select id="cliente_id_empresa" class="form-select {% if modo == 'Visualizar' %}bg-light{% endif %}"
+                        {% if modo == 'Visualizar' %}disabled{% endif %}>
+                    <option value="">-- Seleccione Cliente --</option>
+                    {% for c in clientes %}
+                    <option value="{{ c.id }}" {% if registro and registro.cliente_id == c.id %}selected{% endif %}>
+                        {{ c.nombre }} {{ c.apellidos }} ({{ c.rut }})
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="col-md-6">
+                <label class="form-label small fw-bold text-muted"><code>(*)</code> Comuna</label>
+                <select id="comuna_id_empresa" class="form-select {% if modo == 'Visualizar' %}bg-light{% endif %}"
+                        {% if modo == 'Visualizar' %}disabled{% endif %}>
+                    <option value="">-- Seleccione Comuna --</option>
+                    {% for com in comunas %}
+                    <option value="{{ com.id }}" {% if registro and registro.comuna_id == com.id %}selected{% endif %}>
+                        {{ com.nombre }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="col-md-12">
+                <label class="form-label small fw-bold text-muted">Dirección</label>
+                <div class="input-group">
+                    <span class="input-group-text bg-light border-end-0"><i class="fa fa-map-marker-alt text-muted"></i></span>
+                    <input type="text" class="form-control border-start-0 {% if modo == 'Visualizar' %}bg-light{% endif %}" 
+                           id="direccion_empresa" value="{{ registro.direccion if registro else '' }}"
+                           {% if modo == 'Visualizar' %}readonly{% endif %} placeholder="Calle #123, Oficina X">
+                </div>
+            </div>
+
+            <div class="col-md-12 mt-3">
+                <div class="form-check form-switch">
+                    <input class="form-check-input" type="checkbox" id="activo_empresa" 
+                           {% if registro is none or registro.activo %}checked{% endif %}
+                           {% if modo == 'Visualizar' %}disabled{% endif %}>
+                    <label class="form-check-label small fw-bold text-muted" for="activo_empresa">Empresa Activa</label>
+                </div>
+            </div>
+        </div>
+    </form>
 </div>
-</div>
-<div class="col-md-6">
-<label class="form-label small fw-bold text-muted"><code>(*)</code> Razón Social</label>
-<div class="input-group">
-<span class="input-group-text bg-light border-end-0"><i class="fa fa-building text-muted"></i></span>
-<input class="form-control border-start-0" id="razon_social" name="razon_social" placeholder="Ej: Inversiones ABC SpA" required="" type="text" value=""/>
-</div>
-</div>
-<div class="col-md-12">
-<label class="form-label small fw-bold text-muted"><code>(*)</code> Cliente Asociado</label>
-<select class="form-select select2-modal" id="cliente_id" name="cliente_id" required="">
-<option value="">Seleccione un cliente...</option>
-<option value="1">Ricardo Soto Mayor (Petroleum)</option>
-<option value="2">Claudia Herrera Lynch (Retail)</option>
-<option value="3">Inversiones Delta</option>
-</select>
-</div>
-<div class="col-12">
-<label class="form-label small fw-bold text-muted"><code>(*)</code> Dirección</label>
-<div class="input-group">
-<span class="input-group-text bg-light border-end-0"><i class="fa fa-map-marker-alt text-muted"></i></span>
-<input class="form-control border-start-0" id="direccion" name="direccion" placeholder="Av. Alameda 1234, Santiago" required="" type="text" value=""/>
-</div>
-</div>
-<div class="col-md-6">
-<label class="form-label small fw-bold text-muted">Estado</label>
-<select class="form-select" id="estado_empresa" name="estado">
-<option selected="" value="1">Activo</option>
-<option value="0">Inactivo</option>
-</select>
-</div>
-<div class="col-md-6">
-<label class="form-label small fw-bold text-muted">Secciones o Áreas</label>
-<select class="form-select" id="secciones_empresa" multiple="" name="secciones[]" size="3">
-<!-- Mock Sections -->
-<option value="gasolinera">Gasolinera (Pista)</option>
-<option value="pronto">Tienda Pronto</option>
-<option value="sala_venta">Sala de Ventas</option>
-<option value="lavado">Servicio de Lavado</option>
-<option value="oficina">Administración / Oficina</option>
-</select>
-<div class="form-text small text-muted">Mantenga Ctrl o Cmd para seleccionar múltiples opciones.</div>
-</div>
-</div>
-</form>
-</div>
+
 <div class="modal-footer bg-light border-top-0">
-<button class="btn btn-secondary" onclick="CerrarModal()" type="button">
-<i class="fa fa-times me-1"></i> Cerrar
+    <button type="button" class="btn btn-secondary" onclick="CerrarModal()">Cancelar</button>
+    {% if modo != 'Visualizar' %}
+    <button type="button" id="btnGuardarEmpresa" class="btn btn-primary px-4" onclick="guardarEmpresa()">
+        <i class="fa fa-save me-1"></i> Guardar
     </button>
-<button class="btn btn-primary" id="btnGuardarEmpresa" onclick="guardarEmpresa()" type="button">
-<i class="fa fa-save me-1"></i> Guardar
-    </button>
+    {% endif %}
 </div>
+
 <script>
 function guardarEmpresa() {
-    Swal.fire({
-        title: '¿Guardar Empresa?',
-        text: "Modo Prototipo Estático: Los datos no se guardarán en BD.",
-        icon: 'info',
-        showCancelButton: true,
-        confirmButtonColor: '#18bc9c',
-        cancelButtonColor: '#d33',
-        confirmButtonText: 'Simular Guardado'
-    }).then((result) => {
-        if (result.isConfirmed) {
-            toastr.success('Empresa guardada exitosamente (Simulación).');
+    const id = $('#id_empresa').val();
+    const rut = $('#rut_empresa').val().trim();
+    const razon_social = $('#razon_social_empresa').val().trim();
+    const cliente_id = $('#cliente_id_empresa').val();
+    const comuna_id = $('#comuna_id_empresa').val();
+    const direccion = $('#direccion_empresa').val().trim();
+    const activo = $('#activo_empresa').is(':checked');
+
+    if (!rut || !razon_social || !cliente_id || !comuna_id) {
+        toastr.warning('Faltan campos obligatorios (*).');
+        return;
+    }
+
+    const $btn = $('#btnGuardarEmpresa');
+    $btn.prop('disabled', true).html('<i class="fa fa-spinner fa-spin me-1"></i> Guardando...');
+    $('#fondo').addClass('visible');
+
+    $.post("{{ url_for('empresa.guardar') }}", {
+        id: id,
+        rut: rut,
+        razon_social: razon_social,
+        cliente_id: cliente_id,
+        comuna_id: comuna_id,
+        direccion: direccion,
+        activo: activo ? 'true' : 'false'
+    })
+    .done(function(res) {
+        if (res.ok) {
+            toastr.success(res.msg);
             CerrarModal();
+            if (typeof refreshTablaEmpresas === 'function') refreshTablaEmpresas();
+        } else {
+            toastr.error(res.msg);
+            $btn.prop('disabled', false).html('<i class="fa fa-save me-1"></i> Guardar');
         }
+    })
+    .fail(function() {
+        toastr.error('Error de comunicación con el servidor.');
+        $btn.prop('disabled', false).html('<i class="fa fa-save me-1"></i> Guardar');
+    })
+    .always(function() {
+        $('#fondo').removeClass('visible');
     });
 }
 </script>
