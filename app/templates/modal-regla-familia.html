@@ -1,86 +1,85 @@
 <div class="modal-header bg-primary text-white">
-    <h5 class="modal-title fw-bold">Familia de Reglas</h5>
-    <button type="button" class="btn-close btn-close-white" onclick="CerrarModal()" aria-label="Close"></button>
+    <h5 class="modal-title fw-bold">
+        {% if modo == 'Agregar' %}Nueva Familia de Reglas
+        {% elif modo == 'Editar' %}Editar Familia de Reglas
+        {% else %}Ver Familia de Reglas{% endif %}
+    </h5>
+    <button type="button" class="btn-close btn-close-white" onclick="CerrarModal()"></button>
 </div>
 
 <div class="modal-body p-4">
     <form id="form_regla_familia">
-        <!-- Banner Informativo -->
+        <input type="hidden" name="id" value="{{ registro.id if registro else 0 }}">
+        <input type="hidden" name="activo" value="true" id="activo_familia">
+
         <div class="alert alert-info border-0 shadow-sm mb-4">
             <div class="d-flex align-items-center">
                 <i class="fa fa-sitemap fa-2x me-3 opacity-50"></i>
                 <div>
-                    <h6 class="fw-bold mb-1">Gestión de Motor Genérico</h6>
-                    <p class="mb-0 small">Estás visualizando/editando la lógica base de una familia de evaluación.</p>
+                    <h6 class="fw-bold mb-1">Motor Genérico de Evaluación</h6>
+                    <p class="mb-0 small">Las familias definen la lógica base. El código debe coincidir con la función del motor en <code>rule_engine.py</code>.</p>
                 </div>
             </div>
         </div>
 
         <div class="row g-3">
             <div class="col-md-6">
-                <label class="form-label small fw-bold text-muted"><code>(*)</code> Código de Familia</label>
+                <label class="form-label small fw-bold text-muted">(*) Código</label>
                 <div class="input-group">
                     <span class="input-group-text bg-light border-end-0"><i class="fa fa-code text-muted"></i></span>
-                    <input type="text" class="form-control border-start-0 bg-light" id="codigo_familia" value="comparison" readonly required>
+                    <input type="text" class="form-control border-start-0 {% if modo != 'Agregar' %}bg-light{% endif %}"
+                        name="codigo" id="codigo_familia"
+                        value="{{ registro.codigo if registro else '' }}"
+                        placeholder="ej: comparison"
+                        {% if modo != 'Agregar' %}readonly{% endif %} required>
                 </div>
+                <div class="form-text small">Identificador estable (sin espacios, snake_case)</div>
             </div>
 
             <div class="col-md-6">
-                <label class="form-label small fw-bold text-muted"><code>(*)</code> Función Genérica (Python)</label>
+                <label class="form-label small fw-bold text-muted">(*) Nombre</label>
                 <div class="input-group">
-                    <span class="input-group-text bg-light border-end-0"><i class="fa fa-terminal text-muted"></i></span>
-                    <input type="text" class="form-control border-start-0 bg-light" id="funcion_generica" value="eval_comparison" readonly required>
+                    <span class="input-group-text bg-light border-end-0"><i class="fa fa-tag text-muted"></i></span>
+                    <input type="text" class="form-control border-start-0"
+                        name="nombre" value="{{ registro.nombre if registro else '' }}"
+                        placeholder="ej: Comparación" required
+                        {% if modo == 'Visualizar' %}disabled{% endif %}>
                 </div>
             </div>
-            
-            <div class="col-md-12">
-                <label class="form-label small fw-bold text-muted"><code>(*)</code> Descripción de la Lógica</label>
-                <textarea class="form-control bg-light" id="desc_familia" rows="2" readonly required>Compara valores con umbrales (==, !=, >, <)</textarea>
+
+            <div class="col-12">
+                <label class="form-label small fw-bold text-muted">Descripción</label>
+                <textarea class="form-control" name="descripcion" rows="2"
+                    placeholder="Describe qué evalúa este motor..."
+                    {% if modo == 'Visualizar' %}disabled{% endif %}>{{ registro.descripcion if registro else '' }}</textarea>
             </div>
 
-            <div class="col-md-12">
-                <label class="form-label small fw-bold text-muted">Estado del Motor</label>
-                <select class="form-select" id="estado_familia">
-                    <option value="core" selected>Core (Sistema Base)</option>
-                    <option value="custom">Custom (Personalizado)</option>
-                    <option value="inactivo">Inactivo</option>
+            {% if registro and modo != 'Agregar' %}
+            <div class="col-md-6">
+                <label class="form-label small fw-bold text-muted">Estado</label>
+                <select class="form-select" id="select_activo_familia"
+                    onchange="document.getElementById('activo_familia').value = this.value"
+                    {% if modo == 'Visualizar' %}disabled{% endif %}>
+                    <option value="true" {{ 'selected' if registro.activo }}>Activa</option>
+                    <option value="false" {{ 'selected' if not registro.activo }}>Inactiva</option>
                 </select>
             </div>
+            <div class="col-md-6">
+                <label class="form-label small fw-bold text-muted">Reglas asignadas</label>
+                <div class="form-control bg-light border" style="min-height: 38px;">
+                    <span class="badge bg-secondary-subtle text-secondary border">{{ registro.reglas | length }}</span> reglas en catálogo
+                </div>
+            </div>
+            {% endif %}
         </div>
     </form>
 </div>
 
 <div class="modal-footer bg-light border-top-0">
     <button type="button" class="btn btn-secondary" onclick="CerrarModal()">Cancelar</button>
-    <button type="button" class="btn btn-primary px-4" id="btn-guardar-familia" onclick="guardarReglaFamilia()">
-        <i class="fa fa-save me-1"></i> Guardar Familia
+    {% if modo != 'Visualizar' %}
+    <button type="button" class="btn btn-primary px-4" onclick="guardarFamilia()">
+        <i class="fa fa-save me-1"></i> Guardar
     </button>
-</div>
-
-<script>
-    function guardarReglaFamilia() {
-        // Simulación de guardado
-        $('#fondo').addClass('visible');
-        setTimeout(() => {
-            $('#fondo').removeClass('visible');
-            toastr.success('Familia de reglas guardada con éxito');
-            CerrarModal();
-        }, 800);
-    }
-    
-    // Lógica dinámica según el modo recibido desde Flask
-    {% if modo == 'Agregar' %}
-    $(document).ready(function() {
-        $('.modal-title').text('Nueva Familia de Reglas');
-        $('#codigo_familia').val('').prop('readonly', false).removeClass('bg-light');
-        $('#funcion_generica').val('').prop('readonly', false).removeClass('bg-light');
-        $('#desc_familia').val('').prop('readonly', false).removeClass('bg-light');
-        $('#estado_familia').val('custom');
-    });
-    {% elif modo == 'Visualizar' %}
-    $(document).ready(function() {
-        $('#form_regla_familia input, #form_regla_familia select, #form_regla_familia textarea').prop('disabled', true);
-        $('#btn-guardar-familia').hide();
-    });
     {% endif %}
-</script>
+</div>

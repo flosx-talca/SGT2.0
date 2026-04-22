@@ -1,105 +1,156 @@
 {% extends "_partial.html" if is_htmx else "layout.html" %}
 
-{% block title %}Mis Reglas{% endblock %}
-
-{% block head %}
-
-{% endblock %}
-
-{% block header %}Reglas de mi Empresa{% endblock %}
-{% block page_title %}Mis Reglas{% endblock %}
-
-{% block actions %}
-<button class="btn btn-primary shadow-sm" onclick="Modal('Agregar', 0, '/modal-regla-empresa')">
-    <i class="fa fa-plus me-1"></i> Agregar Regla
-</button>
-{% endblock %}
+{% block title %}Reglas por Empresa{% endblock %}
+{% block header %}Motor de Reglas{% endblock %}
+{% block page_title %}Reglas por Empresa{% endblock %}
 
 {% block content %}
 <div class="alert alert-primary border-0 shadow-sm mb-4">
-                <div class="d-flex align-items-center">
-                    <i class="fa fa-info-circle fa-2x me-3 opacity-50"></i>
-                    <div>
-                        <h6 class="fw-bold mb-1">Información de Perfil</h6>
-                        <p class="mb-0 small">Como administrador de empresa, puedes activar/desactivar reglas y ajustar sus valores permitidos. Las reglas base y su lógica son gestionadas por soporte central.</p>
-                    </div>
-                </div>
-            </div>
+    <div class="d-flex align-items-center">
+        <i class="fa fa-info-circle fa-2x me-3 opacity-50"></i>
+        <div>
+            <h6 class="fw-bold mb-1">Vista de Empresa</h6>
+            <p class="mb-0 small">Puedes activar/desactivar reglas y ajustar los valores permitidos. La lógica base y el catálogo son administrados por el Super Admin.</p>
+        </div>
+    </div>
+</div>
 
-            <div class="row">
-                <div class="col-12">
-                    <div class="card shadow-sm border-0">
-                        <div class="card-body">
-                            <table id="tabla_reglas_empresa" class="table table-hover dt-responsive nowrap w-100 align-middle">
-                                <thead class="table-light text-uppercase" style="font-size: 0.75rem; letter-spacing: 1px;">
-                                    <tr>
-                                        <th>Regla</th>
-                                        <th>Descripción</th>
-                                        <th>Configuración Actual</th>
-                                        <th>Estado</th>
-                                        <th class="text-center">Acciones</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <tr>
-                                        <td><span class="fw-bold text-primary">max_consecutive_days</span></td>
-                                        <td>Define el máximo de días seguidos que un trabajador puede ser asignado.</td>
-                                        <td><span class="badge bg-light text-dark border"><i class="fa fa-history me-1"></i>Máx: 6 días</span></td>
-                                        <td>
-                                            <span class="badge bg-success-subtle text-success">Activo</span>
-                                        </td>
-                                        <td class="text-center">
-                                            <div class="btn-group btn-group-sm">
-                                                <button class="btn btn-outline-info" onclick="Modal('Visualizar', 1, '/modal-regla-empresa')"><i class="fa fa-eye"></i></button>
-                                                <button class="btn btn-outline-warning" onclick="Modal('Editar', 1, '/modal-regla-empresa')"><i class="fa fa-edit"></i></button>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                    <tr>
-                                        <td><span class="fw-bold text-primary">min_rest_hours</span></td>
-                                        <td>Horas mínimas de descanso entre el fin de un turno y el inicio del siguiente.</td>
-                                        <td><span class="badge bg-light text-dark border"><i class="fa fa-clock me-1"></i>Mín: 12 horas</span></td>
-                                        <td>
-                                            <span class="badge bg-success-subtle text-success">Activo</span>
-                                        </td>
-                                        <td class="text-center">
-                                            <div class="btn-group btn-group-sm">
-                                                <button class="btn btn-outline-info" onclick="Modal('Visualizar', 2, '/modal-regla-empresa')"><i class="fa fa-eye"></i></button>
-                                                <button class="btn btn-outline-warning" onclick="Modal('Editar', 2, '/modal-regla-empresa')"><i class="fa fa-edit"></i></button>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                    <tr>
-                                        <td><span class="fw-bold text-primary">sunday_rule</span></td>
-                                        <td>Evaluación de domingos legales trabajados por mes.</td>
-                                        <td><span class="badge bg-light text-dark border"><i class="fa fa-calendar-day me-1"></i>Eval: Domingos</span></td>
-                                        <td>
-                                            <span class="badge bg-danger-subtle text-danger">Inactivo</span>
-                                        </td>
-                                        <td class="text-center">
-                                            <div class="btn-group btn-group-sm">
-                                                <button class="btn btn-outline-info" onclick="Modal('Visualizar', 4, '/modal-regla-empresa')"><i class="fa fa-eye"></i></button>
-                                                <button class="btn btn-outline-warning" onclick="Modal('Editar', 4, '/modal-regla-empresa')"><i class="fa fa-edit"></i></button>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                </tbody>
-                            </table>
+<div class="card shadow-sm border-0 mb-3">
+    <div class="card-body py-3">
+        <div class="d-flex align-items-center gap-3">
+            <label class="form-label mb-0 fw-bold small text-muted">Filtrar empresa:</label>
+            <select class="form-select form-select-sm shadow-sm" style="max-width: 320px;"
+                id="filtro_empresa" onchange="filtrarEmpresa()">
+                <option value="0">— Todas las empresas —</option>
+                {% for emp in empresas %}
+                <option value="{{ emp.id }}" {{ 'selected' if empresa_id_sel == emp.id }}>{{ emp.razon_social }}</option>
+                {% endfor %}
+            </select>
+            <small class="text-muted">{{ registros | length }} regla(s) asignada(s)</small>
+        </div>
+    </div>
+</div>
+
+<div class="card shadow-sm border-0">
+    <div class="card-body">
+        <table id="tabla_reglas_empresa" class="table table-hover dt-responsive nowrap w-100 align-middle">
+            <thead class="table-light text-uppercase" style="font-size: 0.75rem; letter-spacing: 1px;">
+                <tr>
+                    <th>Empresa</th>
+                    <th>Regla</th>
+                    <th>Tipo</th>
+                    <th>Parámetros Activos</th>
+                    <th class="text-center">Estado</th>
+                    <th class="text-center">Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for reg in registros %}
+                <tr id="row-regla-emp-{{ reg.id }}">
+                    <td class="small text-muted">{{ reg.empresa.razon_social }}</td>
+                    <td>
+                        <span class="fw-bold text-primary">{{ reg.catalogo.nombre }}</span><br>
+                        <small class="text-muted">{{ reg.catalogo.descripcion or '' }}</small>
+                    </td>
+                    <td>
+                        {% if reg.catalogo.rule_type == 'hard' %}
+                        <span class="badge bg-danger">HARD</span>
+                        {% elif reg.catalogo.rule_type == 'soft' %}
+                        <span class="badge bg-warning text-dark">SOFT</span>
+                        {% elif reg.catalogo.rule_type == 'client_rule' %}
+                        <span class="badge bg-info text-dark">CLIENTE</span>
+                        {% else %}
+                        <span class="badge bg-secondary">{{ reg.catalogo.rule_type | upper }}</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <code class="small">{{ reg.params | tojson if reg.params else '{}' }}</code>
+                    </td>
+                    <td class="text-center">
+                        {% if reg.is_enabled %}
+                        <span class="badge bg-success-subtle text-success">Activa</span>
+                        {% else %}
+                        <span class="badge bg-secondary-subtle text-secondary">Inactiva</span>
+                        {% endif %}
+                    </td>
+                    <td class="text-center">
+                        <div class="btn-group btn-group-sm">
+                            <button class="btn btn-outline-info" title="Ver"
+                                onclick="Modal('Visualizar', {{ reg.id }}, '/reglas/empresa/modal')">
+                                <i class="fa fa-eye"></i>
+                            </button>
+                            <button class="btn btn-outline-warning" title="Editar parámetros"
+                                onclick="Modal('Editar', {{ reg.id }}, '/reglas/empresa/modal')">
+                                <i class="fa fa-edit"></i>
+                            </button>
+                            <button class="btn btn-outline-{{ 'danger' if reg.is_enabled else 'success' }}"
+                                title="{{ 'Desactivar' if reg.is_enabled else 'Activar' }}"
+                                onclick="toggleReglaEmpresa({{ reg.id }})">
+                                <i class="fa fa-{{ 'ban' if reg.is_enabled else 'check' }}"></i>
+                            </button>
                         </div>
-                    </div>
-                </div>
-            </div>
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="6" class="text-center text-muted py-5">
+                        <i class="fa fa-briefcase fa-2x mb-2 d-block opacity-25"></i>
+                        No hay reglas asignadas para esta empresa.
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
 {% endblock %}
 
 {% block scripts %}
 <script>
-    $(document).ready(function () {
+    $(document).ready(function() {
         $('#tabla_reglas_empresa').DataTable({
             responsive: true,
-            language: {
-                url: '/static/i18n/es-ES.json'
-            }
+            language: { url: '/static/i18n/es-ES.json' }
         });
     });
+
+    function filtrarEmpresa() {
+        const empresaId = $('#filtro_empresa').val();
+        window.location.href = '/reglas/empresa?empresa_id=' + empresaId;
+    }
+
+    function toggleReglaEmpresa(id) {
+        $('#fondo').addClass('visible');
+        $.post('/reglas/empresa/toggle', { id: id }, function(res) {
+            $('#fondo').removeClass('visible');
+            if (res.ok) {
+                toastr.success(res.msg);
+                setTimeout(() => location.reload(), 400);
+            } else {
+                toastr.error(res.msg);
+            }
+        }).fail(function() {
+            $('#fondo').removeClass('visible');
+            toastr.error('Error al cambiar estado.');
+        });
+    }
+
+    function guardarReglaEmpresa() {
+        const formData = $('#form_regla_empresa').serialize();
+        $('#fondo').addClass('visible');
+        $.post('/reglas/empresa/guardar', formData, function(res) {
+            $('#fondo').removeClass('visible');
+            if (res.ok) {
+                toastr.success(res.msg);
+                CerrarModal();
+                setTimeout(() => location.reload(), 400);
+            } else {
+                toastr.error(res.msg);
+            }
+        }).fail(function(xhr) {
+            $('#fondo').removeClass('visible');
+            toastr.error(xhr.responseJSON?.msg || 'Error al guardar.');
+        });
+    }
 </script>
 {% endblock %}

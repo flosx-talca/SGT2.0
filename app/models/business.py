@@ -96,3 +96,50 @@ class TrabajadorAusencia(db.Model):
     fecha_fin = db.Column(db.Date, nullable=False)
     motivo = db.Column(db.String(20), nullable=False)
     creado_en = db.Column(db.DateTime, default=datetime.utcnow)
+
+
+# ─── Motor de Reglas ──────────────────────────────────────────────────────────
+
+class ReglaFamilia(db.Model):
+    __tablename__ = 'regla_familia'
+    id = db.Column(db.Integer, primary_key=True)
+    codigo = db.Column(db.String(50), nullable=False, unique=True)
+    nombre = db.Column(db.String(100), nullable=False)
+    descripcion = db.Column(db.Text)
+    activo = db.Column(db.Boolean, default=True)
+
+    reglas = db.relationship('ReglaCatalogo', backref='familia', lazy=True)
+
+
+class ReglaCatalogo(db.Model):
+    __tablename__ = 'regla_catalogo'
+    id = db.Column(db.Integer, primary_key=True)
+    familia_id = db.Column(db.Integer, db.ForeignKey('regla_familia.id', ondelete='RESTRICT'), nullable=False)
+    codigo = db.Column(db.String(100), nullable=False, unique=True)
+    nombre = db.Column(db.String(150), nullable=False)
+    descripcion = db.Column(db.Text)
+    rule_type = db.Column(db.String(20), nullable=False)        # hard | soft | client_rule | worker_restriction
+    scope = db.Column(db.String(20), nullable=False)            # empresa | sucursal | area | trabajador
+    field = db.Column(db.String(100))
+    operator = db.Column(db.String(10))
+    params_default = db.Column(db.JSON)
+    params_editables = db.Column(db.JSON)                       # lista de keys que el cliente puede editar
+    activo = db.Column(db.Boolean, default=True)
+    creado_en = db.Column(db.DateTime, default=datetime.utcnow)
+
+    asignaciones = db.relationship('ReglaEmpresa', backref='catalogo', lazy=True, cascade='all, delete-orphan')
+
+
+class ReglaEmpresa(db.Model):
+    __tablename__ = 'regla_empresa'
+    id = db.Column(db.Integer, primary_key=True)
+    regla_catalogo_id = db.Column(db.Integer, db.ForeignKey('regla_catalogo.id', ondelete='CASCADE'), nullable=False)
+    empresa_id = db.Column(db.Integer, db.ForeignKey('empresa.id', ondelete='CASCADE'), nullable=False)
+    params = db.Column(db.JSON)
+    is_enabled = db.Column(db.Boolean, default=True)
+    creado_en = db.Column(db.DateTime, default=datetime.utcnow)
+    actualizado_en = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    empresa = db.relationship('Empresa', backref=db.backref('reglas_empresa', lazy=True))
+
+    __table_args__ = (db.UniqueConstraint('regla_catalogo_id', 'empresa_id', name='uq_regla_empresa'),)

@@ -1,0 +1,28 @@
+{% for reg in registros %}
+<tr id="row-familia-{{ reg.id }}">
+    <td><code class="fw-bold text-primary">{{ reg.codigo }}</code></td>
+    <td class="fw-bold">{{ reg.nombre }}</td>
+    <td class="text-muted small">{{ reg.descripcion or '—' }}</td>
+    <td class="text-center">
+        <span class="badge bg-secondary-subtle text-secondary border">{{ reg.reglas | length }}</span>
+    </td>
+    <td class="text-center">
+        {% if reg.activo %}
+        <span class="badge bg-success-subtle text-success">Activa</span>
+        {% else %}
+        <span class="badge bg-secondary-subtle text-secondary">Inactiva</span>
+        {% endif %}
+    </td>
+    <td class="text-center">
+        <div class="btn-group btn-group-sm">
+            <button class="btn btn-outline-info" onclick="Modal('Visualizar', {{ reg.id }}, '/reglas/familias/modal')"><i class="fa fa-eye"></i></button>
+            <button class="btn btn-outline-warning" onclick="Modal('Editar', {{ reg.id }}, '/reglas/familias/modal')"><i class="fa fa-edit"></i></button>
+            <button class="btn btn-outline-{{ 'danger' if reg.activo else 'success' }}" onclick="toggleFamilia({{ reg.id }})">
+                <i class="fa fa-{{ 'ban' if reg.activo else 'check' }}"></i>
+            </button>
+        </div>
+    </td>
+</tr>
+{% else %}
+<tr><td colspan="6" class="text-center text-muted py-4">No hay familias registradas.</td></tr>
+{% endfor %}

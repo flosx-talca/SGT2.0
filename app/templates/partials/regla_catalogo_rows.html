@@ -1,0 +1,34 @@
+{% for reg in registros %}
+<tr id="row-catalogo-{{ reg.id }}">
+    <td>
+        <span class="fw-bold">{{ reg.nombre }}</span><br>
+        <small class="text-muted"><code>{{ reg.codigo }}</code></small>
+    </td>
+    <td><code>{{ reg.familia.codigo }}</code></td>
+    <td>
+        {% if reg.rule_type == 'hard' %}<span class="badge bg-danger">HARD</span>
+        {% elif reg.rule_type == 'soft' %}<span class="badge bg-warning text-dark">SOFT</span>
+        {% elif reg.rule_type == 'client_rule' %}<span class="badge bg-info text-dark">CLIENTE</span>
+        {% else %}<span class="badge bg-secondary">{{ reg.rule_type | upper }}</span>{% endif %}
+    </td>
+    <td>{{ reg.scope }}</td>
+    <td class="text-muted small">{{ reg.field or '—' }}</td>
+    <td><code class="small">{{ reg.params_default | tojson if reg.params_default else '{}' }}</code></td>
+    <td class="text-center">
+        {% if reg.activo %}<span class="badge bg-success-subtle text-success">Activa</span>
+        {% else %}<span class="badge bg-secondary-subtle text-secondary">Inactiva</span>{% endif %}
+    </td>
+    <td class="text-center">
+        <div class="btn-group btn-group-sm">
+            <button class="btn btn-outline-info" onclick="Modal('Visualizar', {{ reg.id }}, '/reglas/catalogo/modal')"><i class="fa fa-eye"></i></button>
+            <button class="btn btn-outline-warning" onclick="Modal('Editar', {{ reg.id }}, '/reglas/catalogo/modal')"><i class="fa fa-edit"></i></button>
+            <button class="btn btn-outline-success" onclick="Modal('Asignar', {{ reg.id }}, '/reglas/catalogo/modal')"><i class="fa fa-share-square"></i></button>
+            <button class="btn btn-outline-{{ 'danger' if reg.activo else 'success' }}" onclick="toggleCatalogo({{ reg.id }})">
+                <i class="fa fa-{{ 'ban' if reg.activo else 'check' }}"></i>
+            </button>
+        </div>
+    </td>
+</tr>
+{% else %}
+<tr><td colspan="8" class="text-center text-muted py-4">No hay reglas en el catálogo.</td></tr>
+{% endfor %}

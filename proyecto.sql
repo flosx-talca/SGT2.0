@@ -235,3 +235,56 @@ CREATE INDEX IF NOT EXISTS ix_empresa_activo     ON empresa(activo);
 CREATE INDEX IF NOT EXISTS ix_empresa_cliente    ON empresa(cliente_id);
 CREATE INDEX IF NOT EXISTS ix_usuario_rol        ON usuario(rol_id);
 CREATE INDEX IF NOT EXISTS ix_usuario_activo     ON usuario(activo);
+
+-- ==========================================
+-- 16. REGLA_FAMILIA (Motor genérico — familias de evaluación)
+-- ==========================================
+CREATE TABLE IF NOT EXISTS regla_familia (
+    id          SERIAL PRIMARY KEY,
+    codigo      VARCHAR(50)  NOT NULL UNIQUE,
+    nombre      VARCHAR(100) NOT NULL,
+    descripcion TEXT,
+    activo      BOOLEAN DEFAULT TRUE
+);
+CREATE INDEX IF NOT EXISTS ix_regla_familia_activo ON regla_familia(activo);
+-- Valores de referencia: comparison, range, set_membership, sequence,
+--   logic_all_any_not, calendar, worker_attribute, assignment_constraint
+
+-- ==========================================
+-- 17. REGLA_CATALOGO (Reglas globales — solo Super Admin)
+-- ==========================================
+CREATE TABLE IF NOT EXISTS regla_catalogo (
+    id               SERIAL PRIMARY KEY,
+    familia_id       INTEGER NOT NULL REFERENCES regla_familia(id) ON DELETE RESTRICT,
+    codigo           VARCHAR(100) NOT NULL UNIQUE,
+    nombre           VARCHAR(150) NOT NULL,
+    descripcion      TEXT,
+    rule_type        VARCHAR(20)  NOT NULL CHECK (rule_type IN ('hard','soft','client_rule','worker_restriction')),
+    scope            VARCHAR(20)  NOT NULL CHECK (scope IN ('empresa','sucursal','area','trabajador')),
+    field            VARCHAR(100),
+    operator         VARCHAR(10),
+    params_default   JSONB DEFAULT '{}'::jsonb,
+    params_editables JSONB DEFAULT '[]'::jsonb,
+    activo           BOOLEAN DEFAULT TRUE,
+    creado_en        TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS ix_regla_catalogo_familia ON regla_catalogo(familia_id);
+CREATE INDEX IF NOT EXISTS ix_regla_catalogo_activo  ON regla_catalogo(activo);
+CREATE INDEX IF NOT EXISTS ix_regla_catalogo_tipo    ON regla_catalogo(rule_type);
+
+-- ==========================================
+-- 18. REGLA_EMPRESA (Instancias asignadas por Super Admin a empresas)
+-- ==========================================
+CREATE TABLE IF NOT EXISTS regla_empresa (
+    id                 SERIAL PRIMARY KEY,
+    regla_catalogo_id  INTEGER NOT NULL REFERENCES regla_catalogo(id) ON DELETE CASCADE,
+    empresa_id         INTEGER NOT NULL REFERENCES empresa(id) ON DELETE CASCADE,
+    params             JSONB DEFAULT '{}'::jsonb,
+    is_enabled         BOOLEAN DEFAULT TRUE,
+    creado_en          TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    actualizado_en     TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT uq_regla_empresa UNIQUE (regla_catalogo_id, empresa_id)
+);
+CREATE INDEX IF NOT EXISTS ix_regla_empresa_empresa   ON regla_empresa(empresa_id);
+CREATE INDEX IF NOT EXISTS ix_regla_empresa_catalogo  ON regla_empresa(regla_catalogo_id);
+CREATE INDEX IF NOT EXISTS ix_regla_empresa_enabled   ON regla_empresa(is_enabled);

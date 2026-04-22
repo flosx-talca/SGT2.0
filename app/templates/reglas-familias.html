@@ -1,16 +1,11 @@
 {% extends "_partial.html" if is_htmx else "layout.html" %}
 
-{% block title %}Motores Genéricos{% endblock %}
-
-{% block head %}
-
-{% endblock %}
-
-{% block header %}Familias de Reglas{% endblock %}
-{% block page_title %}Motores Genéricos{% endblock %}
+{% block title %}Familias de Reglas{% endblock %}
+{% block header %}Motor de Reglas{% endblock %}
+{% block page_title %}Familias de Evaluación{% endblock %}
 
 {% block actions %}
-<button class="btn btn-primary shadow-sm" onclick="Modal('Agregar', 0, '/modal-regla-familia')">
+<button class="btn btn-primary shadow-sm" onclick="Modal('Agregar', 0, '/reglas/familias/modal')">
     <i class="fa fa-plus me-1"></i> Nueva Familia
 </button>
 {% endblock %}
@@ -20,72 +15,68 @@
     <div class="col-12">
         <div class="card shadow-sm border-0">
             <div class="card-header bg-white py-3 border-bottom">
-                <h5 class="mb-0 fw-bold text-dark"><i class="fa fa-sitemap me-2 text-primary"></i>Familias de Evaluación (Motores Genéricos)</h5>
+                <h5 class="mb-0 fw-bold text-dark">
+                    <i class="fa fa-sitemap me-2 text-primary"></i>Familias de Evaluación (Motores Genéricos)
+                </h5>
             </div>
             <div class="card-body">
                 <div class="alert alert-info border-0 bg-info-subtle small mb-4">
                     <i class="fa fa-info-circle me-1"></i>
-                    Las familias definen la lógica base (comparación, rangos, calendarios). Los hijos (reglas) heredan esta lógica y aplican parámetros específicos.
+                    Las familias definen la lógica base del motor. Las reglas del catálogo heredan esta lógica y aplican parámetros específicos por empresa.
                 </div>
                 <table id="tabla_familias" class="table table-hover dt-responsive nowrap w-100 align-middle">
                     <thead class="table-light">
                         <tr>
-                            <th>Código Familia</th>
-                            <th>Descripción de Lógica</th>
-                            <th>Función Genérica</th>
-                            <th>Estado</th>
+                            <th>Código</th>
+                            <th>Nombre</th>
+                            <th>Descripción</th>
+                            <th class="text-center">Reglas</th>
+                            <th class="text-center">Estado</th>
                             <th class="text-center">Acciones</th>
                         </tr>
                     </thead>
                     <tbody>
-                        <tr>
-                            <td class="fw-bold">comparison</td>
-                            <td>Compara valores con umbrales (==, !=, >, <)</td>
-                            <td><code>eval_comparison</code></td>
-                            <td><span class="badge bg-success-subtle text-success">Core</span></td>
+                        {% for reg in registros %}
+                        <tr id="row-familia-{{ reg.id }}">
+                            <td><code class="fw-bold text-primary">{{ reg.codigo }}</code></td>
+                            <td class="fw-bold">{{ reg.nombre }}</td>
+                            <td class="text-muted small">{{ reg.descripcion or '—' }}</td>
+                            <td class="text-center">
+                                <span class="badge bg-secondary-subtle text-secondary border">{{ reg.reglas | length }}</span>
+                            </td>
+                            <td class="text-center">
+                                {% if reg.activo %}
+                                <span class="badge bg-success-subtle text-success">Activa</span>
+                                {% else %}
+                                <span class="badge bg-secondary-subtle text-secondary">Inactiva</span>
+                                {% endif %}
+                            </td>
                             <td class="text-center">
                                 <div class="btn-group btn-group-sm">
-                                    <button class="btn btn-outline-info" onclick="Modal('Visualizar', 1, '/modal-regla-familia')"><i class="fa fa-eye"></i></button>
-                                    <button class="btn btn-outline-warning" onclick="Modal('Editar', 1, '/modal-regla-familia')"><i class="fa fa-edit"></i></button>
+                                    <button class="btn btn-outline-info" title="Ver"
+                                        onclick="Modal('Visualizar', {{ reg.id }}, '/reglas/familias/modal')">
+                                        <i class="fa fa-eye"></i>
+                                    </button>
+                                    <button class="btn btn-outline-warning" title="Editar"
+                                        onclick="Modal('Editar', {{ reg.id }}, '/reglas/familias/modal')">
+                                        <i class="fa fa-edit"></i>
+                                    </button>
+                                    <button class="btn btn-outline-{{ 'danger' if reg.activo else 'success' }}"
+                                        title="{{ 'Desactivar' if reg.activo else 'Activar' }}"
+                                        onclick="toggleFamilia({{ reg.id }})">
+                                        <i class="fa fa-{{ 'ban' if reg.activo else 'check' }}"></i>
+                                    </button>
                                 </div>
                             </td>
                         </tr>
+                        {% else %}
                         <tr>
-                            <td class="fw-bold">range</td>
-                            <td>Valida pertenencia a rangos (min/max)</td>
-                            <td><code>eval_range</code></td>
-                            <td><span class="badge bg-success-subtle text-success">Core</span></td>
-                            <td class="text-center">
-                                <div class="btn-group btn-group-sm">
-                                    <button class="btn btn-outline-info" onclick="Modal('Visualizar', 2, '/modal-regla-familia')"><i class="fa fa-eye"></i></button>
-                                    <button class="btn btn-outline-warning" onclick="Modal('Editar', 2, '/modal-regla-familia')"><i class="fa fa-edit"></i></button>
-                                </div>
+                            <td colspan="6" class="text-center text-muted py-5">
+                                <i class="fa fa-sitemap fa-2x mb-2 d-block opacity-25"></i>
+                                No hay familias registradas. Usa el botón "Nueva Familia" para comenzar.
                             </td>
                         </tr>
-                        <tr>
-                            <td class="fw-bold">sequence</td>
-                            <td>Valida secuencias de días o patrones</td>
-                            <td><code>eval_sequence</code></td>
-                            <td><span class="badge bg-success-subtle text-success">Core</span></td>
-                            <td class="text-center">
-                                <div class="btn-group btn-group-sm">
-                                    <button class="btn btn-outline-info" onclick="Modal('Visualizar', 3, '/modal-regla-familia')"><i class="fa fa-eye"></i></button>
-                                    <button class="btn btn-outline-warning" onclick="Modal('Editar', 3, '/modal-regla-familia')"><i class="fa fa-edit"></i></button>
-                                </div>
-                            </td>
-                        </tr>
-                        <tr>
-                            <td class="fw-bold">calendar</td>
-                            <td>Evalúa domingos, feriados y ausencias</td>
-                            <td><code>eval_calendar</code></td>
-                            <td><span class="badge bg-success-subtle text-success">Core</span></td>
-                            <td class="text-center">
-                                <div class="btn-group btn-group-sm">
-                                    <button class="btn btn-outline-info" onclick="Modal('Visualizar', 4, '/modal-regla-familia')"><i class="fa fa-eye"></i></button>
-                                    <button class="btn btn-outline-warning" onclick="Modal('Editar', 4, '/modal-regla-familia')"><i class="fa fa-edit"></i></button>
-                                </div>
-                            </td>
-                        </tr>
+                        {% endfor %}
                     </tbody>
                 </table>
             </div>
@@ -99,10 +90,42 @@
     $(document).ready(function() {
         $('#tabla_familias').DataTable({
             responsive: true,
-            language: {
-                url: '/static/i18n/es-ES.json'
-            }
+            language: { url: '/static/i18n/es-ES.json' }
         });
     });
+
+    function toggleFamilia(id) {
+        $('#fondo').addClass('visible');
+        $.post('/reglas/familias/toggle', { id: id }, function(res) {
+            $('#fondo').removeClass('visible');
+            if (res.ok) {
+                toastr.success(res.msg);
+                setTimeout(() => location.reload(), 400);
+            } else {
+                toastr.error(res.msg);
+            }
+        }).fail(function() {
+            $('#fondo').removeClass('visible');
+            toastr.error('Error al cambiar estado.');
+        });
+    }
+
+    function guardarFamilia() {
+        const formData = $('#form_regla_familia').serialize();
+        $('#fondo').addClass('visible');
+        $.post('/reglas/familias/guardar', formData, function(res) {
+            $('#fondo').removeClass('visible');
+            if (res.ok) {
+                toastr.success(res.msg);
+                CerrarModal();
+                setTimeout(() => location.reload(), 400);
+            } else {
+                toastr.error(res.msg);
+            }
+        }).fail(function(xhr) {
+            $('#fondo').removeClass('visible');
+            toastr.error(xhr.responseJSON?.msg || 'Error al guardar.');
+        });
+    }
 </script>
 {% endblock %}
