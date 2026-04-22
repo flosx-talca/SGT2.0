@@ -30,6 +30,10 @@ def init_routes(app):
     def clientes():
         return render_template('clientes.html')
 
+    @app.route('/usuarios')
+    def usuarios():
+        return render_template('usuarios.html')
+
     @app.route('/empresas')
     def empresas():
         return render_template('empresas.html')

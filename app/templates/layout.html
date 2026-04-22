@@ -129,6 +129,11 @@
                        hx-get="{{ url_for('clientes') }}" hx-target="#body-content" hx-push-url="true" hx-select="#body-content" hx-swap="outerHTML">
                         <i class="fa fa-handshake"></i> Clientes
                     </a>
+                    <a class="nav-link {{ 'active' if request.endpoint == 'usuarios' else '' }}" 
+                       href="{{ url_for('usuarios') }}"
+                       hx-get="{{ url_for('usuarios') }}" hx-target="#body-content" hx-push-url="true" hx-select="#body-content" hx-swap="outerHTML">
+                        <i class="fa fa-users-cog"></i> Usuarios
+                    </a>
                     <a class="nav-link {{ 'active' if request.endpoint == 'empresas' else '' }}" 
                        href="{{ url_for('empresas') }}"
                        hx-get="{{ url_for('empresas') }}" hx-target="#body-content" hx-push-url="true" hx-select="#body-content" hx-swap="outerHTML">
