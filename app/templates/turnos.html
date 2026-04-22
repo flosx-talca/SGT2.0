@@ -1,4 +1,4 @@
-{% extends "layout.html" %}
+{% extends "_partial.html" if is_htmx else "layout.html" %}
 
 {% block title %}Turnos{% endblock %}
 

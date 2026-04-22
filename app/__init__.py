@@ -1,4 +1,4 @@
-from flask import Flask
+from flask import Flask, request as flask_request
 from .config import Config
 from .database import db
 from . import models
@@ -9,6 +9,11 @@ def create_app():
 
     # Inicializar plugins
     db.init_app(app)
+
+    # Inyectar is_htmx en todos los templates automáticamente
+    @app.context_processor
+    def inject_htmx():
+        return {'is_htmx': flask_request.headers.get('HX-Request', False)}
 
     # Registrar Blueprints
     from .controllers.main_bp import main_bp
