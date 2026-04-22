@@ -145,8 +145,8 @@
                         <i class="fa fa-concierge-bell"></i> Servicios
                     </a>
                     <a class="nav-link {{ 'active' if request.endpoint == 'regiones' else '' }}" 
-                       href="{{ url_for('main.regiones') }}"
-                       hx-get="{{ url_for('main.regiones') }}" hx-target="#body-content" hx-push-url="true" hx-select="#body-content" hx-swap="outerHTML">
+                       href="{{ url_for('region.index') }}"
+                       hx-get="{{ url_for('region.index') }}" hx-target="#body-content" hx-push-url="true" hx-select="#body-content" hx-swap="outerHTML">
                         <i class="fa fa-map-marked-alt"></i> Regiones
                     </a>
                     <a class="nav-link {{ 'active' if request.endpoint == 'comunas' else '' }}" 

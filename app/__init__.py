@@ -12,6 +12,8 @@ def create_app():
 
     # Registrar Blueprints
     from .controllers.main_bp import main_bp
+    from .controllers.region_bp import region_bp
     app.register_blueprint(main_bp)
+    app.register_blueprint(region_bp)
 
     return app

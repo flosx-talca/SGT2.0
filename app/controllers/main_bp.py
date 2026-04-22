@@ -58,9 +58,6 @@ def simulacion():
 def reglas():
     return render_template('reglas.html')
 
-@main_bp.route('/regiones')
-def regiones():
-    return render_template('regiones.html')
 
 @main_bp.route('/comunas')
 def comunas():

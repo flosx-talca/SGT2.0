@@ -1,16 +1,26 @@
 <div class="modal-header bg-primary text-white">
-    <h5 class="modal-title fw-bold">Región</h5>
+    <h5 class="modal-title fw-bold">
+        {% if modo == 'Agregar' %}Nueva Región
+        {% elif modo == 'Editar' %}Editar Región
+        {% else %}Detalle de Región
+        {% endif %}
+    </h5>
     <button type="button" class="btn-close btn-close-white" onclick="CerrarModal()" aria-label="Close"></button>
 </div>
 
 <div class="modal-body p-4">
     <form id="form_region">
+        <input type="hidden" id="id_region" value="{{ region.id if region else 0 }}">
         <div class="row g-3">
             <div class="col-md-4">
                 <label class="form-label small fw-bold text-muted"><code>(*)</code> Código</label>
                 <div class="input-group">
                     <span class="input-group-text bg-light border-end-0"><i class="fa fa-barcode text-muted"></i></span>
-                    <input type="text" class="form-control border-start-0 bg-light" id="codigo_region" value="RM" readonly required>
+                    <input type="text" class="form-control border-start-0 {% if modo == 'Visualizar' %}bg-light{% endif %}"
+                           id="codigo_region"
+                           value="{{ region.codigo if region else '' }}"
+                           {% if modo == 'Visualizar' %}readonly{% endif %}
+                           maxlength="10" required>
                 </div>
             </div>
 
@@ -18,13 +28,19 @@
                 <label class="form-label small fw-bold text-muted"><code>(*)</code> Descripción</label>
                 <div class="input-group">
                     <span class="input-group-text bg-light border-end-0"><i class="fa fa-map text-muted"></i></span>
-                    <input type="text" class="form-control border-start-0 bg-light" id="desc_region" value="Región Metropolitana de Santiago" readonly required>
+                    <input type="text" class="form-control border-start-0 {% if modo == 'Visualizar' %}bg-light{% endif %}"
+                           id="desc_region"
+                           value="{{ region.descripcion if region else '' }}"
+                           {% if modo == 'Visualizar' %}readonly{% endif %}
+                           maxlength="150" required>
                 </div>
             </div>
-            
+
             <div class="col-md-12 mt-4">
                 <div class="form-check form-switch">
-                    <input class="form-check-input" type="checkbox" id="activo_region" checked disabled>
+                    <input class="form-check-input" type="checkbox" id="activo_region"
+                           {% if region is none or region.activo %}checked{% endif %}
+                           {% if modo == 'Visualizar' %}disabled{% endif %}>
                     <label class="form-check-label small fw-bold text-muted" for="activo_region">Región Activa</label>
                 </div>
             </div>
@@ -34,38 +50,41 @@
 
 <div class="modal-footer bg-light border-top-0">
     <button type="button" class="btn btn-secondary" onclick="CerrarModal()">Cancelar</button>
-    <button type="button" class="btn btn-primary px-4" id="btn-guardar-region" onclick="guardarRegion()">
+    {% if modo != 'Visualizar' %}
+    <button type="button" class="btn btn-primary px-4" onclick="guardarRegion()">
         <i class="fa fa-save me-1"></i> Guardar Región
     </button>
+    {% endif %}
 </div>
 
 <script>
     function guardarRegion() {
+        const id          = $('#id_region').val();
+        const codigo      = $('#codigo_region').val().trim();
+        const descripcion = $('#desc_region').val().trim();
+        const activo      = $('#activo_region').is(':checked') ? 'true' : 'false';
+
+        if (!codigo || !descripcion) {
+            toastr.warning('Código y Descripción son obligatorios.');
+            return;
+        }
+
         $('#fondo').fadeIn();
-        setTimeout(() => {
-            $('#fondo').fadeOut();
-            toastr.success('Región guardada con éxito');
-            CerrarModal();
-        }, 800);
+        $.post("{{ url_for('region.guardar') }}", { id, codigo, descripcion, activo })
+            .done(function(res) {
+                if (res.ok) {
+                    toastr.success(res.msg);
+                    CerrarModal();
+                    setTimeout(() => location.reload(), 800);
+                } else {
+                    toastr.error(res.msg);
+                }
+            })
+            .fail(function() {
+                toastr.error('Error de comunicación con el servidor.');
+            })
+            .always(function() {
+                $('#fondo').fadeOut();
+            });
     }
-    
-    {% if modo == 'Agregar' %}
-    $(document).ready(function() {
-        $('.modal-title').text('Nueva Región');
-        $('#codigo_region').val('').prop('readonly', false).removeClass('bg-light');
-        $('#desc_region').val('').prop('readonly', false).removeClass('bg-light');
-        $('#activo_region').prop('checked', true).prop('disabled', false);
-    });
-    {% elif modo == 'Visualizar' %}
-    $(document).ready(function() {
-        $('#btn-guardar-region').hide();
-    });
-    {% elif modo == 'Editar' %}
-    $(document).ready(function() {
-        $('.modal-title').text('Editar Región');
-        $('#codigo_region').prop('readonly', false).removeClass('bg-light');
-        $('#desc_region').prop('readonly', false).removeClass('bg-light');
-        $('#activo_region').prop('disabled', false);
-    });
-    {% endif %}
 </script>

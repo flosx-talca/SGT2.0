@@ -2,15 +2,11 @@
 
 {% block title %}Regiones{% endblock %}
 
-{% block head %}
-
-{% endblock %}
-
 {% block header %}Gestión de Regiones{% endblock %}
 {% block page_title %}Regiones{% endblock %}
 
 {% block actions %}
-<button class="btn btn-primary shadow-sm" onclick="Modal('Agregar', 0, '/modal-region')">
+<button class="btn btn-primary shadow-sm" onclick="abrirModalRegion('Agregar', 0)">
     <i class="fa fa-plus me-1"></i> Agregar Región
 </button>
 {% endblock %}
@@ -33,55 +29,37 @@
                         </tr>
                     </thead>
                     <tbody>
-                        <!-- Mock Static Data -->
+                        {% for region in regiones %}
                         <tr>
-                            <td class="fw-bold">RM</td>
-                            <td>Región Metropolitana de Santiago</td>
-                            <td><span class="badge bg-success-subtle text-success">Activo</span></td>
+                            <td class="fw-bold">{{ region.codigo }}</td>
+                            <td>{{ region.descripcion }}</td>
+                            <td>
+                                {% if region.activo %}
+                                    <span class="badge bg-success-subtle text-success">Activo</span>
+                                {% else %}
+                                    <span class="badge bg-danger-subtle text-danger">Inactivo</span>
+                                {% endif %}
+                            </td>
                             <td class="text-center">
                                 <div class="btn-group btn-group-sm">
                                     <button class="btn btn-outline-info" title="Visualizar"
-                                        onclick="Modal('Visualizar', 1, '/modal-region')"><i
-                                            class="fa fa-eye"></i></button>
+                                        onclick="abrirModalRegion('Visualizar', {{ region.id }})">
+                                        <i class="fa fa-eye"></i>
+                                    </button>
                                     <button class="btn btn-outline-warning" title="Editar"
-                                        onclick="Modal('Editar', 1, '/modal-region')"><i
-                                            class="fa fa-edit"></i></button>
-                                    <button class="btn btn-outline-danger" title="Eliminar"><i class="fa fa-trash"></i></button>
+                                        onclick="abrirModalRegion('Editar', {{ region.id }})">
+                                        <i class="fa fa-edit"></i>
+                                    </button>
+                                    <button class="btn btn-outline-danger" title="Desactivar"
+                                        onclick="eliminarRegion({{ region.id }}, '{{ region.descripcion }}')">
+                                        <i class="fa fa-ban"></i>
+                                    </button>
                                 </div>
                             </td>
                         </tr>
-                        <tr>
-                            <td class="fw-bold">V</td>
-                            <td>Región de Valparaíso</td>
-                            <td><span class="badge bg-success-subtle text-success">Activo</span></td>
-                            <td class="text-center">
-                                <div class="btn-group btn-group-sm">
-                                    <button class="btn btn-outline-info" title="Visualizar"
-                                        onclick="Modal('Visualizar', 2, '/modal-region')"><i
-                                            class="fa fa-eye"></i></button>
-                                    <button class="btn btn-outline-warning" title="Editar"
-                                        onclick="Modal('Editar', 2, '/modal-region')"><i
-                                            class="fa fa-edit"></i></button>
-                                    <button class="btn btn-outline-danger" title="Eliminar"><i class="fa fa-trash"></i></button>
-                                </div>
-                            </td>
-                        </tr>
-                        <tr>
-                            <td class="fw-bold">VIII</td>
-                            <td>Región del Biobío</td>
-                            <td><span class="badge bg-danger-subtle text-danger">Inactivo</span></td>
-                            <td class="text-center">
-                                <div class="btn-group btn-group-sm">
-                                    <button class="btn btn-outline-info" title="Visualizar"
-                                        onclick="Modal('Visualizar', 3, '/modal-region')"><i
-                                            class="fa fa-eye"></i></button>
-                                    <button class="btn btn-outline-warning" title="Editar"
-                                        onclick="Modal('Editar', 3, '/modal-region')"><i
-                                            class="fa fa-edit"></i></button>
-                                    <button class="btn btn-outline-danger" title="Eliminar"><i class="fa fa-trash"></i></button>
-                                </div>
-                            </td>
-                        </tr>
+                        {% else %}
+                        <tr><td colspan="4" class="text-center text-muted">No hay regiones registradas.</td></tr>
+                        {% endfor %}
                     </tbody>
                 </table>
             </div>
@@ -92,13 +70,52 @@
 
 {% block scripts %}
 <script>
+    // ── DataTable (solo UI, datos ya vienen del servidor) ────────────────────
     $(document).ready(function () {
         $('#tabla_regiones').DataTable({
             responsive: true,
-            language: {
-                url: '/static/i18n/es-ES.json'
-            }
+            language: { url: '/static/i18n/es-ES.json' }
         });
     });
+
+    // ── Abrir modal: carga datos ANTES de mostrarlo ───────────────────────────
+    function abrirModalRegion(modo, id) {
+        $('#fondo').fadeIn();
+        $.post("{{ url_for('region.modal') }}", { modo: modo, id: id })
+            .done(function(html) {
+                $('#modalContent').html(html);
+                $('#modalPrincipal').modal('show');
+            })
+            .fail(function() {
+                toastr.error('No se pudo cargar el formulario.');
+            })
+            .always(function() {
+                $('#fondo').fadeOut();
+            });
+    }
+
+    // ── Eliminar (lógico) ─────────────────────────────────────────────────────
+    function eliminarRegion(id, nombre) {
+        Swal.fire({
+            title: '¿Desactivar región?',
+            text: `"${nombre}" quedará inactiva.`,
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonText: 'Sí, desactivar',
+            cancelButtonText: 'Cancelar',
+            confirmButtonColor: '#e74c3c'
+        }).then(result => {
+            if (!result.isConfirmed) return;
+            $.post("{{ url_for('region.eliminar') }}", { id: id })
+                .done(function(res) {
+                    if (res.ok) {
+                        toastr.success(res.msg);
+                        setTimeout(() => location.reload(), 1000);
+                    } else {
+                        toastr.error(res.msg);
+                    }
+                });
+        });
+    }
 </script>
 {% endblock %}
