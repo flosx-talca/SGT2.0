@@ -1,6 +1,6 @@
 from flask import Blueprint, render_template, request, jsonify
 from app.database import db
-from app.models.business import Trabajador, Empresa, Servicio
+from app.models.business import Trabajador, Empresa, Servicio, Turno, TrabajadorPreferencia, TrabajadorAusencia
 
 trabajador_bp = Blueprint('trabajador', __name__, url_prefix='/trabajadores')
 
@@ -25,11 +25,16 @@ def modal():
     empresas = Empresa.query.filter_by(activo=True).order_by(Empresa.razon_social).all()
     servicios = Servicio.query.filter_by(activo=True).order_by(Servicio.descripcion).all()
     
+    # Obtener tipos de turnos únicos para la tabla de preferencias
+    turnos_db = Turno.query.filter_by(activo=True).all()
+    tipos_turno = sorted(list(set([t.abreviacion for t in turnos_db]))) if turnos_db else ['M', 'I', 'T', 'N']
+    
     return render_template('modal-trabajador.html', 
                            modo=modo, 
                            registro=registro, 
                            empresas=empresas, 
-                           servicios=servicios)
+                           servicios=servicios,
+                           tipos_turno=tipos_turno)
 
 @trabajador_bp.route('/guardar', methods=['POST'])
 def guardar():
@@ -88,7 +93,25 @@ def guardar():
                 activo=activo
             )
             db.session.add(trabajador)
+            db.session.flush() # Para obtener el ID si es nuevo
             msg = f'Trabajador "{nombre} {apellido1}" creado.'
+
+        # Procesar Preferencias
+        TrabajadorPreferencia.query.filter_by(trabajador_id=trabajador.id).delete()
+        for i in range(7): # 0=Lunes, 6=Domingo
+            prefs = request.form.getlist(f'pref_{i}[]')
+            for p in prefs:
+                nueva_pref = TrabajadorPreferencia(trabajador_id=trabajador.id, dia_semana=i, turno=p)
+                db.session.add(nueva_pref)
+
+        # Procesar Ausencias
+        TrabajadorAusencia.query.filter_by(trabajador_id=trabajador.id).delete()
+        aus_inis = request.form.getlist('ausencia_ini[]')
+        aus_fins = request.form.getlist('ausencia_fin[]')
+        aus_motivos = request.form.getlist('ausencia_motivo[]')
+        for ini, fin, motivo in zip(aus_inis, aus_fins, aus_motivos):
+            nueva_aus = TrabajadorAusencia(trabajador_id=trabajador.id, fecha_inicio=ini, fecha_fin=fin, motivo=motivo)
+            db.session.add(nueva_aus)
 
         db.session.commit()
         return jsonify({'ok': True, 'msg': msg})

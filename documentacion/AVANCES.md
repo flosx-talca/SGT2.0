@@ -30,6 +30,6 @@ Se basa directamente en `especificacion-funcional-sistema-turnos.md`.
   - **Gran Migración**: Se completaron los 9 mantenedores principales del sistema bajo el estándar SGT 2.0.
   - **Arquitectura**: Desacoplamiento total mediante Blueprints dedicados por entidad.
   - **UX/UI**: Implementación de tarjetas premium para Turnos, refrescos parciales con HTMX (`_rows.html`) y Smart Spinner (delay 400ms).
-  - **Seguridad**: Integración de hashing de contraseñas en el mantenedor de usuarios.
+  - **Personal y Seguridad**: Se mejoró radicalmente el mantenedor de **Trabajadores**, incluyendo ahora un sistema de gestión de **Preferencias de Turno** (Restricciones Duras) y **Ausencias/Permisos** (Vacaciones, Licencias).
   - **Integridad**: Validaciones de RUT, Email y campos obligatorios en todos los controladores.
 

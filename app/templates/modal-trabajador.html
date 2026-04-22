@@ -10,42 +10,45 @@
 
 <div class="modal-body p-4">
     <form id="form_trabajador">
-        <input type="hidden" id="id_trabajador" value="{{ registro.id if registro else 0 }}">
+        <input type="hidden" name="id" id="id_trabajador" value="{{ registro.id if registro else 0 }}">
         
         <div class="row g-3">
             <!-- Datos Personales -->
             <div class="col-md-4">
                 <label class="form-label small fw-bold text-muted"><code>(*)</code> RUT</label>
-                <input type="text" class="form-control shadow-sm {% if modo == 'Visualizar' %}bg-light{% endif %}" 
-                       id="rut_trabajador" value="{{ registro.rut if registro else '' }}"
-                       {% if modo == 'Visualizar' %}readonly{% endif %} placeholder="12.345.678-9">
+                <div class="input-group input-group-sm shadow-sm">
+                    <span class="input-group-text bg-light border-end-0"><i class="fa fa-id-card text-muted"></i></span>
+                    <input type="text" class="form-control border-start-0 {% if modo == 'Visualizar' %}bg-light{% endif %}" 
+                           name="rut" id="rut_trabajador" value="{{ registro.rut if registro else '' }}"
+                           {% if modo == 'Visualizar' %}readonly{% endif %} placeholder="12.345.678-9">
+                </div>
             </div>
 
             <div class="col-md-8">
                 <label class="form-label small fw-bold text-muted"><code>(*)</code> Nombres</label>
-                <input type="text" class="form-control shadow-sm {% if modo == 'Visualizar' %}bg-light{% endif %}" 
-                       id="nombre_trabajador" value="{{ registro.nombre if registro else '' }}"
+                <input type="text" class="form-control form-control-sm shadow-sm {% if modo == 'Visualizar' %}bg-light{% endif %}" 
+                       name="nombre" id="nombre_trabajador" value="{{ registro.nombre if registro else '' }}"
                        {% if modo == 'Visualizar' %}readonly{% endif %}>
             </div>
 
             <div class="col-md-6">
                 <label class="form-label small fw-bold text-muted"><code>(*)</code> Apellido Paterno</label>
-                <input type="text" class="form-control shadow-sm {% if modo == 'Visualizar' %}bg-light{% endif %}" 
-                       id="apellido1_trabajador" value="{{ registro.apellido1 if registro else '' }}"
+                <input type="text" class="form-control form-control-sm shadow-sm {% if modo == 'Visualizar' %}bg-light{% endif %}" 
+                       name="apellido1" id="apellido1_trabajador" value="{{ registro.apellido1 if registro else '' }}"
                        {% if modo == 'Visualizar' %}readonly{% endif %}>
             </div>
 
             <div class="col-md-6">
                 <label class="form-label small fw-bold text-muted">Apellido Materno</label>
-                <input type="text" class="form-control shadow-sm {% if modo == 'Visualizar' %}bg-light{% endif %}" 
-                       id="apellido2_trabajador" value="{{ registro.apellido2 if registro else '' }}"
+                <input type="text" class="form-control form-control-sm shadow-sm {% if modo == 'Visualizar' %}bg-light{% endif %}" 
+                       name="apellido2" id="apellido2_trabajador" value="{{ registro.apellido2 if registro else '' }}"
                        {% if modo == 'Visualizar' %}readonly{% endif %}>
             </div>
 
             <!-- Datos Laborales -->
             <div class="col-md-6">
-                <label class="form-label small fw-bold text-muted"><code>(*)</code> Empresa / Sucursal</label>
-                <select id="empresa_id_trabajador" class="form-select shadow-sm {% if modo == 'Visualizar' %}bg-light{% endif %}"
+                <label class="form-label small fw-bold text-muted"><code>(*)</code> Empresa</label>
+                <select name="empresa_id" id="empresa_id_trabajador" class="form-select form-select-sm shadow-sm {% if modo == 'Visualizar' %}bg-light{% endif %}"
                         {% if modo == 'Visualizar' %}disabled{% endif %}>
                     <option value="">-- Seleccione Empresa --</option>
                     {% for e in empresas %}
@@ -58,7 +61,7 @@
 
             <div class="col-md-6">
                 <label class="form-label small fw-bold text-muted"><code>(*)</code> Servicio / Área</label>
-                <select id="servicio_id_trabajador" class="form-select shadow-sm {% if modo == 'Visualizar' %}bg-light{% endif %}"
+                <select name="servicio_id" id="servicio_id_trabajador" class="form-select form-select-sm shadow-sm {% if modo == 'Visualizar' %}bg-light{% endif %}"
                         {% if modo == 'Visualizar' %}disabled{% endif %}>
                     <option value="">-- Seleccione Servicio --</option>
                     {% for s in servicios %}
@@ -71,49 +74,181 @@
 
             <div class="col-md-12">
                 <label class="form-label small fw-bold text-muted">Cargo / Función</label>
-                <input type="text" class="form-control shadow-sm {% if modo == 'Visualizar' %}bg-light{% endif %}" 
-                       id="cargo_trabajador" value="{{ registro.cargo if registro else '' }}"
+                <input type="text" class="form-control form-control-sm shadow-sm {% if modo == 'Visualizar' %}bg-light{% endif %}" 
+                       name="cargo" id="cargo_trabajador" value="{{ registro.cargo if registro else '' }}"
                        {% if modo == 'Visualizar' %}readonly{% endif %} placeholder="Ej: Operario, Supervisor, etc.">
             </div>
 
             <div class="col-md-6">
                 <label class="form-label small fw-bold text-muted">Email</label>
-                <input type="email" class="form-control shadow-sm {% if modo == 'Visualizar' %}bg-light{% endif %}" 
-                       id="email_trabajador" value="{{ registro.email if registro else '' }}"
-                       {% if modo == 'Visualizar' %}readonly{% endif %}>
+                <div class="input-group input-group-sm shadow-sm">
+                    <span class="input-group-text bg-light border-end-0"><i class="fa fa-envelope text-muted"></i></span>
+                    <input type="email" class="form-control border-start-0 {% if modo == 'Visualizar' %}bg-light{% endif %}" 
+                           name="email" id="email_trabajador" value="{{ registro.email if registro else '' }}"
+                           {% if modo == 'Visualizar' %}readonly{% endif %}>
+                </div>
             </div>
 
             <div class="col-md-6">
                 <label class="form-label small fw-bold text-muted">Teléfono</label>
-                <input type="text" class="form-control shadow-sm {% if modo == 'Visualizar' %}bg-light{% endif %}" 
-                       id="telefono_trabajador" value="{{ registro.telefono if registro else '' }}"
+                <input type="text" class="form-control form-control-sm shadow-sm {% if modo == 'Visualizar' %}bg-light{% endif %}" 
+                       name="telefono" id="telefono_trabajador" value="{{ registro.telefono if registro else '' }}"
                        {% if modo == 'Visualizar' %}readonly{% endif %}>
             </div>
 
             <div class="col-md-6">
-                <label class="form-label small fw-bold text-muted">Tipo de Contrato</label>
-                <select id="tipo_contrato_trabajador" class="form-select shadow-sm {% if modo == 'Visualizar' %}bg-light{% endif %}"
+                <label class="form-label small fw-bold text-muted"><code>(*)</code> Tipo de Contrato</label>
+                <select name="tipo_contrato" id="tipo_contrato_modal" class="form-select form-select-sm shadow-sm {% if modo == 'Visualizar' %}bg-light{% endif %}"
                         {% if modo == 'Visualizar' %}disabled{% endif %}>
-                    <option value="full-time" {% if registro and registro.tipo_contrato == 'full-time' %}selected{% endif %}>Full Time</option>
-                    <option value="part-time" {% if registro and registro.tipo_contrato == 'part-time' %}selected{% endif %}>Part Time</option>
+                    <option value="full-time" {% if registro is none or registro.tipo_contrato == 'full-time' %}selected{% endif %}>Full-time (44 hrs)</option>
+                    <option value="part-time" {% if registro and registro.tipo_contrato == 'part-time' %}selected{% endif %}>Part-time (Variable)</option>
                     <option value="honorarios" {% if registro and registro.tipo_contrato == 'honorarios' %}selected{% endif %}>Honorarios</option>
                 </select>
             </div>
 
-            <div class="col-md-6">
-                <label class="form-label small fw-bold text-muted">Horas Semanales</label>
-                <input type="number" class="form-control shadow-sm {% if modo == 'Visualizar' %}bg-light{% endif %}" 
-                       id="horas_trabajador" value="{{ registro.horas_semanales if registro else 45 }}"
-                       {% if modo == 'Visualizar' %}readonly{% endif %}>
+            <div class="col-md-6" id="div_horas_part_time" style="{{ 'display:none;' if registro is none or registro.tipo_contrato != 'part-time' else '' }}">
+                <label class="form-label small fw-bold text-muted"><code>(*)</code> Horas Semanales</label>
+                <select name="horas_semanales" id="horas_semanales" class="form-select form-select-sm shadow-sm" {% if modo == 'Visualizar' %}disabled{% endif %}>
+                    <!-- JS populated -->
+                </select>
             </div>
 
-            <div class="col-md-12 mt-3 text-end">
+            <div class="col-md-12 text-end">
                 <div class="form-check form-switch d-inline-block">
-                    <input class="form-check-input" type="checkbox" id="activo_trabajador" 
+                    <input class="form-check-input" type="checkbox" name="activo" id="activo_trabajador" 
                            {% if registro is none or registro.activo %}checked{% endif %}
                            {% if modo == 'Visualizar' %}disabled{% endif %}>
                     <label class="form-check-label fw-bold text-muted ms-2" for="activo_trabajador">Trabajador Activo</label>
                 </div>
+            </div>
+        </div>
+
+        <hr class="my-4 text-muted">
+        
+        <!-- SECCIÓN 1 COLLAPSE - PREFERENCIAS -->
+        <h6 class="fw-bold text-primary mb-3" data-bs-toggle="collapse" data-bs-target="#collapsePreferencias" style="cursor: pointer;">
+            <i class="fa fa-calendar-check me-2"></i>Preferencias de Turno (Restricciones Duras)
+            <i class="fas fa-chevron-down float-end text-muted" style="font-size: 0.8rem; margin-top: 5px;"></i>
+        </h6>
+        
+        <div class="collapse" id="collapsePreferencias">
+            <p class="small text-muted mb-3">Si para un día <strong>no marcas ninguna</strong> casilla, el sistema asume que el trabajador no tiene restricciones. Si marcas alguna, el sistema <strong>jamás</strong> le asignará otro turno ese día.</p>
+            
+            <div class="table-responsive border rounded mb-3">
+                <table class="table table-sm table-hover align-middle text-center mb-0" style="font-size: 0.85rem;">
+                    <thead class="table-light">
+                        <tr>
+                            <th class="text-start ps-3 text-muted">Día de la Semana</th>
+                            {% for tipo in tipos_turno %}
+                            <th class="text-center" style="width: 1%; white-space: nowrap;">
+                                <span class="badge px-2" style="background-color: {{ '#18bc9c' if tipo == 'M' else '#f39c12' if tipo == 'I' else '#3498db' if tipo == 'T' else '#2c3e50' }};">{{ tipo }}</span>
+                            </th>
+                            {% endfor %}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% set dias = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'] %}
+                        {% for i in range(7) %}
+                        <tr>
+                            <td class="text-start ps-3 fw-bold text-secondary">{{ dias[i] }}</td>
+                            {% for tipo in tipos_turno %}
+                            <td class="text-center align-middle">
+                                {% set ns = namespace(found=false) %}
+                                {% if registro %}
+                                    {% for p in registro.preferencias %}
+                                        {% if p.dia_semana == i and p.turno == tipo %}
+                                            {% set ns.found = true %}
+                                        {% endif %}
+                                    {% endfor %}
+                                {% endif %}
+                                <input class="form-check-input border-secondary-subtle" type="checkbox" 
+                                       name="pref_{{ i }}[]" value="{{ tipo }}"
+                                       {{ 'checked' if ns.found else '' }}
+                                       {% if modo == 'Visualizar' %}disabled{% endif %}
+                                       style="cursor: pointer; width: 1.2rem; height: 1.2rem; margin-top: 0;">
+                            </td>
+                            {% endfor %}
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <hr class="my-3 text-muted border-top border-secondary-subtle">
+        
+        <!-- SECCIÓN 2 COLLAPSE - AUSENCIAS -->
+        <h6 class="fw-bold text-primary mb-3" data-bs-toggle="collapse" data-bs-target="#collapseAusencias" style="cursor: pointer;">
+            <i class="fa fa-calendar-times me-2"></i>Ausencias y Permisos Registrados
+            <i class="fas fa-chevron-down float-end text-muted" style="font-size: 0.8rem; margin-top: 5px;"></i>
+        </h6>
+        
+        <div class="collapse" id="collapseAusencias">
+            <p class="small text-muted mb-3">Fechas en las que el trabajador no estará prestando servicios.</p>
+    
+            {% if modo != 'Visualizar' %}
+            <div class="row g-2 mb-3">
+                <div class="col-md-5">
+                    <label class="form-label small text-muted mb-1">Rango de Fechas</label>
+                    <div class="input-group input-group-sm">
+                        <input type="date" class="form-control border-secondary-subtle" id="fecha_inicio">
+                        <span class="input-group-text bg-light border-secondary-subtle px-2">a</span>
+                        <input type="date" class="form-control border-secondary-subtle" id="fecha_fin">
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label small text-muted mb-1">Motivo</label>
+                    <select class="form-select form-select-sm border-secondary-subtle" id="motivo_ausencia">
+                        <option value="" selected disabled>Seleccione...</option>
+                        <option value="VAC">Vacaciones</option>
+                        <option value="LM">Licencia Médica</option>
+                        <option value="PER">Permiso</option>
+                        <option value="OTR">Otro</option>
+                    </select>
+                </div>
+                <div class="col-md-3 d-flex align-items-end">
+                    <button type="button" class="btn btn-sm btn-primary w-100 shadow-sm" id="btn_add_ausencia">
+                        <i class="fa fa-plus me-1"></i> Añadir
+                    </button>
+                </div>
+            </div>
+            {% endif %}
+    
+            <div class="table-responsive border rounded">
+                <table class="table table-sm table-hover align-middle text-center mb-0" style="font-size: 0.85rem;" id="tabla_ausencias">
+                    <thead class="table-light">
+                        <tr>
+                            <th class="text-start ps-3 text-muted">Fechas</th>
+                            <th class="text-center text-muted" style="width: 25%;">Motivo</th>
+                            {% if modo != 'Visualizar' %}<th class="text-end pe-3 text-muted" style="width: 1%;">Acción</th>{% endif %}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% if registro and registro.ausencias %}
+                            {% for a in registro.ausencias %}
+                            <tr>
+                                <td class="text-start ps-3 fw-bold text-secondary">
+                                    <i class="fa fa-calendar-day me-2 text-muted"></i> {{ a.fecha_inicio.strftime('%d/%m/%Y') }} - {{ a.fecha_fin.strftime('%d/%m/%Y') }}
+                                    <input type="hidden" name="ausencia_ini[]" value="{{ a.fecha_inicio }}">
+                                    <input type="hidden" name="ausencia_fin[]" value="{{ a.fecha_fin }}">
+                                    <input type="hidden" name="ausencia_motivo[]" value="{{ a.motivo }}">
+                                </td>
+                                <td class="text-center align-middle">
+                                    <span class="badge {{ 'bg-success' if a.motivo == 'VAC' else 'bg-danger' if a.motivo == 'LM' else 'bg-info text-dark' if a.motivo == 'PER' else 'bg-warning text-dark' }} px-2">{{ a.motivo }}</span>
+                                </td>
+                                {% if modo != 'Visualizar' %}
+                                <td class="text-end pe-3 align-middle">
+                                    <button type="button" class="btn btn-sm btn-outline-danger btn-remove-ausencia" style="padding: 0.1rem 0.3rem;"><i class="fa fa-times"></i></button>
+                                </td>
+                                {% endif %}
+                            </tr>
+                            {% endfor %}
+                        {% endif %}
+                        <tr id="row_no_data" style="{{ 'display:none;' if registro and registro.ausencias else '' }}">
+                            <td colspan="{{ 3 if modo != 'Visualizar' else 2 }}" class="text-muted fst-italic py-3 small">Sin ausencias registradas...</td>
+                        </tr>
+                    </tbody>
+                </table>
             </div>
         </div>
     </form>
@@ -129,20 +264,92 @@
 </div>
 
 <script>
+$(document).ready(function() {
+    // Poblado de horas
+    let options = "";
+    for(let i=1; i<=44; i++) {
+        options += `<option value="${i}">${i} horas</option>`;
+    }
+    $('#horas_semanales').html(options).val({{ registro.horas_semanales if (registro and registro.horas_semanales) else 30 }});
+
+    $('#tipo_contrato_modal').on('change', function() {
+        if($(this).val() === 'part-time') {
+            $('#div_horas_part_time').fadeIn();
+        } else {
+            $('#div_horas_part_time').fadeOut();
+        }
+    }).trigger('change');
+
+    // Lógica de Ausencias
+    $('#btn_add_ausencia').click(function() {
+        const f_ini = $('#fecha_inicio').val();
+        const f_fin = $('#fecha_fin').val();
+        const motivo = $('#motivo_ausencia').val();
+
+        if(!f_ini || !f_fin || !motivo) {
+            toastr.warning('Por favor complete rango de fechas y motivo');
+            return;
+        }
+        if(f_ini > f_fin) {
+            toastr.warning('La fecha de inicio no puede ser posterior a la de fin');
+            return;
+        }
+
+        $('#row_no_data').hide();
+
+        let badgeClass = 'bg-secondary';
+        if(motivo === 'VAC') badgeClass = 'bg-success';
+        if(motivo === 'LM') badgeClass = 'bg-danger';
+        if(motivo === 'PER') badgeClass = 'bg-info text-dark';
+        if(motivo === 'OTR') badgeClass = 'bg-warning text-dark';
+
+        const formatF = (d) => d.split('-').reverse().join('/');
+        
+        const tr = `
+            <tr>
+                <td class="text-start ps-3 fw-bold text-secondary">
+                    <i class="fa fa-calendar-day me-2 text-muted"></i> ${formatF(f_ini)} - ${formatF(f_fin)}
+                    <input type="hidden" name="ausencia_ini[]" value="${f_ini}">
+                    <input type="hidden" name="ausencia_fin[]" value="${f_fin}">
+                    <input type="hidden" name="ausencia_motivo[]" value="${motivo}">
+                </td>
+                <td class="text-center align-middle">
+                    <span class="badge ${badgeClass} px-2">${motivo}</span>
+                </td>
+                <td class="text-end pe-3 align-middle">
+                    <button type="button" class="btn btn-sm btn-outline-danger btn-remove-ausencia" style="padding: 0.1rem 0.3rem;"><i class="fa fa-times"></i></button>
+                </td>
+            </tr>
+        `;
+
+        $('#tabla_ausencias tbody').append(tr);
+        $('#fecha_inicio').val('');
+        $('#fecha_fin').val('');
+        $('#motivo_ausencia').val('');
+    });
+
+    $(document).on('click', '.btn-remove-ausencia', function() {
+        $(this).closest('tr').remove();
+        if($('#tabla_ausencias tbody tr').length === 0 || ($('#tabla_ausencias tbody tr').length === 1 && $('#row_no_data').is(':visible'))) {
+            $('#row_no_data').show();
+        }
+    });
+
+    // Rotar icono de collapse
+    $('#collapsePreferencias, #collapseAusencias').on('show.bs.collapse', function () {
+        $(this).prev('h6').find('i.fa-chevron-down').removeClass('fa-chevron-down').addClass('fa-chevron-up');
+    }).on('hide.bs.collapse', function () {
+        $(this).prev('h6').find('i.fa-chevron-up').removeClass('fa-chevron-up').addClass('fa-chevron-down');
+    });
+});
+
 function guardarTrabajador() {
     const id = $('#id_trabajador').val();
     const rut = $('#rut_trabajador').val().trim();
     const nombre = $('#nombre_trabajador').val().trim();
     const apellido1 = $('#apellido1_trabajador').val().trim();
-    const apellido2 = $('#apellido2_trabajador').val().trim();
     const empresa_id = $('#empresa_id_trabajador').val();
     const servicio_id = $('#servicio_id_trabajador').val();
-    const cargo = $('#cargo_trabajador').val().trim();
-    const email = $('#email_trabajador').val().trim();
-    const telefono = $('#telefono_trabajador').val().trim();
-    const tipo_contrato = $('#tipo_contrato_trabajador').val();
-    const horas = $('#horas_trabajador').val();
-    const activo = $('#activo_trabajador').is(':checked');
 
     if (!rut || !nombre || !apellido1 || !empresa_id || !servicio_id) {
         toastr.warning('Faltan campos obligatorios (*).');
@@ -153,21 +360,12 @@ function guardarTrabajador() {
     $btn.prop('disabled', true).html('<i class="fa fa-spinner fa-spin me-1"></i> Guardando...');
     $('#fondo').addClass('visible');
 
-    $.post("{{ url_for('trabajador.guardar') }}", {
-        id: id,
-        rut: rut,
-        nombre: nombre,
-        apellido1: apellido1,
-        apellido2: apellido2,
-        empresa_id: empresa_id,
-        servicio_id: servicio_id,
-        cargo: cargo,
-        email: email,
-        telefono: telefono,
-        tipo_contrato: tipo_contrato,
-        horas_semanales: horas,
-        activo: activo ? 'true' : 'false'
-    })
+    const formData = $('#form_trabajador').serialize();
+    // Añadir el checkbox de activo manualmente ya que serialize no lo manda si es false
+    const activo = $('#activo_trabajador').is(':checked') ? 'true' : 'false';
+    const finalData = formData + '&activo=' + activo;
+
+    $.post("{{ url_for('trabajador.guardar') }}", finalData)
     .done(function(res) {
         if (res.ok) {
             toastr.success(res.msg);
