@@ -39,14 +39,17 @@
             top: 0; left: 0;
             width: 100vw; height: 100vh;
             background: rgba(255, 255, 255, 0.75);
-            z-index: 100000; /* encima de Bootstrap modal (1050) y su backdrop (1040) */
+            z-index: 100000;
             opacity: 0;
             pointer-events: none;
-            transition: opacity 0.2s ease;
+            /* Al ocultar: desaparecer rápido y sin delay */
+            transition: opacity 0.15s ease 0ms;
         }
         #fondo.visible {
             opacity: 1;
             pointer-events: all;
+            /* Al mostrar: esperar 400ms antes de empezar a aparecer */
+            transition: opacity 0.2s ease 400ms;
         }
         .spinner-wrapper {
             position: absolute;
@@ -408,11 +411,8 @@
                 data: { 'modo': modo, 'id': id },
                 success: function(response) {
                     $('#modal_contenido .modal-content').html(response);
-                    // Ocultar el fondo SOLO después de que el modal esté COMPLETAMENTE visible
-                    // Evita que el spinner quede atrapado detrás del backdrop de Bootstrap
-                    $('#modal_contenido').one('shown.bs.modal', function() {
-                        $('#fondo').removeClass('visible');
-                    });
+                    // Ocultar el fondo apenas el modal comience a mostrarse para mejorar la velocidad percibida
+                    $('#fondo').removeClass('visible');
                     $('#modal_contenido').modal('show');
                 },
                 error: function() {
