@@ -10,12 +10,18 @@ Se basa directamente en `especificacion-funcional-sistema-turnos.md`.
 *Nota: Todos los Features e Issues aquí listados deben ser negociados y aprobados con el usuario antes de su ejecución.*
 
 ### Fase 1: Integración con Base de Datos y Autenticación (Actual)
-- [ ] **Feature 1:** Conexión y Modelado Base de Datos PostgreSQL
-  - [ ] Issue 1.1: Configuración de conexión y ORM (SQLAlchemy) en Flask.
-  - [ ] Issue 1.2: Modelado de tablas base (Empresas, Sucursales, Usuarios, Roles).
-- [ ] **Feature 2:** Refactorización de Mantenedores a Base de Datos
-  - [ ] Issue 2.1: Conectar Mantenedor de Regiones, Comunas y Feriados.
-  - [ ] Issue 2.2: Conectar Mantenedor de Servicios.
+- [x] **Feature 1:** Conexión y Modelado Base de Datos PostgreSQL
+  - [x] Issue 1.1: Configuración de conexión y ORM (SQLAlchemy + psycopg2 + python-dotenv).
+  - [x] Issue 1.2: Modelado completo de tablas (15 entidades en `proyecto.sql` y `app/models/`).
+  - [x] Issue 1.3: Refactorización a arquitectura MVT (Application Factory + Blueprints).
+  - [x] Issue 1.4: Creación de script `seed.py` con datos de prueba (4 Regiones, 7 Comunas, 3 Clientes, 4 Empresas, 5 Servicios, 10 Turnos, 11 Trabajadores).
+  - [x] Issue 1.5: Regla de renderizado de frontend documentada en `PROJECT_CONTEXT.md` (datos antes de mostrar modal/tabla).
+- [ ] **Feature 2:** Refactorización de Mantenedores a Base de Datos (En progreso)
+  - [ ] Issue 2.1: Mantenedor de Regiones (CRUD real contra PostgreSQL).
+  - [ ] Issue 2.2: Mantenedor de Comunas.
+  - [ ] Issue 2.3: Mantenedor de Feriados.
+  - [ ] Issue 2.4: Mantenedor de Servicios.
+  - [ ] Issue 2.5: Mantenedor de Empresas, Clientes y Usuarios.
 
 ### Fase 2: Configuración de Negocio (Multiempresa)
 - [ ] **Feature 3:** Gestión de Trabajadores y Perfiles

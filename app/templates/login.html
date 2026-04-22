@@ -91,7 +91,7 @@
                     if((user === 'admin' && pass === '1234') || (user === '11111111-7' && pass === '1234')) {
                         toastr.success('Bienvenido al sistema');
                         setTimeout(() => {
-                            window.location.href = "{{ url_for('index') }}";
+                            window.location.href = "{{ url_for('main.index') }}";
                         }, 500);
                     } else {
                         Swal.fire({

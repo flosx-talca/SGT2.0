@@ -83,7 +83,7 @@
     <!-- Mobile Top Navbar -->
     <nav class="navbar navbar-expand-lg navbar-dark bg-primary d-lg-none sticky-top shadow-sm">
         <div class="container-fluid">
-            <a class="navbar-brand fw-bold" href="{{ url_for('index') }}">SGT 2.1</a>
+            <a class="navbar-brand fw-bold" href="{{ url_for('main.index') }}">SGT 2.1</a>
             <button class="navbar-toggler" type="button" data-bs-toggle="offcanvas" data-bs-target="#mobileSidebar">
                 <span class="navbar-toggler-icon"></span>
             </button>
@@ -103,97 +103,97 @@
             <div class="sidebar-content flex-grow-1">
                 <nav class="nav flex-column sidebar-nav">
                     <a class="nav-link {{ 'active' if request.endpoint == 'index' else '' }}" 
-                       href="{{ url_for('index') }}" 
-                       hx-get="{{ url_for('index') }}" hx-target="#body-content" hx-push-url="true" hx-select="#body-content" hx-swap="outerHTML">
+                       href="{{ url_for('main.index') }}" 
+                       hx-get="{{ url_for('main.index') }}" hx-target="#body-content" hx-push-url="true" hx-select="#body-content" hx-swap="outerHTML">
                         <i class="fa fa-th-large"></i> Dashboard
                     </a>
                     <a class="nav-link {{ 'active' if request.endpoint == 'trabajadores' else '' }}" 
-                       href="{{ url_for('trabajadores') }}"
-                       hx-get="{{ url_for('trabajadores') }}" hx-target="#body-content" hx-push-url="true" hx-select="#body-content" hx-swap="outerHTML">
+                       href="{{ url_for('main.trabajadores') }}"
+                       hx-get="{{ url_for('main.trabajadores') }}" hx-target="#body-content" hx-push-url="true" hx-select="#body-content" hx-swap="outerHTML">
                         <i class="fa fa-users"></i> Trabajadores
                     </a>
                     <a class="nav-link {{ 'active' if request.endpoint == 'turnos' else '' }}" 
-                       href="{{ url_for('turnos') }}"
-                       hx-get="{{ url_for('turnos') }}" hx-target="#body-content" hx-push-url="true" hx-select="#body-content" hx-swap="outerHTML">
+                       href="{{ url_for('main.turnos') }}"
+                       hx-get="{{ url_for('main.turnos') }}" hx-target="#body-content" hx-push-url="true" hx-select="#body-content" hx-swap="outerHTML">
                         <i class="fa fa-clock"></i> Turnos
                     </a>
                     <a class="nav-link {{ 'active' if request.endpoint == 'planificacion' else '' }}" 
-                       href="{{ url_for('planificacion') }}"
-                       hx-get="{{ url_for('planificacion') }}" hx-target="#body-content" hx-push-url="true" hx-select="#body-content" hx-swap="outerHTML">
+                       href="{{ url_for('main.planificacion') }}"
+                       hx-get="{{ url_for('main.planificacion') }}" hx-target="#body-content" hx-push-url="true" hx-select="#body-content" hx-swap="outerHTML">
                         <i class="fa fa-calendar-alt"></i> Planificación
                     </a>
 
                     <div class="sidebar-heading text-muted small fw-bold px-4 py-2 mt-2 text-uppercase" style="font-size: 0.65rem; letter-spacing: 1px;">Administración Local</div>
                     <a class="nav-link {{ 'active' if request.endpoint == 'clientes' else '' }}" 
-                       href="{{ url_for('clientes') }}"
-                       hx-get="{{ url_for('clientes') }}" hx-target="#body-content" hx-push-url="true" hx-select="#body-content" hx-swap="outerHTML">
+                       href="{{ url_for('main.clientes') }}"
+                       hx-get="{{ url_for('main.clientes') }}" hx-target="#body-content" hx-push-url="true" hx-select="#body-content" hx-swap="outerHTML">
                         <i class="fa fa-handshake"></i> Clientes
                     </a>
                     <a class="nav-link {{ 'active' if request.endpoint == 'usuarios' else '' }}" 
-                       href="{{ url_for('usuarios') }}"
-                       hx-get="{{ url_for('usuarios') }}" hx-target="#body-content" hx-push-url="true" hx-select="#body-content" hx-swap="outerHTML">
+                       href="{{ url_for('main.usuarios') }}"
+                       hx-get="{{ url_for('main.usuarios') }}" hx-target="#body-content" hx-push-url="true" hx-select="#body-content" hx-swap="outerHTML">
                         <i class="fa fa-users-cog"></i> Usuarios
                     </a>
                     <a class="nav-link {{ 'active' if request.endpoint == 'empresas' else '' }}" 
-                       href="{{ url_for('empresas') }}"
-                       hx-get="{{ url_for('empresas') }}" hx-target="#body-content" hx-push-url="true" hx-select="#body-content" hx-swap="outerHTML">
+                       href="{{ url_for('main.empresas') }}"
+                       hx-get="{{ url_for('main.empresas') }}" hx-target="#body-content" hx-push-url="true" hx-select="#body-content" hx-swap="outerHTML">
                         <i class="fa fa-building"></i> Empresas
                     </a>
                     <a class="nav-link {{ 'active' if request.endpoint == 'servicios' else '' }}" 
-                       href="{{ url_for('servicios') }}"
-                       hx-get="{{ url_for('servicios') }}" hx-target="#body-content" hx-push-url="true" hx-select="#body-content" hx-swap="outerHTML">
+                       href="{{ url_for('main.servicios') }}"
+                       hx-get="{{ url_for('main.servicios') }}" hx-target="#body-content" hx-push-url="true" hx-select="#body-content" hx-swap="outerHTML">
                         <i class="fa fa-concierge-bell"></i> Servicios
                     </a>
                     <a class="nav-link {{ 'active' if request.endpoint == 'regiones' else '' }}" 
-                       href="{{ url_for('regiones') }}"
-                       hx-get="{{ url_for('regiones') }}" hx-target="#body-content" hx-push-url="true" hx-select="#body-content" hx-swap="outerHTML">
+                       href="{{ url_for('main.regiones') }}"
+                       hx-get="{{ url_for('main.regiones') }}" hx-target="#body-content" hx-push-url="true" hx-select="#body-content" hx-swap="outerHTML">
                         <i class="fa fa-map-marked-alt"></i> Regiones
                     </a>
                     <a class="nav-link {{ 'active' if request.endpoint == 'comunas' else '' }}" 
-                       href="{{ url_for('comunas') }}"
-                       hx-get="{{ url_for('comunas') }}" hx-target="#body-content" hx-push-url="true" hx-select="#body-content" hx-swap="outerHTML">
+                       href="{{ url_for('main.comunas') }}"
+                       hx-get="{{ url_for('main.comunas') }}" hx-target="#body-content" hx-push-url="true" hx-select="#body-content" hx-swap="outerHTML">
                         <i class="fa fa-map-pin"></i> Comunas
                     </a>
                     <a class="nav-link {{ 'active' if request.endpoint == 'feriados' else '' }}" 
-                       href="{{ url_for('feriados') }}"
-                       hx-get="{{ url_for('feriados') }}" hx-target="#body-content" hx-push-url="true" hx-select="#body-content" hx-swap="outerHTML">
+                       href="{{ url_for('main.feriados') }}"
+                       hx-get="{{ url_for('main.feriados') }}" hx-target="#body-content" hx-push-url="true" hx-select="#body-content" hx-swap="outerHTML">
                         <i class="fa fa-umbrella-beach"></i> Feriados
                     </a>
                     <a class="nav-link {{ 'active' if request.endpoint == 'roles' else '' }}" 
-                       href="{{ url_for('roles') }}"
-                       hx-get="{{ url_for('roles') }}" hx-target="#body-content" hx-push-url="true" hx-select="#body-content" hx-swap="outerHTML">
+                       href="{{ url_for('main.roles') }}"
+                       hx-get="{{ url_for('main.roles') }}" hx-target="#body-content" hx-push-url="true" hx-select="#body-content" hx-swap="outerHTML">
                         <i class="fa fa-id-badge"></i> Roles
                     </a>
                     <a class="nav-link {{ 'active' if request.endpoint == 'menus' else '' }}" 
-                       href="{{ url_for('menus') }}"
-                       hx-get="{{ url_for('menus') }}" hx-target="#body-content" hx-push-url="true" hx-select="#body-content" hx-swap="outerHTML">
+                       href="{{ url_for('main.menus') }}"
+                       hx-get="{{ url_for('main.menus') }}" hx-target="#body-content" hx-push-url="true" hx-select="#body-content" hx-swap="outerHTML">
                         <i class="fa fa-list"></i> Menús
                     </a>
 
                     <div class="sidebar-heading text-muted small fw-bold px-4 py-2 mt-2 text-uppercase" style="font-size: 0.65rem; letter-spacing: 1px;">Soporte y Configuración</div>
                     <a class="nav-link {{ 'active' if request.endpoint == 'simulacion' else '' }}" 
-                       href="{{ url_for('simulacion') }}"
-                       hx-get="{{ url_for('simulacion') }}" hx-target="#body-content" hx-push-url="true" hx-select="#body-content" hx-swap="outerHTML">
+                       href="{{ url_for('main.simulacion') }}"
+                       hx-get="{{ url_for('main.simulacion') }}" hx-target="#body-content" hx-push-url="true" hx-select="#body-content" hx-swap="outerHTML">
                         <i class="fa fa-robot"></i> Simulación
                     </a>
                     <a class="nav-link {{ 'active' if request.endpoint == 'reglas_empresa' else '' }}" 
-                       href="{{ url_for('reglas_empresa') }}"
-                       hx-get="{{ url_for('reglas_empresa') }}" hx-target="#body-content" hx-push-url="true" hx-select="#body-content" hx-swap="outerHTML">
+                       href="{{ url_for('main.reglas_empresa') }}"
+                       hx-get="{{ url_for('main.reglas_empresa') }}" hx-target="#body-content" hx-push-url="true" hx-select="#body-content" hx-swap="outerHTML">
                         <i class="fa fa-briefcase"></i> Reglas Empresa
                     </a>
                     <a class="nav-link {{ 'active' if request.endpoint == 'reglas_familias' else '' }}" 
-                       href="{{ url_for('reglas_familias') }}"
-                       hx-get="{{ url_for('reglas_familias') }}" hx-target="#body-content" hx-push-url="true" hx-select="#body-content" hx-swap="outerHTML">
+                       href="{{ url_for('main.reglas_familias') }}"
+                       hx-get="{{ url_for('main.reglas_familias') }}" hx-target="#body-content" hx-push-url="true" hx-select="#body-content" hx-swap="outerHTML">
                         <i class="fa fa-layer-group"></i> Reglas Familia
                     </a>
                     <a class="nav-link {{ 'active' if request.endpoint == 'reglas' else '' }}" 
-                       href="{{ url_for('reglas') }}"
-                       hx-get="{{ url_for('reglas') }}" hx-target="#body-content" hx-push-url="true" hx-select="#body-content" hx-swap="outerHTML">
+                       href="{{ url_for('main.reglas') }}"
+                       hx-get="{{ url_for('main.reglas') }}" hx-target="#body-content" hx-push-url="true" hx-select="#body-content" hx-swap="outerHTML">
                         <i class="fa fa-cogs"></i> Reglas Generales
                     </a>
                     <a class="nav-link {{ 'active' if request.endpoint == 'reglas_config' else '' }}" 
-                       href="{{ url_for('reglas_config') }}"
-                       hx-get="{{ url_for('reglas_config') }}" hx-target="#body-content" hx-push-url="true" hx-select="#body-content" hx-swap="outerHTML">
+                       href="{{ url_for('main.reglas_config') }}"
+                       hx-get="{{ url_for('main.reglas_config') }}" hx-target="#body-content" hx-push-url="true" hx-select="#body-content" hx-swap="outerHTML">
                         <i class="fa fa-sliders-h"></i> Configuración Reglas
                     </a>
                 </nav>
@@ -214,7 +214,7 @@
                     <ul class="dropdown-menu shadow border-0" aria-labelledby="userMenu">
                         <li><a class="dropdown-item small py-2" href="#" onclick="toastr.info('Cargando perfil...')"><i class="fa fa-key me-2 text-warning"></i> Cambiar Clave</a></li>
                         <li><hr class="dropdown-divider"></li>
-                        <li><a class="dropdown-item small py-2 text-danger" href="{{ url_for('login') }}"><i class="fa fa-sign-out-alt me-2"></i> Cerrar Sesión</a></li>
+                        <li><a class="dropdown-item small py-2 text-danger" href="{{ url_for('main.login') }}"><i class="fa fa-sign-out-alt me-2"></i> Cerrar Sesión</a></li>
                     </ul>
                 </div>
 
@@ -264,7 +264,7 @@
                         <h2 class="fw-bold mb-1">{% block header %}{% endblock %}</h2>
                         <nav aria-label="breadcrumb">
                             <ol class="breadcrumb mb-0">
-                                <li class="breadcrumb-item"><a href="{{ url_for('index') }}" class="text-decoration-none">Inicio</a></li>
+                                <li class="breadcrumb-item"><a href="{{ url_for('main.index') }}" class="text-decoration-none">Inicio</a></li>
                                 <li class="breadcrumb-item active" aria-current="page">{% block page_title %}{% endblock %}</li>
                             </ol>
                         </nav>
