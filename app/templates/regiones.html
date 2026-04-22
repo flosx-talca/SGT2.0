@@ -78,20 +78,10 @@
         });
     });
 
-    // ── Abrir modal: carga datos ANTES de mostrarlo ───────────────────────────
+    // ── Abrir modal: usa la función Modal() global del layout ─────────────────
+    // Carga los datos ANTES de hacer .modal('show') - respeta la regla de renderizado
     function abrirModalRegion(modo, id) {
-        $('#fondo').fadeIn();
-        $.post("{{ url_for('region.modal') }}", { modo: modo, id: id })
-            .done(function(html) {
-                $('#modalContent').html(html);
-                $('#modalPrincipal').modal('show');
-            })
-            .fail(function() {
-                toastr.error('No se pudo cargar el formulario.');
-            })
-            .always(function() {
-                $('#fondo').fadeOut();
-            });
+        Modal(modo, id, "{{ url_for('region.modal') }}");
     }
 
     // ── Eliminar (lógico) ─────────────────────────────────────────────────────

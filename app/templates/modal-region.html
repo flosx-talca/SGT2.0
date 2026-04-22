@@ -75,15 +75,14 @@
                 if (res.ok) {
                     toastr.success(res.msg);
                     CerrarModal();
-                    setTimeout(() => location.reload(), 800);
+                    setTimeout(() => location.reload(), 900);
                 } else {
                     toastr.error(res.msg);
+                    $('#fondo').fadeOut();
                 }
             })
             .fail(function() {
                 toastr.error('Error de comunicación con el servidor.');
-            })
-            .always(function() {
                 $('#fondo').fadeOut();
             });
     }
