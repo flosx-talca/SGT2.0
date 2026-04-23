@@ -1,135 +1,173 @@
 <div class="modal-header bg-primary text-white">
-    <h5 class="modal-title fw-bold"> Turno</h5>
-    <button type="button" class="btn-close btn-close-white" onclick="CerrarModal()" aria-label="Close"></button>
+    <h5 class="modal-title fw-bold">
+        {% if modo == 'Agregar' %}Nuevo Turno
+        {% elif modo == 'Editar' %}Editar Turno
+        {% else %}Detalle de Turno
+        {% endif %}
+    </h5>
+    <button type="button" class="btn-close btn-close-white" onclick="CerrarModal()"></button>
 </div>
 
 <div class="modal-body p-4">
     <form id="form_turno">
-        <input type="hidden" name="id_turno" id="id_turno" value="1">
-
+        <input type="hidden" id="id_turno" value="{{ registro.id if registro else 0 }}">
         <div class="row g-3">
-            <div class="col-md-6">
-                <label class="form-label small fw-bold text-muted"><code>(*)</code> Nombre</label>
-                <input type="text" class="form-control" name="nombre" id="t_nombre"
-                       placeholder="Ej: Mañana" value="Mañana"
-                        required>
-            </div>
-            <div class="col-md-6">
-                <label class="form-label small fw-bold text-muted"><code>(*)</code> Abreviación</label>
-                <input type="text" class="form-control" name="abreviacion" id="t_abreviacion"
-                       placeholder="Ej: M" maxlength="5" value="M"
-                        required>
-            </div>
-
-            <div class="col-md-6">
-                <label class="form-label small fw-bold text-muted"><code>(*)</code> Hora Inicio</label>
-                <div class="input-group">
-                    <span class="input-group-text bg-light border-end-0"><i class="fa fa-clock text-muted"></i></span>
-                    <input type="time" class="form-control border-start-0" name="hora_inicio" id="t_hora_inicio"
-                           value="08:00"
-                            required>
-                </div>
-            </div>
-            <div class="col-md-6">
-                <label class="form-label small fw-bold text-muted"><code>(*)</code> Hora Fin</label>
-                <div class="input-group">
-                    <span class="input-group-text bg-light border-end-0"><i class="fa fa-clock text-muted"></i></span>
-                    <input type="time" class="form-control border-start-0" name="hora_fin" id="t_hora_fin"
-                           value="16:00"
-                            required>
+            <div class="col-md-8">
+                <label class="form-label small fw-bold text-muted"><code>(*)</code> Empresa / Sucursal</label>
+                <div class="input-group shadow-sm">
+                    <span class="input-group-text bg-light border-end-0"><i class="fa fa-building text-muted"></i></span>
+                    <select id="empresa_id_turno" class="form-select border-start-0 {% if modo == 'Visualizar' %}bg-light{% endif %}"
+                            {% if modo == 'Visualizar' %}disabled{% endif %}>
+                        <option value="">-- Seleccione Sucursal --</option>
+                        {% for e in empresas %}
+                        <option value="{{ e.id }}" {% if registro and registro.empresa_id == e.id %}selected{% endif %}>
+                            {{ e.razon_social }}
+                        </option>
+                        {% endfor %}
+                    </select>
                 </div>
             </div>
 
-            <div class="col-md-6">
-                <label class="form-label small fw-bold text-muted"><code>(*)</code> Sucursal</label>
-                <select class="form-select" name="sucursal_id" id="t_sucursal"
-                         required>
-                    
-                    <option value="1" >
-                        Pronto Vitacura
-                    </option>
-                    
-                    <option value="2" >
-                        Bencinera Norte
-                    </option>
-                    
-                </select>
-            </div>
-            <div class="col-md-6">
-                <label class="form-label small fw-bold text-muted">Color en el cuadrante</label>
-                <div class="input-group">
-                    <span class="input-group-text bg-light border-end-0"><i class="fa fa-palette text-muted"></i></span>
-                    <input type="color" class="form-control border-start-0 p-1" name="color" id="t_color"
-                           value="#18bc9c"
-                           
-                           style="height: 38px; min-width: 60px;">
-                    <span class="input-group-text bg-light" id="color_preview">
-                        <span id="color_label" class="badge px-3"
-                              style="background-color: #18bc9c">
-                            M
-                        </span>
-                    </span>
+            <div class="col-md-4">
+                <label class="form-label small fw-bold text-muted">Color</label>
+                <div class="input-group shadow-sm h-100">
+                    <input type="color" class="form-control form-control-color w-100 border-0 p-1 rounded" 
+                           id="color_turno" value="{{ registro.color if registro else '#18bc9c' }}"
+                           {% if modo == 'Visualizar' %}disabled{% endif %}
+                           oninput="updatePreviewColor(this.value)">
                 </div>
             </div>
-            
-            <div class="col-md-6">
-                <label class="form-label small fw-bold text-muted"><code>(*)</code> Dotación (Cobertura Diaria)</label>
-                <div class="input-group">
+
+            <div class="col-md-12">
+                <div class="d-flex align-items-center gap-3 bg-light p-3 rounded border border-light shadow-sm mb-2">
+                    <div id="preview-badge" class="badge" style="background-color: {{ registro.color if registro else '#18bc9c' }}; color: #fff; width: 60px; height: 45px; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 1.4rem; box-shadow: 0 4px 8px rgba(0,0,0,0.2);">
+                        {{ registro.abreviacion if registro else 'T1' }}
+                    </div>
+                    <div>
+                        <h6 class="mb-0 fw-bold">Vista Previa</h6>
+                        <small class="text-muted">Así se verá el turno en el cuadrante</small>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-8">
+                <label class="form-label small fw-bold text-muted"><code>(*)</code> Nombre del Turno</label>
+                <input type="text" class="form-control shadow-sm {% if modo == 'Visualizar' %}bg-light{% endif %}" 
+                       id="nombre_turno" value="{{ registro.nombre if registro else '' }}"
+                       {% if modo == 'Visualizar' %}readonly{% endif %} placeholder="Ej: Mañana, Tarde, Noche...">
+            </div>
+
+            <div class="col-md-4">
+                <label class="form-label small fw-bold text-muted"><code>(*)</code> Abrev.</label>
+                <input type="text" class="form-control text-uppercase shadow-sm {% if modo == 'Visualizar' %}bg-light{% endif %}" 
+                       id="abrev_turno" value="{{ registro.abreviacion if registro else '' }}"
+                       maxlength="5" {% if modo == 'Visualizar' %}readonly{% endif %} placeholder="M1"
+                       oninput="$('#preview-badge').text(this.value.toUpperCase() || 'T1')">
+            </div>
+
+            <div class="col-md-4">
+                <label class="form-label small fw-bold text-muted"><code>(*)</code> Inicio</label>
+                <div class="input-group shadow-sm">
+                    <span class="input-group-text bg-light border-end-0"><i class="fa fa-clock text-primary"></i></span>
+                    <input type="time" class="form-control border-start-0 {% if modo == 'Visualizar' %}bg-light{% endif %}" 
+                           id="inicio_turno" value="{{ registro.hora_inicio.strftime('%H:%M') if registro else '' }}"
+                           {% if modo == 'Visualizar' %}readonly{% endif %}>
+                </div>
+            </div>
+
+            <div class="col-md-4">
+                <label class="form-label small fw-bold text-muted"><code>(*)</code> Término</label>
+                <div class="input-group shadow-sm">
+                    <span class="input-group-text bg-light border-end-0"><i class="fa fa-flag-checkered text-danger"></i></span>
+                    <input type="time" class="form-control border-start-0 {% if modo == 'Visualizar' %}bg-light{% endif %}" 
+                           id="fin_turno" value="{{ registro.hora_fin.strftime('%H:%M') if registro else '' }}"
+                           {% if modo == 'Visualizar' %}readonly{% endif %}>
+                </div>
+            </div>
+
+            <div class="col-md-4">
+                <label class="form-label small fw-bold text-muted">Dotación Diaria</label>
+                <div class="input-group shadow-sm">
                     <span class="input-group-text bg-light border-end-0"><i class="fa fa-users text-muted"></i></span>
-                    <input type="number" class="form-control border-start-0" name="dotacion" id="t_dotacion"
-                           placeholder="Ej: 2" min="0" max="20" value="1"
-                            required>
+                    <input type="number" class="form-control border-start-0 {% if modo == 'Visualizar' %}bg-light{% endif %}" 
+                           id="dotacion_turno" value="{{ registro.dotacion_diaria if registro else 1 }}"
+                           min="1" {% if modo == 'Visualizar' %}readonly{% endif %}>
                 </div>
-                <small class="text-muted" style="font-size: 0.7rem;">Personas requeridas por día para este turno.</small>
+            </div>
+
+            <div class="col-md-12 mt-3">
+                <div class="form-check form-switch p-0 ps-5 bg-light rounded py-2 border border-light shadow-sm">
+                    <input class="form-check-input" type="checkbox" id="activo_turno" 
+                           {% if registro is none or registro.activo %}checked{% endif %}
+                           {% if modo == 'Visualizar' %}disabled{% endif %}>
+                    <label class="form-check-label fw-bold text-muted ms-2" for="activo_turno">Turno Operativo</label>
+                </div>
             </div>
         </div>
     </form>
 </div>
 
 <div class="modal-footer bg-light border-top-0">
-    <button type="button" class="btn btn-secondary px-4" onclick="CerrarModal()">Cancelar</button>
-    
-    <button type="button" class="btn btn-primary px-4" id="btn_guardar_turno">
-        <i class="fa fa-save me-1"></i> Guardar Turno
+    <button type="button" class="btn btn-secondary shadow-sm" onclick="CerrarModal()">Cancelar</button>
+    {% if modo != 'Visualizar' %}
+    <button type="button" id="btnGuardarTurno" class="btn btn-primary px-4 shadow-sm" onclick="guardarTurno()">
+        <i class="fa fa-save me-1"></i> Guardar Cambios
     </button>
-    
+    {% endif %}
 </div>
 
 <script>
-    // Preview del color en tiempo real
-    document.getElementById('t_color').addEventListener('input', function() {
-        document.getElementById('color_label').style.backgroundColor = this.value;
-    });
-    document.getElementById('t_abreviacion').addEventListener('input', function() {
-        document.getElementById('color_label').textContent = this.value || 'T';
-    });
+function updatePreviewColor(color) {
+    $('#preview-badge').css('background-color', color);
+}
 
-    $('#btn_guardar_turno').click(function() {
-        if (!$('#t_nombre').val() || !$('#t_hora_inicio').val() || !$('#t_hora_fin').val()) {
-            toastr.error('Por favor complete todos los campos obligatorios');
-            return;
+function guardarTurno() {
+    const id = $('#id_turno').val();
+    const empresa_id = $('#empresa_id_turno').val();
+    const nombre = $('#nombre_turno').val().trim();
+    const abreviacion = $('#abrev_turno').val().trim();
+    const hora_inicio = $('#inicio_turno').val();
+    const hora_fin = $('#fin_turno').val();
+    const color = $('#color_turno').val();
+    const dotacion = $('#dotacion_turno').val();
+    const activo = $('#activo_turno').is(':checked');
+
+    if (!empresa_id || !nombre || !abreviacion || !hora_inicio || !hora_fin) {
+        toastr.warning('Faltan campos obligatorios (*).');
+        return;
+    }
+
+    const $btn = $('#btnGuardarTurno');
+    $btn.prop('disabled', true).html('<i class="fa fa-spinner fa-spin me-1"></i> Guardando...');
+    $('#fondo').addClass('visible');
+
+    $.post("{{ url_for('turno.guardar') }}", {
+        id: id,
+        empresa_id: empresa_id,
+        nombre: nombre,
+        abreviacion: abreviacion,
+        hora_inicio: hora_inicio,
+        hora_fin: hora_fin,
+        color: color,
+        dotacion_diaria: dotacion,
+        activo: activo ? 'true' : 'false'
+    })
+    .done(function(res) {
+        if (res.ok) {
+            toastr.success(res.msg);
+            CerrarModal();
+            if (typeof refreshTablaTurnos === 'function') refreshTablaTurnos();
+        } else {
+            toastr.error(res.msg);
+            $btn.prop('disabled', false).html('<i class="fa fa-save me-1"></i> Guardar Cambios');
         }
-        const formData = $('#form_turno').serialize();
-        $('#fondo').fadeIn();
-        $.ajax({
-            url: '/turno/guardar',
-            type: 'POST',
-            data: formData,
-            success: function(res) {
-                $('#fondo').fadeOut();
-                if (res.status === 'success') {
-                    toastr.success(res.message);
-                    CerrarModal();
-                    setTimeout(() => location.reload(), 500);
-                } else {
-                    toastr.error(res.message);
-                }
-            },
-            error: function(xhr) {
-                $('#fondo').fadeOut();
-                const msg = xhr.responseJSON ? xhr.responseJSON.message : 'Error al guardar';
-                toastr.error(msg);
-            }
-        });
+    })
+    .fail(function() {
+        toastr.error('Error de comunicación con el servidor.');
+        $btn.prop('disabled', false).html('<i class="fa fa-save me-1"></i> Guardar Cambios');
+    })
+    .always(function() {
+        $('#fondo').removeClass('visible');
     });
+}
 </script>

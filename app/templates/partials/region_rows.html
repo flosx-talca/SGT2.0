@@ -1,0 +1,31 @@
+{% for region in regiones %}
+<tr>
+    <td class="fw-bold">{{ region.codigo }}</td>
+    <td>{{ region.descripcion }}</td>
+    <td>
+        {% if region.activo %}
+            <span class="badge bg-success-subtle text-success">Activo</span>
+        {% else %}
+            <span class="badge bg-danger-subtle text-danger">Inactivo</span>
+        {% endif %}
+    </td>
+    <td class="text-center">
+        <div class="btn-group btn-group-sm">
+            <button class="btn btn-outline-info" title="Visualizar"
+                onclick="abrirModalRegion('Visualizar', {{ region.id }})">
+                <i class="fa fa-eye"></i>
+            </button>
+            <button class="btn btn-outline-warning" title="Editar"
+                onclick="abrirModalRegion('Editar', {{ region.id }})">
+                <i class="fa fa-edit"></i>
+            </button>
+            <button class="btn btn-outline-danger" title="Desactivar"
+                onclick="eliminarRegion({{ region.id }}, '{{ region.descripcion }}')">
+                <i class="fa fa-ban"></i>
+            </button>
+        </div>
+    </td>
+</tr>
+{% else %}
+<tr><td colspan="4" class="text-center text-muted">No hay regiones registradas.</td></tr>
+{% endfor %}

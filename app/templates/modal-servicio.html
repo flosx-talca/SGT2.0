@@ -1,33 +1,32 @@
 <div class="modal-header bg-primary text-white">
-    <h5 class="modal-title fw-bold">Tipo de Servicio</h5>
-    <button type="button" class="btn-close btn-close-white" onclick="CerrarModal()" aria-label="Close"></button>
+    <h5 class="modal-title fw-bold">
+        {% if modo == 'Agregar' %}Nuevo Servicio
+        {% elif modo == 'Editar' %}Editar Servicio
+        {% else %}Detalle de Servicio
+        {% endif %}
+    </h5>
+    <button type="button" class="btn-close btn-close-white" onclick="CerrarModal()"></button>
 </div>
 
 <div class="modal-body p-4">
     <form id="form_servicio">
+        <input type="hidden" id="id_servicio" value="{{ registro.id if registro else 0 }}">
         <div class="row g-3">
             <div class="col-md-12">
                 <label class="form-label small fw-bold text-muted"><code>(*)</code> Descripción del Servicio</label>
                 <div class="input-group">
                     <span class="input-group-text bg-light border-end-0"><i class="fa fa-concierge-bell text-muted"></i></span>
-                    <input type="text" class="form-control border-start-0 bg-light" id="desc_servicio" value="Pronto" readonly required>
+                    <input type="text" class="form-control border-start-0 {% if modo == 'Visualizar' %}bg-light{% endif %}" 
+                           id="desc_servicio" value="{{ registro.descripcion if registro else '' }}"
+                           {% if modo == 'Visualizar' %}readonly{% endif %} placeholder="Ej: Seguridad, Limpieza, Pista...">
                 </div>
             </div>
 
-            <div class="col-md-12">
-                <label class="form-label small fw-bold text-muted">Empresas Asociadas (Multiselect)</label>
-                <select class="form-select bg-light" id="empresas_servicio" multiple disabled>
-                    <option value="1" selected>Copec S.A.</option>
-                    <option value="2">Abastible</option>
-                    <option value="3" selected>Franquicias del Norte</option>
-                    <option value="4">Retail Express</option>
-                </select>
-                <small class="text-muted" style="font-size: 0.7rem;">Mantenga presionado Ctrl (o Cmd) para seleccionar múltiples.</small>
-            </div>
-            
-            <div class="col-md-12 mt-4">
+            <div class="col-md-12 mt-3">
                 <div class="form-check form-switch">
-                    <input class="form-check-input" type="checkbox" id="activo_servicio" checked disabled>
+                    <input class="form-check-input" type="checkbox" id="activo_servicio" 
+                           {% if registro is none or registro.activo %}checked{% endif %}
+                           {% if modo == 'Visualizar' %}disabled{% endif %}>
                     <label class="form-check-label small fw-bold text-muted" for="activo_servicio">Servicio Activo</label>
                 </div>
             </div>
@@ -37,38 +36,49 @@
 
 <div class="modal-footer bg-light border-top-0">
     <button type="button" class="btn btn-secondary" onclick="CerrarModal()">Cancelar</button>
-    <button type="button" class="btn btn-primary px-4" id="btn-guardar-servicio" onclick="guardarServicio()">
-        <i class="fa fa-save me-1"></i> Guardar Servicio
+    {% if modo != 'Visualizar' %}
+    <button type="button" id="btnGuardarServicio" class="btn btn-primary px-4" onclick="guardarServicio()">
+        <i class="fa fa-save me-1"></i> Guardar
     </button>
+    {% endif %}
 </div>
 
 <script>
-    function guardarServicio() {
-        $('#fondo').fadeIn();
-        setTimeout(() => {
-            $('#fondo').fadeOut();
-            toastr.success('Servicio guardado con éxito');
-            CerrarModal();
-        }, 800);
+function guardarServicio() {
+    const id = $('#id_servicio').val();
+    const descripcion = $('#desc_servicio').val().trim();
+    const activo = $('#activo_servicio').is(':checked');
+
+    if (!descripcion) {
+        toastr.warning('La descripción es obligatoria.');
+        return;
     }
-    
-    {% if modo == 'Agregar' %}
-    $(document).ready(function() {
-        $('.modal-title').text('Nuevo Tipo de Servicio');
-        $('#desc_servicio').val('').prop('readonly', false).removeClass('bg-light');
-        $('#empresas_servicio').val([]).prop('disabled', false).removeClass('bg-light');
-        $('#activo_servicio').prop('checked', true).prop('disabled', false);
+
+    const $btn = $('#btnGuardarServicio');
+    $btn.prop('disabled', true).html('<i class="fa fa-spinner fa-spin me-1"></i> Guardando...');
+    $('#fondo').addClass('visible');
+
+    $.post("{{ url_for('servicio.guardar') }}", {
+        id: id,
+        descripcion: descripcion,
+        activo: activo ? 'true' : 'false'
+    })
+    .done(function(res) {
+        if (res.ok) {
+            toastr.success(res.msg);
+            CerrarModal();
+            if (typeof refreshTablaServicios === 'function') refreshTablaServicios();
+        } else {
+            toastr.error(res.msg);
+            $btn.prop('disabled', false).html('<i class="fa fa-save me-1"></i> Guardar');
+        }
+    })
+    .fail(function() {
+        toastr.error('Error de comunicación con el servidor.');
+        $btn.prop('disabled', false).html('<i class="fa fa-save me-1"></i> Guardar');
+    })
+    .always(function() {
+        $('#fondo').removeClass('visible');
     });
-    {% elif modo == 'Visualizar' %}
-    $(document).ready(function() {
-        $('#btn-guardar-servicio').hide();
-    });
-    {% elif modo == 'Editar' %}
-    $(document).ready(function() {
-        $('.modal-title').text('Editar Tipo de Servicio');
-        $('#desc_servicio').prop('readonly', false).removeClass('bg-light');
-        $('#empresas_servicio').prop('disabled', false).removeClass('bg-light');
-        $('#activo_servicio').prop('disabled', false);
-    });
-    {% endif %}
+}
 </script>

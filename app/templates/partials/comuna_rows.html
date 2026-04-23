@@ -1,0 +1,34 @@
+{% for r in registros %}
+<tr>
+    <td>{{ r.codigo }}</td>
+    <td>{{ r.descripcion }}</td>
+    <td>{{ r.region.descripcion }}</td>
+    <td>
+        <span class="badge bg-{{ 'success' if r.activo else 'danger' }}-subtle
+                         text-{{ 'success' if r.activo else 'danger' }}">
+            {{ 'Activo' if r.activo else 'Inactivo' }}
+        </span>
+    </td>
+    <td class="text-center">
+        <div class="btn-group btn-group-sm">
+            <button class="btn btn-outline-info"
+                onclick="Modal('Visualizar', {{ r.id }}, '{{ url_for('comuna.modal') }}')"
+                title="Ver detalle">
+                <i class="fa fa-eye"></i>
+            </button>
+            <button class="btn btn-outline-warning"
+                onclick="Modal('Editar', {{ r.id }}, '{{ url_for('comuna.modal') }}')"
+                title="Editar">
+                <i class="fa fa-edit"></i>
+            </button>
+            <button class="btn btn-outline-danger"
+                onclick="eliminarComuna({{ r.id }}, '{{ r.descripcion }}')"
+                title="Desactivar">
+                <i class="fa fa-ban"></i>
+            </button>
+        </div>
+    </td>
+</tr>
+{% else %}
+<tr><td colspan="5" class="text-center text-muted">Sin comunas registradas.</td></tr>
+{% endfor %}

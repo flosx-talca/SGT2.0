@@ -1,0 +1,125 @@
+<div class="modal-header bg-primary text-white">
+    <h5 class="modal-title fw-bold">
+        {% if modo == 'Agregar' %}Nueva Regla Maestra
+        {% elif modo == 'Editar' %}Editar Regla Maestra
+        {% else %}Detalle de Regla Maestra
+        {% endif %}
+    </h5>
+    <button type="button" class="btn-close btn-close-white" onclick="CerrarModal()"></button>
+</div>
+
+<div class="modal-body p-4">
+    <form id="form_regla">
+        <input type="hidden" id="id_regla" value="{{ registro.id if registro else 0 }}">
+        <div class="row g-3">
+            <div class="col-md-6">
+                <label class="form-label small fw-bold text-muted"><code>(*)</code> Código Único</label>
+                <input type="text"
+                       class="form-control {% if modo == 'Visualizar' %}bg-light{% endif %}"
+                       id="codigo_regla"
+                       value="{{ registro.codigo if registro else '' }}"
+                       {% if modo == 'Visualizar' %}readonly{% endif %}>
+            </div>
+            <div class="col-md-6">
+                <label class="form-label small fw-bold text-muted"><code>(*)</code> Nombre</label>
+                <input type="text"
+                       class="form-control {% if modo == 'Visualizar' %}bg-light{% endif %}"
+                       id="nombre_regla"
+                       value="{{ registro.nombre if registro else '' }}"
+                       {% if modo == 'Visualizar' %}readonly{% endif %}>
+            </div>
+            <div class="col-md-6">
+                <label class="form-label small fw-bold text-muted"><code>(*)</code> Familia</label>
+                <select class="form-select {% if modo == 'Visualizar' %}bg-light{% endif %}" id="familia_regla" {% if modo == 'Visualizar' %}disabled{% endif %}>
+                    <option value="comparison" {% if registro and registro.familia == 'comparison' %}selected{% endif %}>comparison</option>
+                    <option value="range" {% if registro and registro.familia == 'range' %}selected{% endif %}>range</option>
+                    <option value="set_membership" {% if registro and registro.familia == 'set_membership' %}selected{% endif %}>set_membership</option>
+                    <option value="sequence" {% if registro and registro.familia == 'sequence' %}selected{% endif %}>sequence</option>
+                    <option value="calendar" {% if registro and registro.familia == 'calendar' %}selected{% endif %}>calendar</option>
+                </select>
+            </div>
+            <div class="col-md-6">
+                <label class="form-label small fw-bold text-muted"><code>(*)</code> Tipo de Regla</label>
+                <select class="form-select {% if modo == 'Visualizar' %}bg-light{% endif %}" id="tipo_regla" {% if modo == 'Visualizar' %}disabled{% endif %}>
+                    <option value="hard" {% if registro and registro.tipo_regla == 'hard' %}selected{% endif %}>Hard Rule</option>
+                    <option value="soft" {% if registro and registro.tipo_regla == 'soft' %}selected{% endif %}>Soft Rule</option>
+                    <option value="client" {% if registro and registro.tipo_regla == 'client' %}selected{% endif %}>Client Rule</option>
+                </select>
+            </div>
+            <div class="col-md-4">
+                <label class="form-label small fw-bold text-muted"><code>(*)</code> Scope (Alcance)</label>
+                <input type="text"
+                       class="form-control {% if modo == 'Visualizar' %}bg-light{% endif %}"
+                       id="scope_regla" placeholder="ej. worker, client, shift"
+                       value="{{ registro.scope if registro else '' }}"
+                       {% if modo == 'Visualizar' %}readonly{% endif %}>
+            </div>
+            <div class="col-md-4">
+                <label class="form-label small fw-bold text-muted">Campo a Evaluar</label>
+                <input type="text"
+                       class="form-control {% if modo == 'Visualizar' %}bg-light{% endif %}"
+                       id="campo_regla" placeholder="ej. edad, turnos_mes"
+                       value="{{ registro.campo if registro else '' }}"
+                       {% if modo == 'Visualizar' %}readonly{% endif %}>
+            </div>
+            <div class="col-md-4">
+                <label class="form-label small fw-bold text-muted">Operador</label>
+                <input type="text"
+                       class="form-control {% if modo == 'Visualizar' %}bg-light{% endif %}"
+                       id="operador_regla" placeholder="ej. >, <, =="
+                       value="{{ registro.operador if registro else '' }}"
+                       {% if modo == 'Visualizar' %}readonly{% endif %}>
+            </div>
+            <div class="col-md-12 mt-3">
+                <div class="form-check form-switch">
+                    <input class="form-check-input" type="checkbox" id="activo_regla" 
+                           {% if registro is none or registro.activo %}checked{% endif %}
+                           {% if modo == 'Visualizar' %}disabled{% endif %}>
+                    <label class="form-check-label small fw-bold text-muted" for="activo_regla">Regla Activa</label>
+                </div>
+            </div>
+        </div>
+    </form>
+</div>
+
+<div class="modal-footer bg-light border-top-0">
+    <button type="button" class="btn btn-secondary" onclick="CerrarModal()">Cancelar</button>
+    {% if modo != 'Visualizar' %}
+    <button type="button" class="btn btn-primary px-4" onclick="guardarRegla()">
+        <i class="fa fa-save me-1"></i> Guardar
+    </button>
+    {% endif %}
+</div>
+
+<script>
+function guardarRegla() {
+    const id         = $('#id_regla').val();
+    const codigo     = $('#codigo_regla').val().trim();
+    const nombre     = $('#nombre_regla').val().trim();
+    const familia    = $('#familia_regla').val();
+    const tipo_regla = $('#tipo_regla').val();
+    const scope      = $('#scope_regla').val().trim();
+    const campo      = $('#campo_regla').val().trim();
+    const operador   = $('#operador_regla').val().trim();
+    const activo     = $('#activo_regla').is(':checked');
+
+    if (!codigo || !nombre || !familia || !tipo_regla || !scope) { 
+        toastr.warning('Complete todos los campos obligatorios (*).'); 
+        return; 
+    }
+
+    $('#fondo').fadeIn();
+    $.post("{{ url_for('regla.guardar') }}", { id, codigo, nombre, familia, tipo_regla, scope, campo, operador, activo: activo ? 'true' : 'false' })
+        .done(res => {
+            if (res.ok) {
+                toastr.success(res.msg);
+                CerrarModal();
+                refreshTablaRegla();
+            } else {
+                toastr.error(res.msg);
+                $('#fondo').fadeOut();
+            }
+        })
+        .fail(() => { toastr.error('Error de servidor al guardar.'); $('#fondo').fadeOut(); });
+}
+</script>

@@ -1,98 +1,33 @@
-{% extends "layout.html" %}
+{% extends "_partial.html" if is_htmx else "layout.html" %}
 
-{% block title %}Roles{% endblock %}
-
-{% block head %}
-
-{% endblock %}
-
+{% block title %}Roles de Usuario{% endblock %}
 {% block header %}Gestión de Roles{% endblock %}
 {% block page_title %}Roles{% endblock %}
 
 {% block actions %}
-<button class="btn btn-primary shadow-sm" onclick="Modal('Agregar', 0, '/modal-rol')">
-    <i class="fa fa-plus me-1"></i> Agregar Rol
+<button class="btn btn-primary shadow-sm" onclick="Modal('Agregar', 0, '{{ url_for('rol.modal') }}')">
+    <i class="fa fa-user-tag me-1"></i> Nuevo Rol
 </button>
 {% endblock %}
 
 {% block content %}
 <div class="row">
-    <div class="col-12">
+    <div class="col-12 col-lg-7">
         <div class="card shadow-sm border-0">
-            <div class="card-header bg-white py-3 border-bottom">
-                <h5 class="mb-0 fw-bold text-dark"><i class="fa fa-id-badge me-2 text-primary"></i>Directorio de Roles</h5>
+            <div class="card-header bg-white py-3">
+                <h5 class="mb-0 fw-bold text-dark"><i class="fa fa-shield-alt me-2 text-primary"></i>Configuración de Roles</h5>
             </div>
             <div class="card-body">
-                <table id="tabla_roles" class="table table-hover dt-responsive nowrap w-100 align-middle">
+                <table id="tabla_roles" class="table table-hover align-middle w-100">
                     <thead class="table-light">
                         <tr>
-                            <th>Descripción</th>
+                            <th>Descripción del Rol</th>
                             <th>Estado</th>
                             <th class="text-center">Acciones</th>
                         </tr>
                     </thead>
-                    <tbody>
-                        <!-- Mock Static Data -->
-                        <tr>
-                            <td class="fw-bold">Super Admin</td>
-                            <td><span class="badge bg-success-subtle text-success">Activo</span></td>
-                            <td class="text-center">
-                                <div class="btn-group btn-group-sm">
-                                    <button class="btn btn-outline-info" title="Visualizar"
-                                        onclick="Modal('Visualizar', 1, '/modal-rol')"><i
-                                            class="fa fa-eye"></i></button>
-                                    <button class="btn btn-outline-warning" title="Editar"
-                                        onclick="Modal('Editar', 1, '/modal-rol')"><i
-                                            class="fa fa-edit"></i></button>
-                                    <button class="btn btn-outline-danger" title="Eliminar"><i class="fa fa-trash"></i></button>
-                                </div>
-                            </td>
-                        </tr>
-                        <tr>
-                            <td class="fw-bold">Administrador</td>
-                            <td><span class="badge bg-success-subtle text-success">Activo</span></td>
-                            <td class="text-center">
-                                <div class="btn-group btn-group-sm">
-                                    <button class="btn btn-outline-info" title="Visualizar"
-                                        onclick="Modal('Visualizar', 2, '/modal-rol')"><i
-                                            class="fa fa-eye"></i></button>
-                                    <button class="btn btn-outline-warning" title="Editar"
-                                        onclick="Modal('Editar', 2, '/modal-rol')"><i
-                                            class="fa fa-edit"></i></button>
-                                    <button class="btn btn-outline-danger" title="Eliminar"><i class="fa fa-trash"></i></button>
-                                </div>
-                            </td>
-                        </tr>
-                        <tr>
-                            <td class="fw-bold">Cliente</td>
-                            <td><span class="badge bg-success-subtle text-success">Activo</span></td>
-                            <td class="text-center">
-                                <div class="btn-group btn-group-sm">
-                                    <button class="btn btn-outline-info" title="Visualizar"
-                                        onclick="Modal('Visualizar', 3, '/modal-rol')"><i
-                                            class="fa fa-eye"></i></button>
-                                    <button class="btn btn-outline-warning" title="Editar"
-                                        onclick="Modal('Editar', 3, '/modal-rol')"><i
-                                            class="fa fa-edit"></i></button>
-                                    <button class="btn btn-outline-danger" title="Eliminar"><i class="fa fa-trash"></i></button>
-                                </div>
-                            </td>
-                        </tr>
-                        <tr>
-                            <td class="fw-bold">Usuario Solo Lectura</td>
-                            <td><span class="badge bg-danger-subtle text-danger">Inactivo</span></td>
-                            <td class="text-center">
-                                <div class="btn-group btn-group-sm">
-                                    <button class="btn btn-outline-info" title="Visualizar"
-                                        onclick="Modal('Visualizar', 4, '/modal-rol')"><i
-                                            class="fa fa-eye"></i></button>
-                                    <button class="btn btn-outline-warning" title="Editar"
-                                        onclick="Modal('Editar', 4, '/modal-rol')"><i
-                                            class="fa fa-edit"></i></button>
-                                    <button class="btn btn-outline-danger" title="Eliminar"><i class="fa fa-trash"></i></button>
-                                </div>
-                            </td>
-                        </tr>
+                    <tbody id="tbody-roles">
+                        {% include 'partials/rol_rows.html' %}
                     </tbody>
                 </table>
             </div>
@@ -103,13 +38,58 @@
 
 {% block scripts %}
 <script>
-    $(document).ready(function () {
-        $('#tabla_roles').DataTable({
-            responsive: true,
-            language: {
-                url: '/static/i18n/es-ES.json'
-            }
-        });
+var dtRoles;
+
+function initDataTable() {
+    dtRoles = $('#tabla_roles').DataTable({
+        responsive: true,
+        order: [[0, 'asc']],
+        language: { url: '/static/i18n/es-ES.json' },
+        columnDefs: [ { targets: [2], orderable: false, searchable: false } ]
     });
+}
+
+$(document).ready(function() {
+    initDataTable();
+});
+
+function refreshTablaRoles() {
+    $('#fondo').addClass('visible');
+    $.get("{{ url_for('rol.tabla') }}", function(html) {
+        if (dtRoles) dtRoles.destroy();
+        $('#tbody-roles').html(html);
+        initDataTable();
+    }).always(function() {
+        $('#fondo').removeClass('visible');
+    });
+}
+
+function eliminarRol(id, desc) {
+    Swal.fire({
+        title: '¿Desactivar Rol?',
+        text: `Los usuarios asociados a "${desc}" podrían perder acceso al sistema.`,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonText: 'Sí, desactivar',
+        cancelButtonText: 'Cancelar',
+        confirmButtonColor: '#e74c3c'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            $('#fondo').addClass('visible');
+            $.post("{{ url_for('rol.eliminar') }}", { id: id })
+                .done(function(res) {
+                    if (res.ok) {
+                        toastr.success(res.msg);
+                        refreshTablaRoles();
+                    } else {
+                        toastr.error(res.msg);
+                    }
+                })
+                .always(function() {
+                    $('#fondo').removeClass('visible');
+                });
+        }
+    });
+}
 </script>
 {% endblock %}

@@ -1,17 +1,12 @@
-{% extends "layout.html" %}
+{% extends "_partial.html" if is_htmx else "layout.html" %}
 
 {% block title %}Feriados{% endblock %}
-
-{% block head %}
-
-{% endblock %}
-
 {% block header %}Gestión de Feriados{% endblock %}
 {% block page_title %}Feriados{% endblock %}
 
 {% block actions %}
-<button class="btn btn-primary shadow-sm" onclick="Modal('Agregar', 0, '/modal-feriado')">
-    <i class="fa fa-plus me-1"></i> Agregar Feriado
+<button class="btn btn-primary shadow-sm" onclick="Modal('Agregar', 0, '{{ url_for('feriado.modal') }}')">
+    <i class="fa fa-plus me-1"></i> Nuevo Feriado
 </button>
 {% endblock %}
 
@@ -19,73 +14,22 @@
 <div class="row">
     <div class="col-12">
         <div class="card shadow-sm border-0">
-            <div class="card-header bg-white py-3 border-bottom">
-                <h5 class="mb-0 fw-bold text-dark"><i class="fa fa-calendar-star me-2 text-primary"></i>Calendario de Feriados</h5>
+            <div class="card-header bg-white py-3">
+                <h5 class="mb-0 fw-bold text-dark"><i class="fa fa-calendar-alt me-2 text-primary"></i>Listado de Feriados</h5>
             </div>
             <div class="card-body">
-                <table id="tabla_feriados" class="table table-hover dt-responsive nowrap w-100 align-middle">
+                <table id="tabla_feriados" class="table table-hover align-middle w-100">
                     <thead class="table-light">
                         <tr>
                             <th>Fecha</th>
                             <th>Descripción</th>
-                            <th>Regional</th>
-                            <th>Región Asociada</th>
+                            <th>Tipo</th>
+                            <th>Estado</th>
                             <th class="text-center">Acciones</th>
                         </tr>
                     </thead>
-                    <tbody>
-                        <!-- Mock Static Data -->
-                        <tr>
-                            <td class="fw-bold">01/01/2026</td>
-                            <td>Año Nuevo</td>
-                            <td><span class="badge bg-secondary">No</span></td>
-                            <td><span class="text-muted fst-italic">N/A (Nacional)</span></td>
-                            <td class="text-center">
-                                <div class="btn-group btn-group-sm">
-                                    <button class="btn btn-outline-info" title="Visualizar"
-                                        onclick="Modal('Visualizar', 1, '/modal-feriado')"><i
-                                            class="fa fa-eye"></i></button>
-                                    <button class="btn btn-outline-warning" title="Editar"
-                                        onclick="Modal('Editar', 1, '/modal-feriado')"><i
-                                            class="fa fa-edit"></i></button>
-                                    <button class="btn btn-outline-danger" title="Eliminar"><i class="fa fa-trash"></i></button>
-                                </div>
-                            </td>
-                        </tr>
-                        <tr>
-                            <td class="fw-bold">18/09/2026</td>
-                            <td>Independencia Nacional</td>
-                            <td><span class="badge bg-secondary">No</span></td>
-                            <td><span class="text-muted fst-italic">N/A (Nacional)</span></td>
-                            <td class="text-center">
-                                <div class="btn-group btn-group-sm">
-                                    <button class="btn btn-outline-info" title="Visualizar"
-                                        onclick="Modal('Visualizar', 2, '/modal-feriado')"><i
-                                            class="fa fa-eye"></i></button>
-                                    <button class="btn btn-outline-warning" title="Editar"
-                                        onclick="Modal('Editar', 2, '/modal-feriado')"><i
-                                            class="fa fa-edit"></i></button>
-                                    <button class="btn btn-outline-danger" title="Eliminar"><i class="fa fa-trash"></i></button>
-                                </div>
-                            </td>
-                        </tr>
-                        <tr>
-                            <td class="fw-bold">07/06/2026</td>
-                            <td>Asalto y Toma del Morro de Arica</td>
-                            <td><span class="badge bg-primary">Sí</span></td>
-                            <td><span class="badge bg-secondary">XV - Arica y Parinacota</span></td>
-                            <td class="text-center">
-                                <div class="btn-group btn-group-sm">
-                                    <button class="btn btn-outline-info" title="Visualizar"
-                                        onclick="Modal('Visualizar', 3, '/modal-feriado')"><i
-                                            class="fa fa-eye"></i></button>
-                                    <button class="btn btn-outline-warning" title="Editar"
-                                        onclick="Modal('Editar', 3, '/modal-feriado')"><i
-                                            class="fa fa-edit"></i></button>
-                                    <button class="btn btn-outline-danger" title="Eliminar"><i class="fa fa-trash"></i></button>
-                                </div>
-                            </td>
-                        </tr>
+                    <tbody id="tbody-feriados">
+                        {% include 'partials/feriado_rows.html' %}
                     </tbody>
                 </table>
             </div>
@@ -96,14 +40,60 @@
 
 {% block scripts %}
 <script>
-    $(document).ready(function () {
-        $('#tabla_feriados').DataTable({
-            responsive: true,
-            order: [[0, 'asc']], // Order by date initially
-            language: {
-                url: '/static/i18n/es-ES.json'
-            }
-        });
+var dtFeriados;
+
+function initDataTable() {
+    dtFeriados = $('#tabla_feriados').DataTable({
+        responsive: true,
+        order: [[0, 'desc']],
+        language: { url: '/static/i18n/es-ES.json' },
+        columnDefs: [
+            { targets: [4], orderable: false, searchable: false }
+        ]
     });
+}
+
+$(document).ready(function() {
+    initDataTable();
+});
+
+function refreshTablaFeriados() {
+    $('#fondo').addClass('visible');
+    $.get("{{ url_for('feriado.tabla') }}", function(html) {
+        if (dtFeriados) dtFeriados.destroy();
+        $('#tbody-feriados').html(html);
+        initDataTable();
+    }).always(function() {
+        $('#fondo').removeClass('visible');
+    });
+}
+
+function eliminarFeriado(id, desc) {
+    Swal.fire({
+        title: '¿Desactivar Feriado?',
+        text: `"${desc}" ya no será considerado como día festivo.`,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonText: 'Sí, desactivar',
+        cancelButtonText: 'Cancelar',
+        confirmButtonColor: '#e74c3c'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            $('#fondo').addClass('visible');
+            $.post("{{ url_for('feriado.eliminar') }}", { id: id })
+                .done(function(res) {
+                    if (res.ok) {
+                        toastr.success(res.msg);
+                        refreshTablaFeriados();
+                    } else {
+                        toastr.error(res.msg);
+                    }
+                })
+                .always(function() {
+                    $('#fondo').removeClass('visible');
+                });
+        }
+    });
+}
 </script>
 {% endblock %}
