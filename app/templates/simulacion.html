@@ -325,11 +325,16 @@
                 LISTA_TURNOS.forEach(t => conts[t] = 0);
 
                 let celdas_html = trabajadores.map(t => {
-                    const tAbr = (celdas[dia.fecha] && celdas[dia.fecha][t.id]) || 'L';
+                    // raw puede ser: 'M','T','N' (turno), 'L' (libre), 'VAC' (ausencia), '' (sin resolver)
+                    const raw  = (celdas[dia.fecha] !== undefined) ? celdas[dia.fecha][t.id] : undefined;
+                    const tAbr = (raw !== undefined && raw !== null && raw !== '') ? raw : 'L';
+                    const sinResolver = (raw === '' || raw === undefined || raw === null);
                     if (conts[tAbr] !== undefined) conts[tAbr]++;
                     const color = typeof getColorTurno === 'function' ? getColorTurno(tAbr) : '#adb5bd';
-                    return `<td class="celda-turno" onclick="SGT.abrirPicker(this)" data-fecha="${dia.fecha}" data-wid="${t.id}">
-                        <span class="badge-turno ${tAbr === 'L' ? 'libre' : ''}" style="${tAbr !== 'L' ? 'background-color:' + color : ''}; min-width:40px; padding:0 5px;">${tAbr}</span>
+                    // Celda sin resolver: borde punteado naranja para que el usuario la identifique
+                    const estiloExtra = sinResolver ? 'border: 1.5px dashed #fd7e14 !important;' : '';
+                    return `<td class="celda-turno" onclick="SGT.abrirPicker(this)" data-fecha="${dia.fecha}" data-wid="${t.id}" style="${estiloExtra}">
+                        <span class="badge-turno ${tAbr === 'L' ? 'libre' : ''}" style="${tAbr !== 'L' ? 'background-color:' + color : ''}; min-width:40px; padding:0 5px;">${sinResolver ? '' : tAbr}</span>
                     </td>`;
                 }).join('');
 

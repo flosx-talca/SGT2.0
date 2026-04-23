@@ -10,6 +10,9 @@ def create_app():
     # Inicializar plugins
     db.init_app(app)
 
+    # DEBUG: Ver qué URL se está usando realmente
+    print(f"\n--- DEBUG: SQLALCHEMY_DATABASE_URI = {app.config.get('SQLALCHEMY_DATABASE_URI')} ---\n")
+
     # Inyectar is_htmx en todos los templates automáticamente
     @app.context_processor
     def inject_htmx():

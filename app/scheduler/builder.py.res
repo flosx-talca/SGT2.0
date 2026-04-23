@@ -15,8 +15,6 @@ W_MAX_SEM  =      1_000
 W_FRAG     =        100
 W_REWARD   =          1
 W_ASIG     =  1_000_000   # asignaciones fijas por día de semana (muy alto, cede solo ante HARD)
-W_CONSEC   =         50   # reward por días consecutivos trabajados (agrupa libres, ayuda al part-time)
-W_EQ_SEM   =      5_000   # equidad de carga semanal por grupo de contrato
 
 
 def build_model(trabajadores, dias_del_mes, turnos, coberturas, ausencias,
@@ -369,65 +367,11 @@ def build_model(trabajadores, dias_del_mes, turnos, coberturas, ausencias,
         rango_cargas.append(rango_g)
 
     # ═══════════════════════════════════════════════════════════════════════════
-    # SOFT-EQ-SEM: Equidad de carga semanal por grupo de contrato
-    # Minimiza la diferencia entre el que más y el que menos trabaja
-    # en cada ventana semanal, dentro del mismo grupo de horas.
-    # Complementa SOFT-P6 (equidad mensual) controlando la distribución
-    # dentro del mes — evita que un trabajador trabaje todo al inicio
-    # y otro todo al final.
-    # Usa ventanas no solapadas de 7 días desde el día 1.
-    # ═══════════════════════════════════════════════════════════════════════════
-    rango_cargas_sem = []
-    for horas_grupo, workers_grupo in grupos.items():
-        if len(workers_grupo) < 2:
-            continue
-        for i in range(0, N, 7):                    # ventanas no solapadas
-            semana = dias_del_mes[i:i + 7]
-            if not semana:
-                continue
-            max_s = model.NewIntVar(0, 7, f'max_sem_{horas_grupo}_{i}')
-            min_s = model.NewIntVar(0, 7, f'min_sem_{horas_grupo}_{i}')
-            for w in workers_grupo:
-                dias_s = sum(x[w, d, t] for d in semana for t in turnos)
-                model.Add(dias_s <= max_s)
-                model.Add(dias_s >= min_s)
-            rango_s = model.NewIntVar(0, 7, f'rango_sem_{horas_grupo}_{i}')
-            model.Add(rango_s == max_s - min_s)
-            rango_cargas_sem.append(rango_s)
-
-    # ═══════════════════════════════════════════════════════════════════════════
-    # SOFT-CONSEC: Reward por días trabajados consecutivos
-    # Premia cada par de días adyacentes trabajados.
-    # Efecto: el solver agrupa los días libres en bloques en vez de
-    # dispersarlos, lo que mejora especialmente a los trabajadores part-time
-    # que tienen más días libres para distribuir.
-    # El reward compite con HARD-5 (máx 6 consecutivos) y HARD-8 (total mensual).
-    # ═══════════════════════════════════════════════════════════════════════════
-    reward_consec = []
-    for w in trabajadores:
-        for i in range(N - 1):
-            d_hoy    = dias_del_mes[i]
-            d_manana = dias_del_mes[i + 1]
-
-            th  = model.NewBoolVar(f'cth_{w}_{i}')
-            tm  = model.NewBoolVar(f'ctm_{w}_{i}')
-            par = model.NewBoolVar(f'par_{w}_{i}')
-
-            model.Add(th == sum(x[w, d_hoy,    t] for t in turnos))
-            model.Add(tm == sum(x[w, d_manana, t] for t in turnos))
-
-            # par = 1 si trabajó hoy Y mañana
-            model.AddBoolAnd([th, tm]).OnlyEnforceIf(par)
-            model.AddBoolOr([th.Not(), tm.Not()]).OnlyEnforceIf(par.Not())
-            reward_consec.append(par)
-
-    # ═══════════════════════════════════════════════════════════════════════════
     # Función objetivo multi-criterio
     # Los pesos están definidos como constantes al inicio del archivo.
     # Para calibrar el comportamiento del solver, ajustar solo esas constantes.
     # ═══════════════════════════════════════════════════════════════════════════
     obj_asig    = sum(asig_violadas)   * W_ASIG    if asig_violadas  else 0
-    obj_eq_sem  = sum(rango_cargas_sem) * W_EQ_SEM  if rango_cargas_sem else 0
     obj_deficit = sum(deficits)       * W_DEFICIT if deficits       else 0
     obj_excess  = sum(excesses)       * W_EXCESO  if excesses       else 0
     obj_equidad = sum(rango_cargas)   * W_EQUIDAD if rango_cargas   else 0
@@ -445,14 +389,10 @@ def build_model(trabajadores, dias_del_mes, turnos, coberturas, ausencias,
     ]
     reward = sum(reward_list) if reward_list else 0
 
-    reward_consecutivo = sum(reward_consec) * W_CONSEC if reward_consec else 0
-
     model.Minimize(
-        obj_asig + obj_deficit + obj_excess +
-        obj_equidad + obj_eq_sem +
+        obj_asig + obj_deficit + obj_excess + obj_equidad +
         obj_min_sem + obj_max_sem + obj_frag
         - reward * W_REWARD
-        - reward_consecutivo
     )
 
     return model, x

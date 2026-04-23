@@ -15,10 +15,12 @@ class Cliente(db.Model):
     empresas = db.relationship('Empresa', backref='dueño', lazy=True)
     usuarios = db.relationship('Usuario', backref='cliente', lazy=True)
 
+
 empresa_servicio = db.Table('empresa_servicio',
     db.Column('empresa_id', db.Integer, db.ForeignKey('empresa.id', ondelete='CASCADE'), primary_key=True),
     db.Column('servicio_id', db.Integer, db.ForeignKey('servicio.id', ondelete='CASCADE'), primary_key=True)
 )
+
 
 class Empresa(db.Model):
     __tablename__ = 'empresa'
@@ -34,8 +36,10 @@ class Empresa(db.Model):
 
     turnos = db.relationship('Turno', backref='empresa', lazy=True, cascade="all, delete-orphan")
     trabajadores = db.relationship('Trabajador', backref='empresa', lazy=True)
-    servicios = db.relationship('Servicio', secondary=empresa_servicio, backref=db.backref('empresas_asociadas', lazy='dynamic'))
+    servicios = db.relationship('Servicio', secondary=empresa_servicio,
+                                backref=db.backref('empresas_asociadas', lazy='dynamic'))
     reglas = db.relationship('ReglaEmpresa', backref='empresa', lazy=True, cascade="all, delete-orphan")
+
 
 class Servicio(db.Model):
     __tablename__ = 'servicio'
@@ -47,19 +51,28 @@ class Servicio(db.Model):
 
     trabajadores = db.relationship('Trabajador', backref='servicio', lazy=True)
 
+
 class Turno(db.Model):
     __tablename__ = 'turno'
     id = db.Column(db.Integer, primary_key=True)
     empresa_id = db.Column(db.Integer, db.ForeignKey('empresa.id', ondelete='CASCADE'), nullable=False)
     nombre = db.Column(db.String(50), nullable=False)
     abreviacion = db.Column(db.String(5), nullable=False)
-    hora_inicio = db.Column(db.Time, nullable=False)
-    hora_fin = db.Column(db.Time, nullable=False)
+    # db.Time(timezone=False) → PostgreSQL TIME WITHOUT TIME ZONE
+    # En Python se manipula como datetime.time: usa .hour y .minute
+    # Ejemplo: hora_inicio.hour * 60 + hora_inicio.minute = minutos desde medianoche
+    hora_inicio = db.Column(db.Time(timezone=False), nullable=False)
+    hora_fin    = db.Column(db.Time(timezone=False), nullable=False)
     color = db.Column(db.String(10), default='#18bc9c')
     dotacion_diaria = db.Column(db.Integer, default=1)
+    # es_nocturno: True si el turno cruza medianoche (hora_fin <= hora_inicio).
+    # Se calcula automáticamente al guardar en turno_bp.py, no requiere input del usuario.
+    # Migración: ver a1b2c3d4e5f6_add_es_nocturno_nuevas_reglas.py
+    es_nocturno = db.Column(db.Boolean, default=False, nullable=False)
     activo = db.Column(db.Boolean, default=True)
     creado_en = db.Column(db.DateTime, default=datetime.utcnow)
     actualizado_en = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
 
 class TipoAusencia(db.Model):
     __tablename__ = 'tipo_ausencia'
@@ -88,13 +101,20 @@ class Trabajador(db.Model):
     email = db.Column(db.String(150))
     telefono = db.Column(db.String(20))
     tipo_contrato = db.Column(db.String(50), nullable=False, default='full-time')
-    horas_semanales = db.Column(db.Integer)
+    # horas_semanales: horas contractuales por semana.
+    # El builder usa este valor para calcular la meta mensual de turnos.
+    # Ejemplos: 42 (jornada estándar Chile), 32 (part-time), 24 (part-time menor).
+    # NOT NULL con default 42. Migración: ver b2c3d4e5f6a7_trabajador_horas_turno_hora.py
+    horas_semanales = db.Column(db.Integer, nullable=False, default=42)
     activo = db.Column(db.Boolean, default=True)
     creado_en = db.Column(db.DateTime, default=datetime.utcnow)
     actualizado_en = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
-    preferencias = db.relationship('TrabajadorPreferencia', backref='trabajador', lazy=True, cascade="all, delete-orphan")
-    ausencias = db.relationship('TrabajadorAusencia', backref='trabajador', lazy=True, cascade="all, delete-orphan")
+    preferencias = db.relationship('TrabajadorPreferencia', backref='trabajador',
+                                   lazy=True, cascade="all, delete-orphan")
+    ausencias = db.relationship('TrabajadorAusencia', backref='trabajador',
+                                lazy=True, cascade="all, delete-orphan")
+
 
 class TrabajadorPreferencia(db.Model):
     __tablename__ = 'trabajador_preferencia'
@@ -103,16 +123,18 @@ class TrabajadorPreferencia(db.Model):
     dia_semana = db.Column(db.Integer, nullable=False)
     turno = db.Column(db.String(5), nullable=False)
 
+
 class TrabajadorAusencia(db.Model):
     __tablename__ = 'trabajador_ausencia'
     id = db.Column(db.Integer, primary_key=True)
     trabajador_id = db.Column(db.Integer, db.ForeignKey('trabajador.id', ondelete='CASCADE'), nullable=False)
     fecha_inicio = db.Column(db.Date, nullable=False)
     fecha_fin = db.Column(db.Date, nullable=False)
-    motivo = db.Column(db.String(255), nullable=False, default='') # Evitar NotNullViolation
+    motivo = db.Column(db.String(255), nullable=False, default='')
     tipo_ausencia_id = db.Column(db.Integer, db.ForeignKey('tipo_ausencia.id', ondelete='CASCADE'), nullable=True)
     tipo_ausencia = db.relationship('TipoAusencia', lazy=True)
     creado_en = db.Column(db.DateTime, default=datetime.utcnow)
+
 
 class Regla(db.Model):
     __tablename__ = 'regla'
@@ -132,7 +154,9 @@ class Regla(db.Model):
     creado_en = db.Column(db.DateTime, default=datetime.utcnow)
     actualizado_en = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
-    asignaciones = db.relationship('ReglaEmpresa', backref='regla_rel', lazy=True, cascade="all, delete-orphan")
+    asignaciones = db.relationship('ReglaEmpresa', backref='regla_rel',
+                                   lazy=True, cascade="all, delete-orphan")
+
 
 class ReglaEmpresa(db.Model):
     __tablename__ = 'regla_empresa'

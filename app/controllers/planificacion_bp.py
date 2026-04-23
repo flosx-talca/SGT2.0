@@ -1,9 +1,9 @@
 import calendar
-import sys
-from datetime import date, timedelta, datetime
+import math
+from datetime import timedelta, datetime
 from flask import Blueprint, render_template, request, jsonify
 from app.database import db
-from app.models.business import Trabajador, Turno, Servicio, ReglaEmpresa
+from app.models.business import Trabajador, Turno, ReglaEmpresa
 from app.scheduler.builder import build_model
 from app.scheduler.solver import solve_model
 from app.scheduler.explain import extract_solution
@@ -12,165 +12,289 @@ from ortools.sat.python import cp_model
 
 planificacion_bp = Blueprint('planificacion', __name__, url_prefix='/planificacion')
 
+
+def _calcular_horas_turno(hora_inicio, hora_fin):
+    """
+    Calcula la duración en horas de un turno.
+    Maneja el caso que cruza medianoche (fin <= inicio).
+    hora_inicio y hora_fin son objetos datetime.time.
+    """
+    h_ini = hora_inicio.hour * 60 + hora_inicio.minute
+    h_fin = hora_fin.hour   * 60 + hora_fin.minute
+    if h_fin <= h_ini:
+        h_fin += 24 * 60
+    return (h_fin - h_ini) / 60
+
+
+def _calcular_es_nocturno(hora_inicio, hora_fin):
+    """
+    Determina si un turno es nocturno (cruza medianoche).
+    Si el campo es_nocturno ya existe en el modelo se usa ese,
+    si no se calcula desde hora_inicio/hora_fin.
+    """
+    return hora_fin <= hora_inicio
+
+
 @planificacion_bp.route('/generar', methods=['POST'])
 def generar():
     data = request.json
-    mes = int(data.get('mes', 0))
-    anio = int(data.get('anio', 0))
-    servicio_id = data.get('sucursal_id') # Es servicio_id en la BD
-    
+    mes        = int(data.get('mes', 0))
+    anio       = int(data.get('anio', 0))
+    servicio_id = data.get('sucursal_id')
+
     if not mes or not anio or not servicio_id:
-        return jsonify({'status': 'error', 'message': 'Faltan parámetros básicos (mes, anio, sucursal).'}), 400
-        
-    # Obtener trabajadores del servicio
-    trabajadores_db = Trabajador.query.filter_by(servicio_id=servicio_id, activo=True).all()
+        return jsonify({'status': 'error',
+                        'message': 'Faltan parámetros básicos (mes, anio, sucursal).'}), 400
+
+    # ── Trabajadores del servicio ─────────────────────────────────────────────
+    trabajadores_db = Trabajador.query.filter_by(
+        servicio_id=servicio_id, activo=True
+    ).all()
     if not trabajadores_db:
-        return jsonify({'status': 'error', 'message': 'No hay trabajadores activos en este servicio.'}), 400
-        
-    # Extraer IDs
-    t_ids = [t.id for t in trabajadores_db]
-    t_dicts = [{'id': t.id, 'nombre': f"{t.nombre} {t.apellido1}"} for t in trabajadores_db]
-    
-    # Obtener turnos
-    turnos_db = Turno.query.filter_by(activo=True).all()
-    turnos = list(set([t.abreviacion for t in turnos_db])) # Eliminar duplicados
-    if not turnos:
-        return jsonify({'status': 'error', 'message': 'No existen turnos activos configurados en el sistema. Por favor, configure los turnos en el mantenedor.'}), 400
-        
-    # Generar días del mes
-    num_days = calendar.monthrange(anio, mes)[1]
+        return jsonify({'status': 'error',
+                        'message': 'No hay trabajadores activos en este servicio.'}), 400
+
+    t_ids   = [t.id for t in trabajadores_db]
+    t_dicts = [{'id': t.id, 'nombre': f"{t.nombre} {t.apellido1}"}
+               for t in trabajadores_db]
+
+    # Empresa se obtiene del primer trabajador (todos pertenecen a la misma)
+    empresa_id = trabajadores_db[0].empresa_id
+
+    # ── Turnos de la empresa (no todos del sistema) ───────────────────────────
+    turnos_db = Turno.query.filter_by(empresa_id=empresa_id, activo=True).all()
+    if not turnos_db:
+        return jsonify({'status': 'error',
+                        'message': 'No hay turnos activos configurados para esta empresa.'}), 400
+
+    # Abreviaciones únicas manteniendo el orden de BD
+    vistas = set()
+    turnos_ordenados = []
+    for t in turnos_db:
+        if t.abreviacion not in vistas:
+            turnos_ordenados.append(t)
+            vistas.add(t.abreviacion)
+    turnos = [t.abreviacion for t in turnos_ordenados]
+
+    # ── turnos_meta: atributos que necesita el builder ────────────────────────
+    # es_nocturno: usa campo BD si existe, sino calcula desde horario
+    # horas:       calcula desde hora_inicio / hora_fin
+    turnos_meta = {}
+    for t in turnos_ordenados:
+        es_noc = (
+            t.es_nocturno
+            if hasattr(t, 'es_nocturno') and t.es_nocturno is not None
+            else _calcular_es_nocturno(t.hora_inicio, t.hora_fin)
+        )
+        turnos_meta[t.abreviacion] = {
+            'es_nocturno': es_noc,
+            'horas':       _calcular_horas_turno(t.hora_inicio, t.hora_fin),
+        }
+
+    # Colores para el frontend
+    turnos_info = [
+        {
+            'abreviacion':   t.abreviacion,
+            'nombre':        t.nombre,
+            'color':         t.color,
+            'dotacion_diaria': t.dotacion_diaria,
+            'es_nocturno':   turnos_meta[t.abreviacion]['es_nocturno'],
+        }
+        for t in turnos_ordenados
+    ]
+
+    # ── Días del mes ──────────────────────────────────────────────────────────
+    num_days    = calendar.monthrange(anio, mes)[1]
     dias_del_mes = []
-    dias_dict = []
+    dias_dict    = []
     dias_nombres = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom']
-    
+    dias_set     = set()  # para búsqueda O(1) en ausencias
+
     for i in range(1, num_days + 1):
         fecha_str = f"{anio}-{str(mes).zfill(2)}-{str(i).zfill(2)}"
         dias_del_mes.append(fecha_str)
+        dias_set.add(fecha_str)
         dia_idx = calendar.weekday(anio, mes, i)
-        # JS expects dia_semana to be 0=Dom, 1=Lun, ..., 6=Sab. Python calendar: 0=Lun, 6=Dom
-        js_day = 0 if dia_idx == 6 else dia_idx + 1
+        js_day  = 0 if dia_idx == 6 else dia_idx + 1
         dias_dict.append({
-            "fecha": fecha_str,
-            "dia_semana": js_day,
-            "label": f"{str(i).zfill(2)} {dias_nombres[dia_idx]}"
+            'fecha':      fecha_str,
+            'dia_semana': js_day,
+            'label':      f"{str(i).zfill(2)} {dias_nombres[dia_idx]}"
         })
-        
-    # Coberturas (dinámicas basadas en los turnos de BD)
-    cob_global = {}
+
+    # ── Coberturas por día ────────────────────────────────────────────────────
+    # El usuario puede modificar la dotación por turno antes de generar.
+    # La cobertura de domingo puede ser distinta a la global.
+    cob_global  = {}
     cob_domingo = {}
     for t in turnos:
-        # Global
         val_g = data.get(f'cob_{t}', 0)
         cob_global[t] = int(val_g) if val_g else 0
-        # Domingo
+
         val_s = data.get(f'cob_sun_{t}')
-        if val_s is not None and val_s != "":
-            cob_domingo[t] = int(val_s)
-        else:
-            cob_domingo[t] = cob_global[t]
+        cob_domingo[t] = int(val_s) if (val_s is not None and val_s != '') else cob_global[t]
 
     coberturas_por_dia = {}
     for d_str in dias_del_mes:
         py_date = datetime.strptime(d_str, '%Y-%m-%d').date()
-        if py_date.weekday() == 6: # Domingo
-            coberturas_por_dia[d_str] = cob_domingo
-        else:
-            coberturas_por_dia[d_str] = cob_global
-    
-    # Extraer metadatos de trabajadores (tipo contrato, horas)
+        coberturas_por_dia[d_str] = cob_domingo if py_date.weekday() == 6 else cob_global
+
+    # ── trabajadores_meta ─────────────────────────────────────────────────────
+    # El builder usa horas_semanales para calcular la meta mensual.
+    # No se usa tipo_contrato, el builder trabaja solo con horas.
+    # Si el trabajador no tiene horas definidas se usa el default de reglas (42h).
     trabajadores_meta = {
         t.id: {
-            'tipo_contrato':  t.tipo_contrato,
-            'horas_semanales': t.horas_semanales or 45
+            'horas_semanales': t.horas_semanales or None,  # None → usará jornada_semanal de reglas
         }
         for t in trabajadores_db
     }
-    
-    # Leer reglas de empresa de la BD
-    # Asumimos que el servicio pertenece a una empresa - usamos la primera empresa del 1er trabajador
+
+    # ── Reglas de la empresa desde BD ────────────────────────────────────────
     reglas_bd = {}
-    if trabajadores_db:
-        empresa_id = trabajadores_db[0].empresa_id
-        reglas_empresa = ReglaEmpresa.query.filter_by(empresa_id=empresa_id, activo=True).all()
-        for re in reglas_empresa:
-            codigo = re.regla_rel.codigo
-            # Usar params_custom si existe, sino params_base de la regla maestra
-            params = re.params_custom if re.params_custom else re.regla_rel.params_base
-            if codigo == 'working_days_limit' and params:
-                reglas_bd['working_days_limit_min'] = params.get('min', 5)
-                reglas_bd['working_days_limit_max'] = params.get('max', 6)
-            elif codigo == 'min_free_sundays' and params:
-                reglas_bd['min_free_sundays'] = params.get('value', 2)
-    
-    # Extraer ausencias y preferencias
-    # Extraer ausencias y preferencias
+    reglas_empresa = ReglaEmpresa.query.filter_by(
+        empresa_id=empresa_id, activo=True
+    ).all()
+    for re in reglas_empresa:
+        codigo = re.regla_rel.codigo
+        params = re.params_custom if re.params_custom else re.regla_rel.params_base
+        if not params:
+            continue
+        if codigo == 'working_days_limit':
+            reglas_bd['working_days_limit_min'] = params.get('min', 5)
+            reglas_bd['working_days_limit_max'] = params.get('max', 6)
+        elif codigo == 'min_free_sundays':
+            reglas_bd['min_free_sundays'] = params.get('value', 2)
+        elif codigo == 'dias_descanso_post_6':
+            reglas_bd['dias_descanso_post_6'] = params.get('value', 1)
+        elif codigo == 'jornada_semanal':
+            reglas_bd['jornada_semanal'] = params.get('value', 42)
+        elif codigo == 'duracion_turno':
+            reglas_bd['duracion_turno'] = params.get('value', 8)
+
+    # Calcular duracion_turno promedio desde los turnos reales si no viene en reglas
+    if 'duracion_turno' not in reglas_bd and turnos_meta:
+        horas_lista = [v['horas'] for v in turnos_meta.values()]
+        reglas_bd['duracion_turno'] = round(sum(horas_lista) / len(horas_lista))
+
+    # ── Ausencias ─────────────────────────────────────────────────────────────
     ausencias = {}
-    preferencias = {}
     for t in trabajadores_db:
-        # Ausencias
         for a in t.ausencias:
-            f_ini = a.fecha_inicio
-            f_fin = a.fecha_fin
-            if f_ini and f_fin:
-                curr = f_ini
-                while curr <= f_fin:
-                    f_str = curr.strftime('%Y-%m-%d')
-                    if f_str in dias_del_mes:
-                        abr = a.tipo_ausencia.abreviacion if a.tipo_ausencia else "A"
-                        ausencias[(t.id, f_str)] = abr
-                    curr += timedelta(days=1)
-    
+            if not a.fecha_inicio or not a.fecha_fin:
+                continue
+            curr = a.fecha_inicio
+            while curr <= a.fecha_fin:
+                f_str = curr.strftime('%Y-%m-%d')
+                if f_str in dias_set:
+                    abr = a.tipo_ausencia.abreviacion if a.tipo_ausencia else 'A'
+                    ausencias[(t.id, f_str)] = abr
+                curr += timedelta(days=1)
+
+    # ── Asignaciones fijas por día de semana ──────────────────────────────────
+    # Las preferencias del mantenedor son HARD (labor específica del trabajador).
+    # Se expanden para todos los días del mes que coincidan con ese día de semana.
+    # No se aplica si el trabajador tiene ausencia ese día.
+    asignaciones_fijas = {}
     for t in trabajadores_db:
-        # Preferencias
         for p in t.preferencias:
             for dia_str, dia_obj in zip(dias_del_mes, dias_dict):
-                py_weekday = calendar.weekday(int(dia_str[0:4]), int(dia_str[5:7]), int(dia_str[8:10]))
+                py_weekday = calendar.weekday(
+                    int(dia_str[0:4]), int(dia_str[5:7]), int(dia_str[8:10])
+                )
                 if p.dia_semana == py_weekday:
-                    preferencias[(t.id, dia_str)] = p.turno
+                    # Solo si no tiene ausencia ese día
+                    if (t.id, dia_str) not in ausencias:
+                        asignaciones_fijas[(t.id, dia_str)] = p.turno
 
-    # Construir y resolver el modelo
+    # ── Filtrar domingos de asignaciones_fijas ───────────────────────────────
+    # Los domingos tienen restricción legal de descanso (min_free_sundays) que
+    # tiene precedencia sobre cualquier preferencia de turno.
+    # Si se fuerza trabajo en TODOS los domingos del mes, entra en conflicto
+    # con HARD-6 → INFEASIBLE. Se eliminan las asignaciones dominicales.
+    domingos_mes = {
+        d for d in dias_del_mes
+        if calendar.weekday(int(d[:4]), int(d[5:7]), int(d[8:10])) == 6
+    }
+    asignaciones_fijas = {
+        (w, d): t for (w, d), t in asignaciones_fijas.items()
+        if d not in domingos_mes
+    }
+
+    # ── Construir y resolver el modelo ────────────────────────────────────────
     try:
         model, x = build_model(
-            t_ids, dias_del_mes, turnos, coberturas_por_dia, ausencias, preferencias,
+            t_ids,
+            dias_del_mes,
+            turnos,
+            coberturas_por_dia,
+            ausencias,
+            asignaciones_fijas,          # antes era 'preferencias' (SOFT), ahora HARD
             reglas=reglas_bd,
-            trabajadores_meta=trabajadores_meta
+            trabajadores_meta=trabajadores_meta,
+            turnos_meta=turnos_meta,     # nuevo parámetro
         )
         solver, status = solve_model(model)
-        
-        # Ya no bloqueamos por INFEASIBLE: el modelo es 100% Soft, siempre hay solución.
-        # Solo advertimos si el solver no pudo hacer nada en absoluto (UNKNOWN).
+
+        # UNKNOWN = timeout → error bloqueante, no hay nada que mostrar
+        if status == cp_model.UNKNOWN:
+            conflict_report = get_conflict_report(status)
+            return jsonify({
+                'status': 'error',
+                'message': conflict_report['message']
+            }), 400
+
+        # OPTIMAL / FEASIBLE → solución completa
+        # INFEASIBLE          → matriz vacía, el usuario completa manualmente
         advertencia = None
-        conflict_report = get_conflict_report(status)
-        if conflict_report and status == cp_model.UNKNOWN:
-            return jsonify({'status': 'error', 'message': conflict_report['message']}), 400
-            
-        celdas = extract_solution(solver, status, x, t_ids, dias_del_mes, turnos, ausencias)
-        
-        # Calcular métricas básicas
-        turnos_necesarios = sum(sum(c.values()) for c in coberturas_por_dia.values())
-        
+        if status == cp_model.INFEASIBLE:
+            conflict_report = get_conflict_report(status)
+            advertencia = conflict_report['message'] if conflict_report else (
+                'No fue posible resolver el cuadrante automáticamente. '
+                'Puede completarlo manualmente.'
+            )
+
+        celdas = extract_solution(
+            solver, status, x, t_ids, dias_del_mes, turnos, ausencias
+        )
+
+        # Métricas de cobertura (solo cuenta turnos reales, no L ni vacíos)
+        turnos_necesarios = sum(
+            v for c in coberturas_por_dia.values()
+            for v in c.values()
+            if isinstance(v, int)
+        )
+
         return jsonify({
             'status': 'ok',
             'data': {
-                'dias': dias_dict,
-                'trabajadores': t_dicts,
-                'celdas': celdas,
-                'estado': 'simulacion',
+                'dias':          dias_dict,
+                'trabajadores':  t_dicts,
+                'celdas':        celdas,
+                'turnos':        turnos_info,   # colores y metadatos para el frontend
+                'estado':        'simulacion',
+                'advertencia':   advertencia,   # None si todo ok, mensaje si INFEASIBLE
                 'metricas': {
                     'necesarios': turnos_necesarios
                 }
             }
         })
+
     except Exception as e:
-        return jsonify({'status': 'error', 'message': f'Error en el motor CP-SAT: {str(e)}'}), 500
+        return jsonify({
+            'status': 'error',
+            'message': f'Error en el motor CP-SAT: {str(e)}'
+        }), 500
+
 
 @planificacion_bp.route('/celda', methods=['POST'])
 def update_celda():
-    # Este endpoint solo devuelve OK si estamos en modo simulación
-    # ya que no guardaremos en BD hasta que publiquen.
+    # En modo simulación solo confirmamos el cambio.
+    # La persistencia real ocurre al publicar.
     return jsonify({'status': 'ok'})
+
 
 @planificacion_bp.route('/publicar', methods=['POST'])
 def publicar():
-    # Aquí irá la lógica para guardar el cuadrante oficial.
+    # Aquí irá la lógica para guardar el cuadrante oficial en BD.
     return jsonify({'status': 'ok', 'message': 'El cuadrante ha sido publicado.'})

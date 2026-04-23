@@ -12,6 +12,7 @@
     <form id="form_turno">
         <input type="hidden" id="id_turno" value="{{ registro.id if registro else 0 }}">
         <div class="row g-3">
+
             <div class="col-md-8">
                 <label class="form-label small fw-bold text-muted"><code>(*)</code> Empresa / Sucursal</label>
                 <div class="input-group shadow-sm">
@@ -30,36 +31,64 @@
 
             <div class="col-md-4">
                 <label class="form-label small fw-bold text-muted">Color</label>
-                <div class="input-group shadow-sm h-100">
-                    <input type="color" class="form-control form-control-color w-100 border-0 p-1 rounded" 
+                <div class="input-group shadow-sm">
+                    <input type="color" class="form-control form-control-color w-100 border-0 p-1 rounded"
                            id="color_turno" value="{{ registro.color if registro else '#18bc9c' }}"
                            {% if modo == 'Visualizar' %}disabled{% endif %}
                            oninput="updatePreviewColor(this.value)">
                 </div>
             </div>
 
+            <!-- Vista previa + indicador nocturno -->
             <div class="col-md-12">
                 <div class="d-flex align-items-center gap-3 bg-light p-3 rounded border border-light shadow-sm mb-2">
-                    <div id="preview-badge" class="badge" style="background-color: {{ registro.color if registro else '#18bc9c' }}; color: #fff; width: 60px; height: 45px; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 1.4rem; box-shadow: 0 4px 8px rgba(0,0,0,0.2);">
+                    <div id="preview-badge" class="badge"
+                         style="background-color: {{ registro.color if registro else '#18bc9c' }}; color: #fff;
+                                width: 60px; height: 45px; display: flex; align-items: center;
+                                justify-content: center; font-weight: bold; font-size: 1.4rem;
+                                box-shadow: 0 4px 8px rgba(0,0,0,0.2);">
                         {{ registro.abreviacion if registro else 'T1' }}
                     </div>
                     <div>
-                        <h6 class="mb-0 fw-bold">Vista Previa</h6>
+                        <h6 class="mb-1 fw-bold">Vista Previa</h6>
                         <small class="text-muted">Así se verá el turno en el cuadrante</small>
+                    </div>
+                    <!-- Indicador nocturno: se actualiza en tiempo real con JS -->
+                    <div class="ms-auto">
+                        <span id="badge_nocturno"
+                              class="badge {% if registro and registro.es_nocturno %}bg-dark{% else %}bg-secondary bg-opacity-25 text-secondary{% endif %}"
+                              style="font-size: 0.75rem;">
+                            <i class="fa fa-moon me-1"></i>
+                            {% if registro and registro.es_nocturno %}Turno nocturno{% else %}Turno diurno{% endif %}
+                        </span>
+                        <!-- Duración calculada -->
+                        <span id="badge_duracion" class="badge bg-light text-dark border ms-1" style="font-size: 0.75rem;">
+                            <i class="fa fa-clock me-1 text-muted"></i>
+                            <span id="txt_duracion">
+                                {% if registro %}
+                                    {% set hi = registro.hora_inicio.hour * 60 + registro.hora_inicio.minute %}
+                                    {% set hf = registro.hora_fin.hour * 60 + registro.hora_fin.minute %}
+                                    {% set dur = (hf - hi) if hf > hi else (hf + 1440 - hi) %}
+                                    {{ (dur // 60) }}h{% if dur % 60 %}{{ dur % 60 }}m{% endif %}
+                                {% else %}
+                                    --
+                                {% endif %}
+                            </span>
+                        </span>
                     </div>
                 </div>
             </div>
 
             <div class="col-md-8">
                 <label class="form-label small fw-bold text-muted"><code>(*)</code> Nombre del Turno</label>
-                <input type="text" class="form-control shadow-sm {% if modo == 'Visualizar' %}bg-light{% endif %}" 
+                <input type="text" class="form-control shadow-sm {% if modo == 'Visualizar' %}bg-light{% endif %}"
                        id="nombre_turno" value="{{ registro.nombre if registro else '' }}"
                        {% if modo == 'Visualizar' %}readonly{% endif %} placeholder="Ej: Mañana, Tarde, Noche...">
             </div>
 
             <div class="col-md-4">
                 <label class="form-label small fw-bold text-muted"><code>(*)</code> Abrev.</label>
-                <input type="text" class="form-control text-uppercase shadow-sm {% if modo == 'Visualizar' %}bg-light{% endif %}" 
+                <input type="text" class="form-control text-uppercase shadow-sm {% if modo == 'Visualizar' %}bg-light{% endif %}"
                        id="abrev_turno" value="{{ registro.abreviacion if registro else '' }}"
                        maxlength="5" {% if modo == 'Visualizar' %}readonly{% endif %} placeholder="M1"
                        oninput="$('#preview-badge').text(this.value.toUpperCase() || 'T1')">
@@ -69,9 +98,11 @@
                 <label class="form-label small fw-bold text-muted"><code>(*)</code> Inicio</label>
                 <div class="input-group shadow-sm">
                     <span class="input-group-text bg-light border-end-0"><i class="fa fa-clock text-primary"></i></span>
-                    <input type="time" class="form-control border-start-0 {% if modo == 'Visualizar' %}bg-light{% endif %}" 
-                           id="inicio_turno" value="{{ registro.hora_inicio.strftime('%H:%M') if registro else '' }}"
-                           {% if modo == 'Visualizar' %}readonly{% endif %}>
+                    <input type="time" class="form-control border-start-0 {% if modo == 'Visualizar' %}bg-light{% endif %}"
+                           id="inicio_turno"
+                           value="{{ registro.hora_inicio.strftime('%H:%M') if registro else '' }}"
+                           {% if modo == 'Visualizar' %}readonly{% endif %}
+                           oninput="actualizarIndicadores()">
                 </div>
             </div>
 
@@ -79,9 +110,11 @@
                 <label class="form-label small fw-bold text-muted"><code>(*)</code> Término</label>
                 <div class="input-group shadow-sm">
                     <span class="input-group-text bg-light border-end-0"><i class="fa fa-flag-checkered text-danger"></i></span>
-                    <input type="time" class="form-control border-start-0 {% if modo == 'Visualizar' %}bg-light{% endif %}" 
-                           id="fin_turno" value="{{ registro.hora_fin.strftime('%H:%M') if registro else '' }}"
-                           {% if modo == 'Visualizar' %}readonly{% endif %}>
+                    <input type="time" class="form-control border-start-0 {% if modo == 'Visualizar' %}bg-light{% endif %}"
+                           id="fin_turno"
+                           value="{{ registro.hora_fin.strftime('%H:%M') if registro else '' }}"
+                           {% if modo == 'Visualizar' %}readonly{% endif %}
+                           oninput="actualizarIndicadores()">
                 </div>
             </div>
 
@@ -89,7 +122,7 @@
                 <label class="form-label small fw-bold text-muted">Dotación Diaria</label>
                 <div class="input-group shadow-sm">
                     <span class="input-group-text bg-light border-end-0"><i class="fa fa-users text-muted"></i></span>
-                    <input type="number" class="form-control border-start-0 {% if modo == 'Visualizar' %}bg-light{% endif %}" 
+                    <input type="number" class="form-control border-start-0 {% if modo == 'Visualizar' %}bg-light{% endif %}"
                            id="dotacion_turno" value="{{ registro.dotacion_diaria if registro else 1 }}"
                            min="1" {% if modo == 'Visualizar' %}readonly{% endif %}>
                 </div>
@@ -97,12 +130,13 @@
 
             <div class="col-md-12 mt-3">
                 <div class="form-check form-switch p-0 ps-5 bg-light rounded py-2 border border-light shadow-sm">
-                    <input class="form-check-input" type="checkbox" id="activo_turno" 
+                    <input class="form-check-input" type="checkbox" id="activo_turno"
                            {% if registro is none or registro.activo %}checked{% endif %}
                            {% if modo == 'Visualizar' %}disabled{% endif %}>
                     <label class="form-check-label fw-bold text-muted ms-2" for="activo_turno">Turno Operativo</label>
                 </div>
             </div>
+
         </div>
     </form>
 </div>
@@ -121,16 +155,58 @@ function updatePreviewColor(color) {
     $('#preview-badge').css('background-color', color);
 }
 
+/**
+ * Recalcula en tiempo real el indicador nocturno y la duración
+ * cada vez que el usuario cambia hora_inicio o hora_fin.
+ * Replica exactamente la lógica de turno_bp.py: es_nocturno = hora_fin <= hora_inicio
+ */
+function actualizarIndicadores() {
+    const ini = $('#inicio_turno').val();
+    const fin = $('#fin_turno').val();
+
+    if (!ini || !fin) return;
+
+    const [hIni, mIni] = ini.split(':').map(Number);
+    const [hFin, mFin] = fin.split(':').map(Number);
+
+    const minIni = hIni * 60 + mIni;
+    const minFin = hFin * 60 + mFin;
+
+    // Misma lógica que Python: hora_fin <= hora_inicio → nocturno
+    const esNocturno = minFin <= minIni;
+
+    // Calcular duración en minutos (si cruza medianoche, sumar 24h)
+    const durMin = esNocturno ? (minFin + 1440 - minIni) : (minFin - minIni);
+    const durH   = Math.floor(durMin / 60);
+    const durM   = durMin % 60;
+    const durTxt = durM > 0 ? `${durH}h ${durM}m` : `${durH}h`;
+
+    // Actualizar badge nocturno
+    const $badge = $('#badge_nocturno');
+    if (esNocturno) {
+        $badge.removeClass('bg-secondary bg-opacity-25 text-secondary')
+              .addClass('bg-dark')
+              .html('<i class="fa fa-moon me-1"></i> Turno nocturno');
+    } else {
+        $badge.removeClass('bg-dark')
+              .addClass('bg-secondary bg-opacity-25 text-secondary')
+              .html('<i class="fa fa-moon me-1"></i> Turno diurno');
+    }
+
+    // Actualizar duración
+    $('#txt_duracion').text(durTxt);
+}
+
 function guardarTurno() {
-    const id = $('#id_turno').val();
-    const empresa_id = $('#empresa_id_turno').val();
-    const nombre = $('#nombre_turno').val().trim();
+    const id          = $('#id_turno').val();
+    const empresa_id  = $('#empresa_id_turno').val();
+    const nombre      = $('#nombre_turno').val().trim();
     const abreviacion = $('#abrev_turno').val().trim();
     const hora_inicio = $('#inicio_turno').val();
-    const hora_fin = $('#fin_turno').val();
-    const color = $('#color_turno').val();
-    const dotacion = $('#dotacion_turno').val();
-    const activo = $('#activo_turno').is(':checked');
+    const hora_fin    = $('#fin_turno').val();
+    const color       = $('#color_turno').val();
+    const dotacion    = $('#dotacion_turno').val();
+    const activo      = $('#activo_turno').is(':checked');
 
     if (!empresa_id || !nombre || !abreviacion || !hora_inicio || !hora_fin) {
         toastr.warning('Faltan campos obligatorios (*).');
@@ -142,15 +218,15 @@ function guardarTurno() {
     $('#fondo').addClass('visible');
 
     $.post("{{ url_for('turno.guardar') }}", {
-        id: id,
-        empresa_id: empresa_id,
-        nombre: nombre,
-        abreviacion: abreviacion,
-        hora_inicio: hora_inicio,
-        hora_fin: hora_fin,
-        color: color,
+        id:             id,
+        empresa_id:     empresa_id,
+        nombre:         nombre,
+        abreviacion:    abreviacion,
+        hora_inicio:    hora_inicio,
+        hora_fin:       hora_fin,
+        color:          color,
         dotacion_diaria: dotacion,
-        activo: activo ? 'true' : 'false'
+        activo:         activo ? 'true' : 'false'
     })
     .done(function(res) {
         if (res.ok) {
