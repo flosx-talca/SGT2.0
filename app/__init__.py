@@ -1,6 +1,7 @@
 from flask import Flask, request as flask_request
 from .config import Config
 from .database import db
+from flask_migrate import Migrate
 from . import models
 
 def create_app():
@@ -9,6 +10,7 @@ def create_app():
 
     # Inicializar plugins
     db.init_app(app)
+    Migrate(app, db)
 
     # DEBUG: Ver qué URL se está usando realmente
     print(f"\n--- DEBUG: SQLALCHEMY_DATABASE_URI = {app.config.get('SQLALCHEMY_DATABASE_URI')} ---\n")
