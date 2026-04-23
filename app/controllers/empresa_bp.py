@@ -24,7 +24,7 @@ def modal():
         registro = Empresa.query.get_or_404(int(registro_id))
     
     clientes = Cliente.query.filter_by(activo=True).order_by(Cliente.nombre).all()
-    comunas = Comuna.query.filter_by(activo=True).order_by(Comuna.nombre).all()
+    comunas = Comuna.query.filter_by(activo=True).order_by(Comuna.descripcion).all()
     
     return render_template('modal-empresa.html', 
                            modo=modo, 

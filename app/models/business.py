@@ -35,6 +35,7 @@ class Empresa(db.Model):
     turnos = db.relationship('Turno', backref='empresa', lazy=True, cascade="all, delete-orphan")
     trabajadores = db.relationship('Trabajador', backref='empresa', lazy=True)
     servicios = db.relationship('Servicio', secondary=empresa_servicio, backref=db.backref('empresas_asociadas', lazy='dynamic'))
+    reglas = db.relationship('ReglaEmpresa', backref='empresa', lazy=True, cascade="all, delete-orphan")
 
 class Servicio(db.Model):
     __tablename__ = 'servicio'
@@ -96,3 +97,37 @@ class TrabajadorAusencia(db.Model):
     fecha_fin = db.Column(db.Date, nullable=False)
     motivo = db.Column(db.String(20), nullable=False)
     creado_en = db.Column(db.DateTime, default=datetime.utcnow)
+
+class Regla(db.Model):
+    __tablename__ = 'regla'
+    __table_args__ = (
+        db.Index('ix_regla_activo', 'activo'),
+    )
+    id = db.Column(db.Integer, primary_key=True)
+    codigo = db.Column(db.String(50), nullable=False, unique=True)
+    nombre = db.Column(db.String(100), nullable=False)
+    familia = db.Column(db.String(50), nullable=False)
+    tipo_regla = db.Column(db.String(20), nullable=False)
+    scope = db.Column(db.String(50), nullable=False)
+    campo = db.Column(db.String(100))
+    operador = db.Column(db.String(20))
+    params_base = db.Column(db.JSON)
+    activo = db.Column(db.Boolean, default=True)
+    creado_en = db.Column(db.DateTime, default=datetime.utcnow)
+    actualizado_en = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    asignaciones = db.relationship('ReglaEmpresa', backref='regla_rel', lazy=True, cascade="all, delete-orphan")
+
+class ReglaEmpresa(db.Model):
+    __tablename__ = 'regla_empresa'
+    __table_args__ = (
+        db.Index('ix_regla_empresa_activo', 'activo'),
+        db.Index('ix_regla_empresa_empresa_id', 'empresa_id'),
+    )
+    id = db.Column(db.Integer, primary_key=True)
+    empresa_id = db.Column(db.Integer, db.ForeignKey('empresa.id', ondelete='CASCADE'), nullable=False)
+    regla_id = db.Column(db.Integer, db.ForeignKey('regla.id', ondelete='CASCADE'), nullable=False)
+    params_custom = db.Column(db.JSON)
+    activo = db.Column(db.Boolean, default=True)
+    creado_en = db.Column(db.DateTime, default=datetime.utcnow)
+    actualizado_en = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)

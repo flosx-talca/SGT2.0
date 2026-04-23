@@ -32,4 +32,13 @@ Se basa directamente en `especificacion-funcional-sistema-turnos.md`.
   - **UX/UI**: Implementación de tarjetas premium para Turnos, refrescos parciales con HTMX (`_rows.html`) y Smart Spinner (delay 400ms).
   - **Personal y Seguridad**: Se mejoró radicalmente el mantenedor de **Trabajadores**, incluyendo ahora un sistema de gestión de **Preferencias de Turno** (Restricciones Duras) y **Ausencias/Permisos** (Vacaciones, Licencias).
   - **Integridad**: Validaciones de RUT, Email y campos obligatorios en todos los controladores.
+  - **Motor de Reglas (Fase 2)**: 
+    - Modelado en BD y SQLAlchemy de `Regla` (Reglas Maestras controladas por Super Admin) y `ReglaEmpresa` (Asignación personalizada por cliente).
+    - Limpieza y Sincronización de Base de Datos: Se eliminaron tablas residuales (`regla_catalogo` y la antigua `regla_empresa`) para alinear correctamente la estructura PostgreSQL con los nuevos modelos SQLAlchemy.
+    - Poblamiento Inicial de Reglas: Se creó el script `seed_reglas.py` y se insertaron las 6 reglas base de la legislación laboral chilena (Ley 21.561, reducción a 42 horas).
+    - Creación de mantenedores con CRUD completo (`regla_bp` y `regla_empresa_bp`) adaptados al estándar SGT 2.1 con refresco parcial HTMX y modales dinámicos.
+    - Estandarización de Interfaz: Se añadieron los contenedores tipo *Card*, bloques de títulos y *breadcrumbs* a los mantenedores de Reglas, igualando la estética de la vista de Trabajadores.
+    - Corrección de Errores Críticos (Bugs): 
+      - Se solucionó un problema de redeclaración de variables de inicialización de DataTables (`SyntaxError` con `let`) que rompía el buscador al navegar vía HTMX en toda la plataforma, reemplazándose por `var`.
+      - Se corrigió un error interno en el modal de Empresas causado por una discrepancia de nombre de columna (`Comuna.nombre` por `Comuna.descripcion`), restableciendo su correcto funcionamiento.
 

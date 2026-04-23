@@ -235,3 +235,37 @@ CREATE INDEX IF NOT EXISTS ix_empresa_activo     ON empresa(activo);
 CREATE INDEX IF NOT EXISTS ix_empresa_cliente    ON empresa(cliente_id);
 CREATE INDEX IF NOT EXISTS ix_usuario_rol        ON usuario(rol_id);
 CREATE INDEX IF NOT EXISTS ix_usuario_activo     ON usuario(activo);
+
+-- ==========================================
+-- 16. REGLA (Maestra)
+-- ==========================================
+CREATE TABLE IF NOT EXISTS regla (
+    id SERIAL PRIMARY KEY,
+    codigo VARCHAR(50) NOT NULL UNIQUE,
+    nombre VARCHAR(100) NOT NULL,
+    familia VARCHAR(50) NOT NULL,
+    tipo_regla VARCHAR(20) NOT NULL,
+    scope VARCHAR(50) NOT NULL,
+    campo VARCHAR(100),
+    operador VARCHAR(20),
+    params_base JSONB,
+    activo BOOLEAN DEFAULT TRUE,
+    creado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    actualizado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS ix_regla_activo ON regla(activo);
+
+-- ==========================================
+-- 17. REGLA_EMPRESA
+-- ==========================================
+CREATE TABLE IF NOT EXISTS regla_empresa (
+    id SERIAL PRIMARY KEY,
+    empresa_id INTEGER NOT NULL REFERENCES empresa(id) ON DELETE CASCADE,
+    regla_id INTEGER NOT NULL REFERENCES regla(id) ON DELETE CASCADE,
+    params_custom JSONB,
+    activo BOOLEAN DEFAULT TRUE,
+    creado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    actualizado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS ix_regla_empresa_activo ON regla_empresa(activo);
+CREATE INDEX IF NOT EXISTS ix_regla_empresa_empresa_id ON regla_empresa(empresa_id);

@@ -49,7 +49,7 @@
                     <option value="">-- Seleccione Comuna --</option>
                     {% for com in comunas %}
                     <option value="{{ com.id }}" {% if registro and registro.comuna_id == com.id %}selected{% endif %}>
-                        {{ com.nombre }}
+                        {{ com.descripcion }}
                     </option>
                     {% endfor %}
                 </select>
