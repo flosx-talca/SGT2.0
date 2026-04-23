@@ -9,15 +9,14 @@
 <div class="modal-body p-4">
     {% if registro %}
     <form id="form_regla_empresa">
-        <input type="hidden" name="id" value="{{ registro.id }}">
-        <input type="hidden" name="is_enabled" value="{{ 'true' if registro.is_enabled else 'false' }}" id="is_enabled_hidden">
+        <input type="hidden" id="id_regla_empresa" value="{{ registro.id }}">
 
         <div class="alert alert-info border-0 shadow-sm mb-4">
             <div class="d-flex align-items-center">
                 <i class="fa fa-info-circle fa-2x me-3 opacity-50"></i>
                 <div>
                     <h6 class="fw-bold mb-1">Personalización de Regla</h6>
-                    <p class="mb-0 small">Solo puedes modificar los valores permitidos por el Super Admin. La lógica base no se puede cambiar.</p>
+                    <p class="mb-0 small">Solo puedes modificar los valores permitidos. La lógica base no se puede cambiar.</p>
                 </div>
             </div>
         </div>
@@ -29,13 +28,14 @@
             </div>
             <div class="col-md-4">
                 <label class="form-label small fw-bold text-muted">Tipo</label>
-                <input type="text" class="form-control bg-light"
-                    value="{{ registro.catalogo.rule_type | upper }}" readonly>
+                <input type="text" class="form-control bg-light" value="{{ registro.catalogo.rule_type | upper }}" readonly>
             </div>
+            {% if registro.catalogo.descripcion %}
             <div class="col-12">
                 <label class="form-label small fw-bold text-muted">Descripción</label>
-                <textarea class="form-control bg-light" rows="2" readonly>{{ registro.catalogo.descripcion or '—' }}</textarea>
+                <textarea class="form-control bg-light" rows="2" readonly>{{ registro.catalogo.descripcion }}</textarea>
             </div>
+            {% endif %}
         </div>
 
         <hr>
@@ -50,16 +50,15 @@
         {% for key in editables %}
         <div class="mb-3">
             <label class="form-label small fw-bold text-muted">{{ key }}</label>
-            {% set val = params.get(key, '') %}
             <input type="text" class="form-control param-editable"
                 data-key="{{ key }}"
-                value="{{ val }}"
+                value="{{ params.get(key, '') }}"
                 {% if modo == 'Visualizar' %}disabled{% endif %}>
         </div>
         {% endfor %}
         {% else %}
         <p class="text-muted small py-2">
-            <i class="fa fa-lock me-1"></i> Esta regla no tiene parámetros editables. Solo puedes activarla o desactivarla.
+            <i class="fa fa-lock me-1"></i> Sin parámetros editables. Solo puedes activar/desactivar esta regla.
         </p>
         {% endif %}
 
@@ -67,8 +66,7 @@
 
         <div class="col-md-6">
             <label class="form-label small fw-bold text-muted">Estado en esta Empresa</label>
-            <select class="form-select" id="select_is_enabled"
-                onchange="document.getElementById('is_enabled_hidden').value = this.value"
+            <select class="form-select" id="is_enabled_regla"
                 {% if modo == 'Visualizar' %}disabled{% endif %}>
                 <option value="true" {{ 'selected' if registro.is_enabled }}>Activa</option>
                 <option value="false" {{ 'selected' if not registro.is_enabled }}>Inactiva</option>
@@ -83,42 +81,50 @@
 <div class="modal-footer bg-light border-top-0">
     <button type="button" class="btn btn-secondary" onclick="CerrarModal()">Cancelar</button>
     {% if modo == 'Editar' and registro %}
-    <button type="button" class="btn btn-primary px-4" onclick="guardarReglaEmpresaModal()">
+    <button type="button" id="btn_guardar_regla_emp" class="btn btn-primary px-4" onclick="guardarReglaEmpresa()">
         <i class="fa fa-save me-1"></i> Guardar
     </button>
     {% endif %}
 </div>
 
 <script>
-function guardarReglaEmpresaModal() {
-    {% if registro %}
-    const editables = {{ registro.catalogo.params_editables | tojson }};
-    const params = {};
+function guardarReglaEmpresa() {
+    const id         = $('#id_regla_empresa').val();
+    const is_enabled = $('#is_enabled_regla').val();
+    const params     = {};
+
     $('.param-editable').each(function() {
         const key = $(this).data('key');
-        const rawVal = $(this).val();
-        const numVal = parseFloat(rawVal);
-        params[key] = isNaN(numVal) ? rawVal : numVal;
+        const raw = $(this).val();
+        const num = parseFloat(raw);
+        params[key] = isNaN(num) ? raw : num;
     });
-    const data = {
-        id: '{{ registro.id }}',
-        is_enabled: $('#is_enabled_hidden').val(),
-        params: JSON.stringify(params),
-    };
-    $('#fondo').addClass('visible');
-    $.post('/reglas/empresa/guardar', data, function(res) {
-        $('#fondo').removeClass('visible');
+
+    const $btn = $('#btn_guardar_regla_emp');
+    $btn.prop('disabled', true).html('<i class="fa fa-spinner fa-spin me-1"></i> Guardando...');
+    $('#fondo').fadeIn();
+
+    $.post("{{ url_for('regla.empresa_guardar') }}", {
+        id: id,
+        is_enabled: is_enabled,
+        params: JSON.stringify(params)
+    })
+    .done(function(res) {
         if (res.ok) {
             toastr.success(res.msg);
             CerrarModal();
-            setTimeout(() => location.reload(), 400);
+            if (typeof refreshTablaReglaEmpresa === 'function') refreshTablaReglaEmpresa();
+            else $('#fondo').fadeOut();
         } else {
             toastr.error(res.msg);
+            $btn.prop('disabled', false).html('<i class="fa fa-save me-1"></i> Guardar');
+            $('#fondo').fadeOut();
         }
-    }).fail(function(xhr) {
-        $('#fondo').removeClass('visible');
-        toastr.error(xhr.responseJSON?.msg || 'Error al guardar.');
+    })
+    .fail(function() {
+        toastr.error('Error de comunicación con el servidor.');
+        $btn.prop('disabled', false).html('<i class="fa fa-save me-1"></i> Guardar');
+        $('#fondo').fadeOut();
     });
-    {% endif %}
 }
 </script>

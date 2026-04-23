@@ -26,15 +26,15 @@
                 <option value="{{ emp.id }}" {{ 'selected' if empresa_id_sel == emp.id }}>{{ emp.razon_social }}</option>
                 {% endfor %}
             </select>
-            <small class="text-muted">{{ registros | length }} regla(s) asignada(s)</small>
+            <small class="text-muted">{{ registros | length }} regla(s)</small>
         </div>
     </div>
 </div>
 
 <div class="card shadow-sm border-0">
     <div class="card-body">
-        <table id="tabla_reglas_empresa" class="table table-hover dt-responsive nowrap w-100 align-middle">
-            <thead class="table-light text-uppercase" style="font-size: 0.75rem; letter-spacing: 1px;">
+        <table id="tabla_reglas_empresa" class="table table-hover align-middle w-100">
+            <thead class="table-light">
                 <tr>
                     <th>Empresa</th>
                     <th>Regla</th>
@@ -44,61 +44,8 @@
                     <th class="text-center">Acciones</th>
                 </tr>
             </thead>
-            <tbody>
-                {% for reg in registros %}
-                <tr id="row-regla-emp-{{ reg.id }}">
-                    <td class="small text-muted">{{ reg.empresa.razon_social }}</td>
-                    <td>
-                        <span class="fw-bold text-primary">{{ reg.catalogo.nombre }}</span><br>
-                        <small class="text-muted">{{ reg.catalogo.descripcion or '' }}</small>
-                    </td>
-                    <td>
-                        {% if reg.catalogo.rule_type == 'hard' %}
-                        <span class="badge bg-danger">HARD</span>
-                        {% elif reg.catalogo.rule_type == 'soft' %}
-                        <span class="badge bg-warning text-dark">SOFT</span>
-                        {% elif reg.catalogo.rule_type == 'client_rule' %}
-                        <span class="badge bg-info text-dark">CLIENTE</span>
-                        {% else %}
-                        <span class="badge bg-secondary">{{ reg.catalogo.rule_type | upper }}</span>
-                        {% endif %}
-                    </td>
-                    <td>
-                        <code class="small">{{ reg.params | tojson if reg.params else '{}' }}</code>
-                    </td>
-                    <td class="text-center">
-                        {% if reg.is_enabled %}
-                        <span class="badge bg-success-subtle text-success">Activa</span>
-                        {% else %}
-                        <span class="badge bg-secondary-subtle text-secondary">Inactiva</span>
-                        {% endif %}
-                    </td>
-                    <td class="text-center">
-                        <div class="btn-group btn-group-sm">
-                            <button class="btn btn-outline-info" title="Ver"
-                                onclick="Modal('Visualizar', {{ reg.id }}, '/reglas/empresa/modal')">
-                                <i class="fa fa-eye"></i>
-                            </button>
-                            <button class="btn btn-outline-warning" title="Editar parámetros"
-                                onclick="Modal('Editar', {{ reg.id }}, '/reglas/empresa/modal')">
-                                <i class="fa fa-edit"></i>
-                            </button>
-                            <button class="btn btn-outline-{{ 'danger' if reg.is_enabled else 'success' }}"
-                                title="{{ 'Desactivar' if reg.is_enabled else 'Activar' }}"
-                                onclick="toggleReglaEmpresa({{ reg.id }})">
-                                <i class="fa fa-{{ 'ban' if reg.is_enabled else 'check' }}"></i>
-                            </button>
-                        </div>
-                    </td>
-                </tr>
-                {% else %}
-                <tr>
-                    <td colspan="6" class="text-center text-muted py-5">
-                        <i class="fa fa-briefcase fa-2x mb-2 d-block opacity-25"></i>
-                        No hay reglas asignadas para esta empresa.
-                    </td>
-                </tr>
-                {% endfor %}
+            <tbody id="tbody-reglas-empresa">
+                {% include 'partials/regla_empresa_rows.html' %}
             </tbody>
         </table>
     </div>
@@ -107,50 +54,53 @@
 
 {% block scripts %}
 <script>
-    $(document).ready(function() {
-        $('#tabla_reglas_empresa').DataTable({
-            responsive: true,
-            language: { url: '/static/i18n/es-ES.json' }
-        });
+let dtReglaEmpresa;
+
+$(document).ready(function() {
+    dtReglaEmpresa = $('#tabla_reglas_empresa').DataTable({
+        responsive: true,
+        order: [[0, 'asc']],
+        language: { url: '/static/i18n/es-ES.json' },
+        columnDefs: [{ targets: [5], orderable: false, searchable: false }]
     });
+});
 
-    function filtrarEmpresa() {
-        const empresaId = $('#filtro_empresa').val();
-        window.location.href = '/reglas/empresa?empresa_id=' + empresaId;
-    }
+function refreshTablaReglaEmpresa() {
+    const empresaId = $('#filtro_empresa').val();
+    htmx.ajax('GET', "{{ url_for('regla.empresa_tabla') }}", {
+        target: '#tbody-reglas-empresa',
+        swap: 'innerHTML',
+        values: { empresa_id: empresaId }
+    }).then(() => {
+        dtReglaEmpresa.destroy();
+        dtReglaEmpresa = $('#tabla_reglas_empresa').DataTable({
+            responsive: true,
+            order: [[0, 'asc']],
+            language: { url: '/static/i18n/es-ES.json' },
+            columnDefs: [{ targets: [5], orderable: false, searchable: false }]
+        });
+        $('#fondo').fadeOut();
+    });
+}
 
-    function toggleReglaEmpresa(id) {
-        $('#fondo').addClass('visible');
-        $.post('/reglas/empresa/toggle', { id: id }, function(res) {
-            $('#fondo').removeClass('visible');
+function filtrarEmpresa() {
+    const empresaId = $('#filtro_empresa').val();
+    window.location.href = "{{ url_for('regla.empresa_view') }}?empresa_id=" + empresaId;
+}
+
+function toggleReglaEmpresa(id) {
+    $('#fondo').fadeIn();
+    $.post("{{ url_for('regla.empresa_toggle') }}", { id: id })
+        .done(function(res) {
             if (res.ok) {
                 toastr.success(res.msg);
-                setTimeout(() => location.reload(), 400);
+                refreshTablaReglaEmpresa();
             } else {
                 toastr.error(res.msg);
+                $('#fondo').fadeOut();
             }
-        }).fail(function() {
-            $('#fondo').removeClass('visible');
-            toastr.error('Error al cambiar estado.');
-        });
-    }
-
-    function guardarReglaEmpresa() {
-        const formData = $('#form_regla_empresa').serialize();
-        $('#fondo').addClass('visible');
-        $.post('/reglas/empresa/guardar', formData, function(res) {
-            $('#fondo').removeClass('visible');
-            if (res.ok) {
-                toastr.success(res.msg);
-                CerrarModal();
-                setTimeout(() => location.reload(), 400);
-            } else {
-                toastr.error(res.msg);
-            }
-        }).fail(function(xhr) {
-            $('#fondo').removeClass('visible');
-            toastr.error(xhr.responseJSON?.msg || 'Error al guardar.');
-        });
-    }
+        })
+        .fail(function() { $('#fondo').fadeOut(); });
+}
 </script>
 {% endblock %}

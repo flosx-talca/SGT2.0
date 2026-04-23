@@ -1,5 +1,5 @@
 {% for reg in registros %}
-<tr id="row-regla-emp-{{ reg.id }}">
+<tr>
     <td class="small text-muted">{{ reg.empresa.razon_social }}</td>
     <td>
         <span class="fw-bold text-primary">{{ reg.catalogo.nombre }}</span><br>
@@ -18,9 +18,16 @@
     </td>
     <td class="text-center">
         <div class="btn-group btn-group-sm">
-            <button class="btn btn-outline-info" onclick="Modal('Visualizar', {{ reg.id }}, '/reglas/empresa/modal')"><i class="fa fa-eye"></i></button>
-            <button class="btn btn-outline-warning" onclick="Modal('Editar', {{ reg.id }}, '/reglas/empresa/modal')"><i class="fa fa-edit"></i></button>
-            <button class="btn btn-outline-{{ 'danger' if reg.is_enabled else 'success' }}" onclick="toggleReglaEmpresa({{ reg.id }})">
+            <button class="btn btn-outline-info" title="Ver"
+                onclick="Modal('Visualizar', {{ reg.id }}, '{{ url_for('regla.empresa_modal') }}')">
+                <i class="fa fa-eye"></i>
+            </button>
+            <button class="btn btn-outline-warning" title="Editar"
+                onclick="Modal('Editar', {{ reg.id }}, '{{ url_for('regla.empresa_modal') }}')">
+                <i class="fa fa-edit"></i>
+            </button>
+            <button class="btn btn-outline-{{ 'danger' if reg.is_enabled else 'success' }}" title="{{ 'Desactivar' if reg.is_enabled else 'Activar' }}"
+                onclick="toggleReglaEmpresa({{ reg.id }})">
                 <i class="fa fa-{{ 'ban' if reg.is_enabled else 'check' }}"></i>
             </button>
         </div>

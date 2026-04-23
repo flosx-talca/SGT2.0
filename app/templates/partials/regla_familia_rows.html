@@ -1,5 +1,5 @@
 {% for reg in registros %}
-<tr id="row-familia-{{ reg.id }}">
+<tr>
     <td><code class="fw-bold text-primary">{{ reg.codigo }}</code></td>
     <td class="fw-bold">{{ reg.nombre }}</td>
     <td class="text-muted small">{{ reg.descripcion or '—' }}</td>
@@ -15,9 +15,16 @@
     </td>
     <td class="text-center">
         <div class="btn-group btn-group-sm">
-            <button class="btn btn-outline-info" onclick="Modal('Visualizar', {{ reg.id }}, '/reglas/familias/modal')"><i class="fa fa-eye"></i></button>
-            <button class="btn btn-outline-warning" onclick="Modal('Editar', {{ reg.id }}, '/reglas/familias/modal')"><i class="fa fa-edit"></i></button>
-            <button class="btn btn-outline-{{ 'danger' if reg.activo else 'success' }}" onclick="toggleFamilia({{ reg.id }})">
+            <button class="btn btn-outline-info" title="Ver"
+                onclick="Modal('Visualizar', {{ reg.id }}, '{{ url_for('regla.familias_modal') }}')">
+                <i class="fa fa-eye"></i>
+            </button>
+            <button class="btn btn-outline-warning" title="Editar"
+                onclick="Modal('Editar', {{ reg.id }}, '{{ url_for('regla.familias_modal') }}')">
+                <i class="fa fa-edit"></i>
+            </button>
+            <button class="btn btn-outline-{{ 'danger' if reg.activo else 'success' }}" title="{{ 'Desactivar' if reg.activo else 'Activar' }}"
+                onclick="toggleFamilia({{ reg.id }})">
                 <i class="fa fa-{{ 'ban' if reg.activo else 'check' }}"></i>
             </button>
         </div>

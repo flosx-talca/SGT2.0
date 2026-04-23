@@ -9,15 +9,14 @@
 
 <div class="modal-body p-4">
     <form id="form_regla_familia">
-        <input type="hidden" name="id" value="{{ registro.id if registro else 0 }}">
-        <input type="hidden" name="activo" value="true" id="activo_familia">
+        <input type="hidden" id="id_familia" value="{{ registro.id if registro else 0 }}">
 
         <div class="alert alert-info border-0 shadow-sm mb-4">
             <div class="d-flex align-items-center">
                 <i class="fa fa-sitemap fa-2x me-3 opacity-50"></i>
                 <div>
                     <h6 class="fw-bold mb-1">Motor Genérico de Evaluación</h6>
-                    <p class="mb-0 small">Las familias definen la lógica base. El código debe coincidir con la función del motor en <code>rule_engine.py</code>.</p>
+                    <p class="mb-0 small">El código debe coincidir con el evaluador en <code>rule_engine.py</code>.</p>
                 </div>
             </div>
         </div>
@@ -28,12 +27,12 @@
                 <div class="input-group">
                     <span class="input-group-text bg-light border-end-0"><i class="fa fa-code text-muted"></i></span>
                     <input type="text" class="form-control border-start-0 {% if modo != 'Agregar' %}bg-light{% endif %}"
-                        name="codigo" id="codigo_familia"
+                        id="codigo_familia"
                         value="{{ registro.codigo if registro else '' }}"
                         placeholder="ej: comparison"
                         {% if modo != 'Agregar' %}readonly{% endif %} required>
                 </div>
-                <div class="form-text small">Identificador estable (sin espacios, snake_case)</div>
+                <div class="form-text small">snake_case, sin espacios</div>
             </div>
 
             <div class="col-md-6">
@@ -41,33 +40,33 @@
                 <div class="input-group">
                     <span class="input-group-text bg-light border-end-0"><i class="fa fa-tag text-muted"></i></span>
                     <input type="text" class="form-control border-start-0"
-                        name="nombre" value="{{ registro.nombre if registro else '' }}"
-                        placeholder="ej: Comparación" required
-                        {% if modo == 'Visualizar' %}disabled{% endif %}>
+                        id="nombre_familia"
+                        value="{{ registro.nombre if registro else '' }}"
+                        placeholder="ej: Comparación"
+                        {% if modo == 'Visualizar' %}disabled{% endif %} required>
                 </div>
             </div>
 
             <div class="col-12">
                 <label class="form-label small fw-bold text-muted">Descripción</label>
-                <textarea class="form-control" name="descripcion" rows="2"
+                <textarea class="form-control" id="desc_familia" rows="2"
                     placeholder="Describe qué evalúa este motor..."
                     {% if modo == 'Visualizar' %}disabled{% endif %}>{{ registro.descripcion if registro else '' }}</textarea>
             </div>
 
-            {% if registro and modo != 'Agregar' %}
+            {% if registro %}
             <div class="col-md-6">
                 <label class="form-label small fw-bold text-muted">Estado</label>
-                <select class="form-select" id="select_activo_familia"
-                    onchange="document.getElementById('activo_familia').value = this.value"
+                <select class="form-select" id="activo_familia"
                     {% if modo == 'Visualizar' %}disabled{% endif %}>
                     <option value="true" {{ 'selected' if registro.activo }}>Activa</option>
                     <option value="false" {{ 'selected' if not registro.activo }}>Inactiva</option>
                 </select>
             </div>
             <div class="col-md-6">
-                <label class="form-label small fw-bold text-muted">Reglas asignadas</label>
-                <div class="form-control bg-light border" style="min-height: 38px;">
-                    <span class="badge bg-secondary-subtle text-secondary border">{{ registro.reglas | length }}</span> reglas en catálogo
+                <label class="form-label small fw-bold text-muted">Reglas en catálogo</label>
+                <div class="form-control bg-light">
+                    <span class="badge bg-secondary-subtle text-secondary border">{{ registro.reglas | length }}</span>
                 </div>
             </div>
             {% endif %}
@@ -78,8 +77,48 @@
 <div class="modal-footer bg-light border-top-0">
     <button type="button" class="btn btn-secondary" onclick="CerrarModal()">Cancelar</button>
     {% if modo != 'Visualizar' %}
-    <button type="button" class="btn btn-primary px-4" onclick="guardarFamilia()">
+    <button type="button" id="btn_guardar_familia" class="btn btn-primary px-4" onclick="guardarFamilia()">
         <i class="fa fa-save me-1"></i> Guardar
     </button>
     {% endif %}
 </div>
+
+<script>
+function guardarFamilia() {
+    const id       = $('#id_familia').val();
+    const codigo   = $('#codigo_familia').val().trim();
+    const nombre   = $('#nombre_familia').val().trim();
+    const desc     = $('#desc_familia').val().trim();
+    const activo   = $('#activo_familia').length ? $('#activo_familia').val() : 'true';
+
+    if (!codigo || !nombre) {
+        toastr.warning('Código y Nombre son obligatorios.');
+        return;
+    }
+
+    const $btn = $('#btn_guardar_familia');
+    $btn.prop('disabled', true).html('<i class="fa fa-spinner fa-spin me-1"></i> Guardando...');
+    $('#fondo').fadeIn();
+
+    $.post("{{ url_for('regla.familias_guardar') }}", {
+        id: id, codigo: codigo, nombre: nombre, descripcion: desc, activo: activo
+    })
+    .done(function(res) {
+        if (res.ok) {
+            toastr.success(res.msg);
+            CerrarModal();
+            if (typeof refreshTablaFamilias === 'function') refreshTablaFamilias();
+            else $('#fondo').fadeOut();
+        } else {
+            toastr.error(res.msg);
+            $btn.prop('disabled', false).html('<i class="fa fa-save me-1"></i> Guardar');
+            $('#fondo').fadeOut();
+        }
+    })
+    .fail(function() {
+        toastr.error('Error de comunicación con el servidor.');
+        $btn.prop('disabled', false).html('<i class="fa fa-save me-1"></i> Guardar');
+        $('#fondo').fadeOut();
+    });
+}
+</script>

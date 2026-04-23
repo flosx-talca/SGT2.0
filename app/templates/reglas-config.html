@@ -5,7 +5,7 @@
 {% block page_title %}Catálogo de Reglas{% endblock %}
 
 {% block actions %}
-<button class="btn btn-primary shadow-sm" onclick="Modal('Agregar', 0, '/reglas/catalogo/modal')">
+<button class="btn btn-primary shadow-sm" onclick="Modal('Agregar', 0, '{{ url_for('regla.catalogo_modal') }}')">
     <i class="fa fa-plus me-1"></i> Nueva Regla
 </button>
 {% endblock %}
@@ -22,9 +22,9 @@
             <div class="card-body">
                 <div class="alert alert-info border-0 bg-info-subtle small mb-4">
                     <i class="fa fa-info-circle me-1"></i>
-                    Las reglas del catálogo son creadas por el Super Admin. Desde aquí puedes asignarlas a empresas específicas.
+                    Reglas creadas por el Super Admin. Usa el botón <strong>Asignar</strong> para activarlas en una empresa específica.
                 </div>
-                <table id="tabla_reglas" class="table table-hover dt-responsive nowrap w-100 align-middle">
+                <table id="tabla_catalogo" class="table table-hover align-middle w-100">
                     <thead class="table-light">
                         <tr>
                             <th>Regla</th>
@@ -37,65 +37,8 @@
                             <th class="text-center">Acciones</th>
                         </tr>
                     </thead>
-                    <tbody>
-                        {% for reg in registros %}
-                        <tr id="row-catalogo-{{ reg.id }}">
-                            <td>
-                                <span class="fw-bold">{{ reg.nombre }}</span><br>
-                                <small class="text-muted"><code>{{ reg.codigo }}</code></small>
-                            </td>
-                            <td><code>{{ reg.familia.codigo }}</code></td>
-                            <td>
-                                {% if reg.rule_type == 'hard' %}
-                                <span class="badge bg-danger">HARD</span>
-                                {% elif reg.rule_type == 'soft' %}
-                                <span class="badge bg-warning text-dark">SOFT</span>
-                                {% elif reg.rule_type == 'client_rule' %}
-                                <span class="badge bg-info text-dark">CLIENTE</span>
-                                {% else %}
-                                <span class="badge bg-secondary">{{ reg.rule_type | upper }}</span>
-                                {% endif %}
-                            </td>
-                            <td>{{ reg.scope }}</td>
-                            <td class="text-muted small">{{ reg.field or '—' }}</td>
-                            <td><code class="small">{{ reg.params_default | tojson if reg.params_default else '{}' }}</code></td>
-                            <td class="text-center">
-                                {% if reg.activo %}
-                                <span class="badge bg-success-subtle text-success">Activa</span>
-                                {% else %}
-                                <span class="badge bg-secondary-subtle text-secondary">Inactiva</span>
-                                {% endif %}
-                            </td>
-                            <td class="text-center">
-                                <div class="btn-group btn-group-sm">
-                                    <button class="btn btn-outline-info" title="Ver"
-                                        onclick="Modal('Visualizar', {{ reg.id }}, '/reglas/catalogo/modal')">
-                                        <i class="fa fa-eye"></i>
-                                    </button>
-                                    <button class="btn btn-outline-warning" title="Editar"
-                                        onclick="Modal('Editar', {{ reg.id }}, '/reglas/catalogo/modal')">
-                                        <i class="fa fa-edit"></i>
-                                    </button>
-                                    <button class="btn btn-outline-success" title="Asignar a empresa"
-                                        onclick="Modal('Asignar', {{ reg.id }}, '/reglas/catalogo/modal')">
-                                        <i class="fa fa-share-square"></i>
-                                    </button>
-                                    <button class="btn btn-outline-{{ 'danger' if reg.activo else 'success' }}"
-                                        title="{{ 'Desactivar' if reg.activo else 'Activar' }}"
-                                        onclick="toggleCatalogo({{ reg.id }})">
-                                        <i class="fa fa-{{ 'ban' if reg.activo else 'check' }}"></i>
-                                    </button>
-                                </div>
-                            </td>
-                        </tr>
-                        {% else %}
-                        <tr>
-                            <td colspan="8" class="text-center text-muted py-5">
-                                <i class="fa fa-cogs fa-2x mb-2 d-block opacity-25"></i>
-                                No hay reglas en el catálogo. Usa el botón "Nueva Regla" para comenzar.
-                            </td>
-                        </tr>
-                        {% endfor %}
+                    <tbody id="tbody-catalogo">
+                        {% include 'partials/regla_catalogo_rows.html' %}
                     </tbody>
                 </table>
             </div>
@@ -106,62 +49,46 @@
 
 {% block scripts %}
 <script>
-    $(document).ready(function() {
-        $('#tabla_reglas').DataTable({
-            responsive: true,
-            language: { url: '/static/i18n/es-ES.json' }
-        });
+let dtCatalogo;
+
+$(document).ready(function() {
+    dtCatalogo = $('#tabla_catalogo').DataTable({
+        responsive: true,
+        order: [[0, 'asc']],
+        language: { url: '/static/i18n/es-ES.json' },
+        columnDefs: [{ targets: [7], orderable: false, searchable: false }]
     });
+});
 
-    function toggleCatalogo(id) {
-        $('#fondo').addClass('visible');
-        $.post('/reglas/catalogo/toggle', { id: id }, function(res) {
-            $('#fondo').removeClass('visible');
+function refreshTablaCatalogo() {
+    htmx.ajax('GET', "{{ url_for('regla.catalogo_tabla') }}", {
+        target: '#tbody-catalogo',
+        swap: 'innerHTML'
+    }).then(() => {
+        dtCatalogo.destroy();
+        dtCatalogo = $('#tabla_catalogo').DataTable({
+            responsive: true,
+            order: [[0, 'asc']],
+            language: { url: '/static/i18n/es-ES.json' },
+            columnDefs: [{ targets: [7], orderable: false, searchable: false }]
+        });
+        $('#fondo').fadeOut();
+    });
+}
+
+function toggleCatalogo(id) {
+    $('#fondo').fadeIn();
+    $.post("{{ url_for('regla.catalogo_toggle') }}", { id: id })
+        .done(function(res) {
             if (res.ok) {
                 toastr.success(res.msg);
-                setTimeout(() => location.reload(), 400);
+                refreshTablaCatalogo();
             } else {
                 toastr.error(res.msg);
+                $('#fondo').fadeOut();
             }
-        }).fail(function() {
-            $('#fondo').removeClass('visible');
-            toastr.error('Error al cambiar estado.');
-        });
-    }
-
-    function guardarCatalogo() {
-        const formData = $('#form_regla_catalogo').serialize();
-        $('#fondo').addClass('visible');
-        $.post('/reglas/catalogo/guardar', formData, function(res) {
-            $('#fondo').removeClass('visible');
-            if (res.ok) {
-                toastr.success(res.msg);
-                CerrarModal();
-                setTimeout(() => location.reload(), 400);
-            } else {
-                toastr.error(res.msg);
-            }
-        }).fail(function(xhr) {
-            $('#fondo').removeClass('visible');
-            toastr.error(xhr.responseJSON?.msg || 'Error al guardar.');
-        });
-    }
-
-    function asignarRegla() {
-        const formData = $('#form_asignar_regla').serialize();
-        $('#fondo').addClass('visible');
-        $.post('/reglas/catalogo/asignar', formData, function(res) {
-            $('#fondo').removeClass('visible');
-            if (res.ok) {
-                toastr.success(res.msg);
-                CerrarModal();
-            } else {
-                toastr.error(res.msg);
-            }
-        }).fail(function(xhr) {
-            $('#fondo').removeClass('visible');
-            toastr.error(xhr.responseJSON?.msg || 'Error al asignar.');
-        });
-    }
+        })
+        .fail(function() { $('#fondo').fadeOut(); });
+}
 </script>
 {% endblock %}

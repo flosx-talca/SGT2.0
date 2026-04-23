@@ -13,6 +13,11 @@ def familias():
     registros = ReglaFamilia.query.order_by(ReglaFamilia.nombre).all()
     return render_template('reglas-familias.html', registros=registros)
 
+@regla_bp.route('/familias/tabla')
+def familias_tabla():
+    registros = ReglaFamilia.query.order_by(ReglaFamilia.nombre).all()
+    return render_template('partials/regla_familia_rows.html', registros=registros)
+
 @regla_bp.route('/familias/modal', methods=['POST'])
 def familias_modal():
     modo = request.form.get('modo', 'Agregar')
@@ -69,6 +74,11 @@ def catalogo():
     familias = ReglaFamilia.query.filter_by(activo=True).order_by(ReglaFamilia.nombre).all()
     empresas = Empresa.query.filter_by(activo=True).order_by(Empresa.razon_social).all()
     return render_template('reglas-config.html', registros=registros, familias=familias, empresas=empresas)
+
+@regla_bp.route('/catalogo/tabla')
+def catalogo_tabla():
+    registros = ReglaCatalogo.query.order_by(ReglaCatalogo.nombre).all()
+    return render_template('partials/regla_catalogo_rows.html', registros=registros)
 
 @regla_bp.route('/catalogo/modal', methods=['POST'])
 def catalogo_modal():

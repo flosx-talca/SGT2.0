@@ -11,43 +11,41 @@
 <div class="modal-body p-4">
 
     {% if modo == 'Asignar' %}
-    <!-- ── Modo: Asignar a empresa ── -->
+    <!-- ── Modo Asignar ── -->
     <form id="form_asignar_regla">
-        <input type="hidden" name="regla_id" value="{{ registro.id if registro else 0 }}">
+        <input type="hidden" id="asignar_regla_id" value="{{ registro.id if registro else 0 }}">
         <div class="alert alert-success border-0 bg-success-subtle small mb-4">
             <i class="fa fa-share-square me-1"></i>
-            Asignarás la regla <strong>{{ registro.nombre if registro else '' }}</strong> a la empresa seleccionada.
-            Los parámetros por defecto serán copiados y la empresa podrá ajustar los campos permitidos.
+            Asignarás <strong>{{ registro.nombre if registro else '' }}</strong> a la empresa seleccionada con los parámetros por defecto.
         </div>
         <div class="mb-3">
             <label class="form-label small fw-bold text-muted">(*) Empresa</label>
-            <select class="form-select" name="empresa_id" required>
+            <select class="form-select" id="asignar_empresa_id" required>
                 <option value="">— Seleccionar empresa —</option>
                 {% for emp in empresas %}
                 <option value="{{ emp.id }}">{{ emp.razon_social }}</option>
                 {% endfor %}
             </select>
         </div>
-        {% if registro %}
+        {% if registro and registro.params_default %}
         <div class="mb-3">
             <label class="form-label small fw-bold text-muted">Parámetros que se copiarán</label>
-            <pre class="form-control bg-light small">{{ registro.params_default | tojson(indent=2) if registro.params_default else '{}' }}</pre>
+            <pre class="form-control bg-light small py-2">{{ registro.params_default | tojson(indent=2) }}</pre>
         </div>
         {% endif %}
     </form>
 
     {% else %}
-    <!-- ── Modo: Agregar / Editar / Visualizar ── -->
+    <!-- ── Modos Agregar / Editar / Visualizar ── -->
     <form id="form_regla_catalogo">
-        <input type="hidden" name="id" value="{{ registro.id if registro else 0 }}">
-        <input type="hidden" name="activo" value="true" id="activo_catalogo">
+        <input type="hidden" id="id_catalogo" value="{{ registro.id if registro else 0 }}">
 
         <div class="row g-3">
             <div class="col-md-6">
                 <label class="form-label small fw-bold text-muted">(*) Familia</label>
-                <select class="form-select" name="familia_id" required
+                <select class="form-select" id="cat_familia_id" required
                     {% if modo == 'Visualizar' %}disabled{% endif %}>
-                    <option value="">— Seleccionar familia —</option>
+                    <option value="">— Seleccionar —</option>
                     {% for f in familias %}
                     <option value="{{ f.id }}" {{ 'selected' if registro and registro.familia_id == f.id }}>
                         {{ f.codigo }} — {{ f.nombre }}
@@ -58,20 +56,20 @@
 
             <div class="col-md-6">
                 <label class="form-label small fw-bold text-muted">(*) Tipo de Regla</label>
-                <select class="form-select" name="rule_type" required
+                <select class="form-select" id="cat_rule_type" required
                     {% if modo == 'Visualizar' %}disabled{% endif %}>
-                    <option value="">— Seleccionar tipo —</option>
+                    <option value="">— Seleccionar —</option>
                     <option value="hard" {{ 'selected' if registro and registro.rule_type == 'hard' }}>Hard (No se puede romper)</option>
                     <option value="soft" {{ 'selected' if registro and registro.rule_type == 'soft' }}>Soft (Preferencia)</option>
-                    <option value="client_rule" {{ 'selected' if registro and registro.rule_type == 'client_rule' }}>Client Rule (Operación cliente)</option>
-                    <option value="worker_restriction" {{ 'selected' if registro and registro.rule_type == 'worker_restriction' }}>Worker Restriction (Trabajador)</option>
+                    <option value="client_rule" {{ 'selected' if registro and registro.rule_type == 'client_rule' }}>Client Rule</option>
+                    <option value="worker_restriction" {{ 'selected' if registro and registro.rule_type == 'worker_restriction' }}>Worker Restriction</option>
                 </select>
             </div>
 
             <div class="col-md-8">
                 <label class="form-label small fw-bold text-muted">(*) Código</label>
                 <input type="text" class="form-control {% if modo != 'Agregar' %}bg-light{% endif %}"
-                    name="codigo" value="{{ registro.codigo if registro else '' }}"
+                    id="cat_codigo" value="{{ registro.codigo if registro else '' }}"
                     placeholder="ej: max_consecutive_work_days"
                     {% if modo != 'Agregar' %}readonly{% endif %} required>
                 <div class="form-text small">snake_case, único en el sistema</div>
@@ -79,7 +77,7 @@
 
             <div class="col-md-4">
                 <label class="form-label small fw-bold text-muted">(*) Ámbito</label>
-                <select class="form-select" name="scope" required
+                <select class="form-select" id="cat_scope" required
                     {% if modo == 'Visualizar' %}disabled{% endif %}>
                     <option value="">— Ámbito —</option>
                     <option value="empresa" {{ 'selected' if registro and registro.scope == 'empresa' }}>Empresa</option>
@@ -91,7 +89,7 @@
 
             <div class="col-12">
                 <label class="form-label small fw-bold text-muted">(*) Nombre</label>
-                <input type="text" class="form-control" name="nombre"
+                <input type="text" class="form-control" id="cat_nombre"
                     value="{{ registro.nombre if registro else '' }}"
                     placeholder="ej: Máximo de días consecutivos" required
                     {% if modo == 'Visualizar' %}disabled{% endif %}>
@@ -99,14 +97,14 @@
 
             <div class="col-12">
                 <label class="form-label small fw-bold text-muted">Descripción</label>
-                <textarea class="form-control" name="descripcion" rows="2"
+                <textarea class="form-control" id="cat_descripcion" rows="2"
                     placeholder="Describe qué evalúa esta regla..."
                     {% if modo == 'Visualizar' %}disabled{% endif %}>{{ registro.descripcion if registro else '' }}</textarea>
             </div>
 
             <div class="col-md-6">
                 <label class="form-label small fw-bold text-muted">Campo evaluado <small>(field)</small></label>
-                <input type="text" class="form-control" name="field"
+                <input type="text" class="form-control" id="cat_field"
                     value="{{ registro.field if registro else '' }}"
                     placeholder="ej: consecutive_work_days"
                     {% if modo == 'Visualizar' %}disabled{% endif %}>
@@ -114,7 +112,7 @@
 
             <div class="col-md-6">
                 <label class="form-label small fw-bold text-muted">Operador</label>
-                <select class="form-select" name="operator"
+                <select class="form-select" id="cat_operator"
                     {% if modo == 'Visualizar' %}disabled{% endif %}>
                     <option value="">— Sin operador —</option>
                     {% for op in ['==','!=','>','<','>=','<=','in','not_in'] %}
@@ -124,25 +122,24 @@
             </div>
 
             <div class="col-md-6">
-                <label class="form-label small fw-bold text-muted">Parámetros default <small>(JSON)</small></label>
-                <textarea class="form-control font-monospace small" name="params_default" rows="3"
+                <label class="form-label small fw-bold text-muted">Params default <small>(JSON)</small></label>
+                <textarea class="form-control font-monospace small" id="cat_params_default" rows="3"
                     placeholder='{"value": 6}'
                     {% if modo == 'Visualizar' %}disabled{% endif %}>{{ registro.params_default | tojson(indent=2) if registro and registro.params_default else '{}' }}</textarea>
             </div>
 
             <div class="col-md-6">
-                <label class="form-label small fw-bold text-muted">Keys editables por cliente <small>(JSON array)</small></label>
-                <textarea class="form-control font-monospace small" name="params_editables" rows="3"
+                <label class="form-label small fw-bold text-muted">Keys editables <small>(JSON array)</small></label>
+                <textarea class="form-control font-monospace small" id="cat_params_editables" rows="3"
                     placeholder='["value"]'
                     {% if modo == 'Visualizar' %}disabled{% endif %}>{{ registro.params_editables | tojson if registro and registro.params_editables else '[]' }}</textarea>
-                <div class="form-text small">Las keys que el cliente podrá modificar en su empresa</div>
+                <div class="form-text small">Keys que el cliente podrá modificar</div>
             </div>
 
-            {% if registro and modo != 'Agregar' %}
+            {% if registro %}
             <div class="col-md-6">
                 <label class="form-label small fw-bold text-muted">Estado</label>
-                <select class="form-select" id="select_activo_cat"
-                    onchange="document.getElementById('activo_catalogo').value = this.value"
+                <select class="form-select" id="cat_activo"
                     {% if modo == 'Visualizar' %}disabled{% endif %}>
                     <option value="true" {{ 'selected' if registro.activo }}>Activa</option>
                     <option value="false" {{ 'selected' if not registro.activo }}>Inactiva</option>
@@ -157,12 +154,92 @@
 <div class="modal-footer bg-light border-top-0">
     <button type="button" class="btn btn-secondary" onclick="CerrarModal()">Cancelar</button>
     {% if modo == 'Asignar' %}
-    <button type="button" class="btn btn-success px-4" onclick="asignarRegla()">
+    <button type="button" id="btn_asignar" class="btn btn-success px-4" onclick="asignarRegla()">
         <i class="fa fa-share-square me-1"></i> Asignar
     </button>
     {% elif modo != 'Visualizar' %}
-    <button type="button" class="btn btn-primary px-4" onclick="guardarCatalogo()">
+    <button type="button" id="btn_guardar_catalogo" class="btn btn-primary px-4" onclick="guardarCatalogo()">
         <i class="fa fa-save me-1"></i> Guardar
     </button>
     {% endif %}
 </div>
+
+<script>
+function guardarCatalogo() {
+    const id              = $('#id_catalogo').val();
+    const familia_id      = $('#cat_familia_id').val();
+    const rule_type       = $('#cat_rule_type').val();
+    const codigo          = $('#cat_codigo').val().trim();
+    const scope           = $('#cat_scope').val();
+    const nombre          = $('#cat_nombre').val().trim();
+    const descripcion     = $('#cat_descripcion').val().trim();
+    const field           = $('#cat_field').val().trim();
+    const operator        = $('#cat_operator').val();
+    const params_default  = $('#cat_params_default').val().trim();
+    const params_editables = $('#cat_params_editables').val().trim();
+    const activo          = $('#cat_activo').length ? $('#cat_activo').val() : 'true';
+
+    if (!familia_id || !rule_type || !codigo || !scope || !nombre) {
+        toastr.warning('Completa los campos obligatorios (*).');
+        return;
+    }
+
+    const $btn = $('#btn_guardar_catalogo');
+    $btn.prop('disabled', true).html('<i class="fa fa-spinner fa-spin me-1"></i> Guardando...');
+    $('#fondo').fadeIn();
+
+    $.post("{{ url_for('regla.catalogo_guardar') }}", {
+        id, familia_id, rule_type, codigo, scope, nombre,
+        descripcion, field, operator, params_default, params_editables, activo
+    })
+    .done(function(res) {
+        if (res.ok) {
+            toastr.success(res.msg);
+            CerrarModal();
+            if (typeof refreshTablaCatalogo === 'function') refreshTablaCatalogo();
+            else $('#fondo').fadeOut();
+        } else {
+            toastr.error(res.msg);
+            $btn.prop('disabled', false).html('<i class="fa fa-save me-1"></i> Guardar');
+            $('#fondo').fadeOut();
+        }
+    })
+    .fail(function() {
+        toastr.error('Error de comunicación con el servidor.');
+        $btn.prop('disabled', false).html('<i class="fa fa-save me-1"></i> Guardar');
+        $('#fondo').fadeOut();
+    });
+}
+
+function asignarRegla() {
+    const regla_id   = $('#asignar_regla_id').val();
+    const empresa_id = $('#asignar_empresa_id').val();
+
+    if (!empresa_id) {
+        toastr.warning('Selecciona una empresa.');
+        return;
+    }
+
+    const $btn = $('#btn_asignar');
+    $btn.prop('disabled', true).html('<i class="fa fa-spinner fa-spin me-1"></i> Asignando...');
+    $('#fondo').fadeIn();
+
+    $.post("{{ url_for('regla.catalogo_asignar') }}", { regla_id, empresa_id })
+    .done(function(res) {
+        if (res.ok) {
+            toastr.success(res.msg);
+            CerrarModal();
+            $('#fondo').fadeOut();
+        } else {
+            toastr.error(res.msg);
+            $btn.prop('disabled', false).html('<i class="fa fa-share-square me-1"></i> Asignar');
+            $('#fondo').fadeOut();
+        }
+    })
+    .fail(function() {
+        toastr.error('Error de comunicación con el servidor.');
+        $btn.prop('disabled', false).html('<i class="fa fa-share-square me-1"></i> Asignar');
+        $('#fondo').fadeOut();
+    });
+}
+</script>

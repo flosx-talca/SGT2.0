@@ -1,5 +1,5 @@
 {% for reg in registros %}
-<tr id="row-catalogo-{{ reg.id }}">
+<tr>
     <td>
         <span class="fw-bold">{{ reg.nombre }}</span><br>
         <small class="text-muted"><code>{{ reg.codigo }}</code></small>
@@ -20,10 +20,20 @@
     </td>
     <td class="text-center">
         <div class="btn-group btn-group-sm">
-            <button class="btn btn-outline-info" onclick="Modal('Visualizar', {{ reg.id }}, '/reglas/catalogo/modal')"><i class="fa fa-eye"></i></button>
-            <button class="btn btn-outline-warning" onclick="Modal('Editar', {{ reg.id }}, '/reglas/catalogo/modal')"><i class="fa fa-edit"></i></button>
-            <button class="btn btn-outline-success" onclick="Modal('Asignar', {{ reg.id }}, '/reglas/catalogo/modal')"><i class="fa fa-share-square"></i></button>
-            <button class="btn btn-outline-{{ 'danger' if reg.activo else 'success' }}" onclick="toggleCatalogo({{ reg.id }})">
+            <button class="btn btn-outline-info" title="Ver"
+                onclick="Modal('Visualizar', {{ reg.id }}, '{{ url_for('regla.catalogo_modal') }}')">
+                <i class="fa fa-eye"></i>
+            </button>
+            <button class="btn btn-outline-warning" title="Editar"
+                onclick="Modal('Editar', {{ reg.id }}, '{{ url_for('regla.catalogo_modal') }}')">
+                <i class="fa fa-edit"></i>
+            </button>
+            <button class="btn btn-outline-success" title="Asignar a empresa"
+                onclick="Modal('Asignar', {{ reg.id }}, '{{ url_for('regla.catalogo_modal') }}')">
+                <i class="fa fa-share-square"></i>
+            </button>
+            <button class="btn btn-outline-{{ 'danger' if reg.activo else 'success' }}" title="{{ 'Desactivar' if reg.activo else 'Activar' }}"
+                onclick="toggleCatalogo({{ reg.id }})">
                 <i class="fa fa-{{ 'ban' if reg.activo else 'check' }}"></i>
             </button>
         </div>
