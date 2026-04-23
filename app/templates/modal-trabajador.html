@@ -141,7 +141,7 @@
                             <th class="text-start ps-3 text-muted">Día de la Semana</th>
                             {% for tipo in tipos_turno %}
                             <th class="text-center" style="width: 1%; white-space: nowrap;">
-                                <span class="badge px-2" style="background-color: {{ '#18bc9c' if tipo == 'M' else '#f39c12' if tipo == 'I' else '#3498db' if tipo == 'T' else '#2c3e50' }};">{{ tipo }}</span>
+                                <span class="badge px-2" style="background-color: {{ tipo.color }};">{{ tipo.abreviacion }}</span>
                             </th>
                             {% endfor %}
                         </tr>
@@ -156,13 +156,13 @@
                                 {% set ns = namespace(found=false) %}
                                 {% if registro %}
                                     {% for p in registro.preferencias %}
-                                        {% if p.dia_semana == i and p.turno == tipo %}
+                                        {% if p.dia_semana == i and p.turno == tipo.abreviacion %}
                                             {% set ns.found = true %}
                                         {% endif %}
                                     {% endfor %}
                                 {% endif %}
                                 <input class="form-check-input border-secondary-subtle" type="checkbox" 
-                                       name="pref_{{ i }}[]" value="{{ tipo }}"
+                                       name="pref_{{ i }}[]" value="{{ tipo.abreviacion }}"
                                        {{ 'checked' if ns.found else '' }}
                                        {% if modo == 'Visualizar' %}disabled{% endif %}
                                        style="cursor: pointer; width: 1.2rem; height: 1.2rem; margin-top: 0;">

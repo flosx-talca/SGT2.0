@@ -66,6 +66,24 @@
 <div class="card">
     <div class="card-body p-0">
         <div id="cuadrante_container">
+            <!-- Panel de Métricas IA -->
+            <div id="panel_metricas" class="alert alert-light border shadow-sm mx-3 mt-3 mb-0" style="display:none;">
+                <div class="row align-items-center text-center">
+                    <div class="col-4 border-end">
+                        <small class="text-muted text-uppercase fw-bold">Turnos Necesarios</small>
+                        <h4 class="mb-0 text-primary fw-bold" id="metrica_req">0</h4>
+                    </div>
+                    <div class="col-4 border-end">
+                        <small class="text-muted text-uppercase fw-bold">Turnos Cubiertos</small>
+                        <h4 class="mb-0 text-success fw-bold" id="metrica_cub">0</h4>
+                    </div>
+                    <div class="col-4">
+                        <small class="text-muted text-uppercase fw-bold">Déficit</small>
+                        <h4 class="mb-0 fw-bold" id="metrica_def">0</h4>
+                    </div>
+                </div>
+            </div>
+            
             <!-- Estado vacío -->
             <div id="estado_vacio" class="text-center py-5 text-muted">
                 <i class="fa fa-calendar-alt fa-3x opacity-25 mb-3"></i>
@@ -253,7 +271,7 @@
             });
 
             html += `</tbody></table>`;
-            
+
             console.log("SGT: [6] Inyectando HTML...");
             container.innerHTML = html;
             container.style.display = 'block';
@@ -269,6 +287,38 @@
 
             const badge = document.getElementById('estado_badge');
             if (badge) badge.innerHTML = '<span class="badge bg-warning text-dark">Simulación</span>';
+
+            // --- Calcular métricas de cobertura (DESPUÉS de inyectar HTML) ---
+            let total_necesarios = this.cuadranteData.metricas ? this.cuadranteData.metricas.necesarios : 0;
+            if (!total_necesarios) {
+                let req_diario_total = 0;
+                LISTA_TURNOS.forEach(t => req_diario_total += (parseInt($('#cob_' + t).val()) || 0));
+                total_necesarios = req_diario_total * dias.length;
+            }
+            
+            let total_cubiertos = 0;
+            dias.forEach(dia => {
+                trabajadores.forEach(t => {
+                    const tAbr = (celdas[dia.fecha] && celdas[dia.fecha][t.id]) || 'L';
+                    if (LISTA_TURNOS.includes(tAbr)) {
+                        total_cubiertos++;
+                    }
+                });
+            });
+            
+            const deficit = total_necesarios - total_cubiertos;
+            
+            $('#metrica_req').text(total_necesarios);
+            $('#metrica_cub').text(total_cubiertos);
+            
+            const defEl = $('#metrica_def');
+            defEl.text(deficit);
+            if (deficit > 0) {
+                defEl.removeClass('text-success').addClass('text-danger');
+            } else {
+                defEl.removeClass('text-danger').addClass('text-success');
+            }
+            $('#panel_metricas').slideDown();
             
             console.log("SGT: [7] Finalización exitosa del renderizado.");
             toastr.success('Cuadrante renderizado correctamente');

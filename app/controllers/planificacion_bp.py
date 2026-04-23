@@ -2,7 +2,7 @@ import calendar
 from datetime import date
 from flask import Blueprint, render_template, request, jsonify
 from app.database import db
-from app.models.business import Trabajador, Turno, Servicio
+from app.models.business import Trabajador, Turno, Servicio, ReglaEmpresa
 from app.scheduler.builder import build_model
 from app.scheduler.solver import solve_model
 from app.scheduler.explain import extract_solution
@@ -61,6 +61,31 @@ def generar():
         val = data.get(f'cob_{t}', 0)
         coberturas[t] = int(val) if val else 0
     
+    # Extraer metadatos de trabajadores (tipo contrato, horas)
+    trabajadores_meta = {
+        t.id: {
+            'tipo_contrato':  t.tipo_contrato,
+            'horas_semanales': t.horas_semanales or 45
+        }
+        for t in trabajadores_db
+    }
+    
+    # Leer reglas de empresa de la BD
+    # Asumimos que el servicio pertenece a una empresa - usamos la primera empresa del 1er trabajador
+    reglas_bd = {}
+    if trabajadores_db:
+        empresa_id = trabajadores_db[0].empresa_id
+        reglas_empresa = ReglaEmpresa.query.filter_by(empresa_id=empresa_id, activo=True).all()
+        for re in reglas_empresa:
+            codigo = re.regla_rel.codigo
+            # Usar params_custom si existe, sino params_base de la regla maestra
+            params = re.params_custom if re.params_custom else re.regla_rel.params_base
+            if codigo == 'working_days_limit' and params:
+                reglas_bd['working_days_limit_min'] = params.get('min', 5)
+                reglas_bd['working_days_limit_max'] = params.get('max', 6)
+            elif codigo == 'min_free_sundays' and params:
+                reglas_bd['min_free_sundays'] = params.get('value', 2)
+    
     # Extraer ausencias y preferencias
     ausencias = {}
     preferencias = {}
@@ -91,14 +116,24 @@ def generar():
 
     # Construir y resolver el modelo
     try:
-        model, x = build_model(t_ids, dias_del_mes, turnos, coberturas, ausencias, preferencias)
+        model, x = build_model(
+            t_ids, dias_del_mes, turnos, coberturas, ausencias, preferencias,
+            reglas=reglas_bd,
+            trabajadores_meta=trabajadores_meta
+        )
         solver, status = solve_model(model)
         
+        # Ya no bloqueamos por INFEASIBLE: el modelo es 100% Soft, siempre hay solución.
+        # Solo advertimos si el solver no pudo hacer nada en absoluto (UNKNOWN).
+        advertencia = None
         conflict_report = get_conflict_report(status)
-        if conflict_report:
+        if conflict_report and status == cp_model.UNKNOWN:
             return jsonify({'status': 'error', 'message': conflict_report['message']}), 400
             
         celdas = extract_solution(solver, status, x, t_ids, dias_del_mes, turnos, ausencias)
+        
+        # Calcular métricas básicas
+        turnos_necesarios = sum(coberturas.values()) * len(dias_del_mes)
         
         return jsonify({
             'status': 'ok',
@@ -106,7 +141,10 @@ def generar():
                 'dias': dias_dict,
                 'trabajadores': t_dicts,
                 'celdas': celdas,
-                'estado': 'simulacion'
+                'estado': 'simulacion',
+                'metricas': {
+                    'necesarios': turnos_necesarios
+                }
             }
         })
     except Exception as e:

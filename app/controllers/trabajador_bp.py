@@ -27,7 +27,20 @@ def modal():
     
     # Obtener tipos de turnos únicos para la tabla de preferencias
     turnos_db = Turno.query.filter_by(activo=True).all()
-    tipos_turno = sorted(list(set([t.abreviacion for t in turnos_db]))) if turnos_db else ['M', 'I', 'T', 'N']
+    tipos_turno = []
+    vistos = set()
+    for t in turnos_db:
+        if t.abreviacion not in vistos:
+            tipos_turno.append({'abreviacion': t.abreviacion, 'color': t.color})
+            vistos.add(t.abreviacion)
+            
+    if not tipos_turno:
+        tipos_turno = [
+            {'abreviacion': 'M', 'color': '#18bc9c'},
+            {'abreviacion': 'T', 'color': '#3498db'},
+            {'abreviacion': 'I', 'color': '#f39c12'},
+            {'abreviacion': 'N', 'color': '#34495e'}
+        ]
     tipos_ausencia = TipoAusencia.query.filter_by(activo=True).all()
     
     return render_template('modal-trabajador.html', 
