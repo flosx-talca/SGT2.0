@@ -70,6 +70,14 @@
                        value="{{ registro.operador if registro else '' }}"
                        {% if modo == 'Visualizar' %}readonly{% endif %}>
             </div>
+            <div class="col-md-12 mt-3">
+                <div class="form-check form-switch">
+                    <input class="form-check-input" type="checkbox" id="activo_regla" 
+                           {% if registro is none or registro.activo %}checked{% endif %}
+                           {% if modo == 'Visualizar' %}disabled{% endif %}>
+                    <label class="form-check-label small fw-bold text-muted" for="activo_regla">Regla Activa</label>
+                </div>
+            </div>
         </div>
     </form>
 </div>
@@ -93,6 +101,7 @@ function guardarRegla() {
     const scope      = $('#scope_regla').val().trim();
     const campo      = $('#campo_regla').val().trim();
     const operador   = $('#operador_regla').val().trim();
+    const activo     = $('#activo_regla').is(':checked');
 
     if (!codigo || !nombre || !familia || !tipo_regla || !scope) { 
         toastr.warning('Complete todos los campos obligatorios (*).'); 
@@ -100,7 +109,7 @@ function guardarRegla() {
     }
 
     $('#fondo').fadeIn();
-    $.post("{{ url_for('regla.guardar') }}", { id, codigo, nombre, familia, tipo_regla, scope, campo, operador })
+    $.post("{{ url_for('regla.guardar') }}", { id, codigo, nombre, familia, tipo_regla, scope, campo, operador, activo: activo ? 'true' : 'false' })
         .done(res => {
             if (res.ok) {
                 toastr.success(res.msg);

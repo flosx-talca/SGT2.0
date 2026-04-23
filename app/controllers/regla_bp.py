@@ -37,6 +37,7 @@ def guardar():
     scope = request.form.get('scope', '').strip()
     campo = request.form.get('campo', '').strip()
     operador = request.form.get('operador', '').strip()
+    activo = request.form.get('activo') == 'true'
     
     if not codigo or not nombre or not familia or not tipo_regla or not scope:
         return jsonify({'ok': False, 'msg': 'Campos obligatorios faltantes.'}), 400
@@ -50,6 +51,7 @@ def guardar():
         registro.scope = scope
         registro.campo = campo
         registro.operador = operador
+        registro.activo = activo
         msg = f'Regla "{nombre}" actualizada con éxito.'
     else:
         registro = Regla(
@@ -60,7 +62,8 @@ def guardar():
             scope=scope,
             campo=campo,
             operador=operador,
-            params_base={}
+            params_base={},
+            activo=activo
         )
         db.session.add(registro)
         msg = f'Regla "{nombre}" creada con éxito.'

@@ -34,6 +34,7 @@ def guardar():
     registro_id = request.form.get('id', '').strip()
     empresa_id = request.form.get('empresa_id', '').strip()
     regla_id = request.form.get('regla_id', '').strip()
+    activo = request.form.get('activo') == 'true'
     
     if not empresa_id or not regla_id:
         return jsonify({'ok': False, 'msg': 'Empresa y Regla son obligatorios.'}), 400
@@ -42,12 +43,14 @@ def guardar():
         registro = ReglaEmpresa.query.get_or_404(int(registro_id))
         registro.empresa_id = empresa_id
         registro.regla_id = regla_id
+        registro.activo = activo
         msg = f'Asignación actualizada con éxito.'
     else:
         registro = ReglaEmpresa(
             empresa_id=empresa_id,
             regla_id=regla_id,
-            params_custom={}
+            params_custom={},
+            activo=activo
         )
         db.session.add(registro)
         msg = f'Asignación creada con éxito.'

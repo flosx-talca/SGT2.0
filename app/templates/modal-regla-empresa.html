@@ -36,6 +36,14 @@
                     La configuración avanzada de parámetros (JSON overrides) podrá ser editada desde un panel avanzado próximamente.
                 </div>
             </div>
+            <div class="col-md-12 mt-3">
+                <div class="form-check form-switch">
+                    <input class="form-check-input" type="checkbox" id="activo_regla_empresa" 
+                           {% if registro is none or registro.activo %}checked{% endif %}
+                           {% if modo == 'Visualizar' %}disabled{% endif %}>
+                    <label class="form-check-label small fw-bold text-muted" for="activo_regla_empresa">Asignación Activa</label>
+                </div>
+            </div>
         </div>
     </form>
 </div>
@@ -54,6 +62,7 @@ function guardarReglaEmpresa() {
     const id         = $('#id_regla_empresa').val();
     const empresa_id = $('#empresa_id_regla').val();
     const regla_id   = $('#regla_id_regla').val();
+    const activo     = $('#activo_regla_empresa').is(':checked');
 
     if (!empresa_id || !regla_id) { 
         toastr.warning('Complete todos los campos obligatorios (*).'); 
@@ -61,7 +70,7 @@ function guardarReglaEmpresa() {
     }
 
     $('#fondo').fadeIn();
-    $.post("{{ url_for('regla_empresa.guardar') }}", { id, empresa_id, regla_id })
+    $.post("{{ url_for('regla_empresa.guardar') }}", { id, empresa_id, regla_id, activo: activo ? 'true' : 'false' })
         .done(res => {
             if (res.ok) {
                 toastr.success(res.msg);
