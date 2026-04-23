@@ -1,4 +1,5 @@
 from flask import Blueprint, render_template, request
+from app.models.business import Servicio, Turno
 
 main_bp = Blueprint('main', __name__)
 
@@ -12,7 +13,9 @@ def login():
 
 @main_bp.route('/planificacion')
 def planificacion():
-    return render_template('simulacion.html') 
+    servicios = Servicio.query.filter_by(activo=True).all()
+    turnos = Turno.query.filter_by(activo=True).all()
+    return render_template('simulacion.html', servicios=servicios, turnos=turnos) 
 
 @main_bp.route('/reglas-empresa')
 def reglas_empresa():
@@ -28,7 +31,9 @@ def reglas_config():
 
 @main_bp.route('/simulacion')
 def simulacion():
-    return render_template('simulacion.html')
+    servicios = Servicio.query.filter_by(activo=True).all()
+    turnos = Turno.query.filter_by(activo=True).all()
+    return render_template('simulacion.html', servicios=servicios, turnos=turnos)
 
 @main_bp.route('/reglas')
 def reglas():

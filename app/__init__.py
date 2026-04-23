@@ -30,6 +30,7 @@ def create_app():
     from .controllers.trabajador_bp import trabajador_bp
     from .controllers.regla_bp import regla_bp
     from .controllers.regla_empresa_bp import regla_empresa_bp
+    from .controllers.planificacion_bp import planificacion_bp
 
     app.register_blueprint(main_bp)
     app.register_blueprint(region_bp)
@@ -45,5 +46,6 @@ def create_app():
     app.register_blueprint(trabajador_bp)
     app.register_blueprint(regla_bp)
     app.register_blueprint(regla_empresa_bp)
+    app.register_blueprint(planificacion_bp)
 
     return app

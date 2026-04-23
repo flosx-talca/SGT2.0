@@ -23,11 +23,9 @@
         
     </select>
     <select class="form-select form-select-sm shadow-sm w-auto" id="sel_sucursal">
-        
-        <option value="1">Pronto Vitacura</option>
-        
-        <option value="2">Bencinera Norte</option>
-        
+        {% for serv in servicios %}
+        <option value="{{ serv.id }}">{{ serv.descripcion }}</option>
+        {% endfor %}
     </select>
 
     <button class="btn btn-outline-secondary btn-sm shadow-sm" onclick="SGT.mostrarMock()" id="btn_cargar">
@@ -49,37 +47,15 @@
         <div class="d-flex align-items-center gap-4 flex-wrap">
             <small class="fw-bold text-secondary"><i class="fa fa-users me-1"></i> DOTACIÓN DIARIA REQUERIDA:</small>
             
+            {% for t in turnos %}
             <div class="d-flex align-items-center gap-2">
                 <span class="badge-turno shadow-sm"
-                    style="background-color: #18bc9c;width:38px;height:28px;font-size:0.75rem;">M</span>
+                    style="background-color: {{ t.color|default('#18bc9c', true) }};min-width:40px;height:28px;font-size:0.75rem;padding:0 5px;">{{ t.abreviacion }}</span>
                 <input type="number" class="form-control form-control-sm shadow-sm text-center cobertura-input fw-bold"
-                    id="cob_M" value="1" min="0" max="20"
-                    style="width:60px;" title="Mínimo requerido para Mañana">
+                    id="cob_{{ t.abreviacion }}" value="1" min="0" max="20"
+                    style="width:60px;" title="Mínimo requerido para {{ t.nombre }}">
             </div>
-            
-            <div class="d-flex align-items-center gap-2">
-                <span class="badge-turno shadow-sm"
-                    style="background-color: #f39c12;width:38px;height:28px;font-size:0.75rem;">I</span>
-                <input type="number" class="form-control form-control-sm shadow-sm text-center cobertura-input fw-bold"
-                    id="cob_I" value="1" min="0" max="20"
-                    style="width:60px;" title="Mínimo requerido para Intermedio">
-            </div>
-            
-            <div class="d-flex align-items-center gap-2">
-                <span class="badge-turno shadow-sm"
-                    style="background-color: #3498db;width:38px;height:28px;font-size:0.75rem;">T</span>
-                <input type="number" class="form-control form-control-sm shadow-sm text-center cobertura-input fw-bold"
-                    id="cob_T" value="2" min="0" max="20"
-                    style="width:60px;" title="Mínimo requerido para Tarde">
-            </div>
-            
-            <div class="d-flex align-items-center gap-2">
-                <span class="badge-turno shadow-sm"
-                    style="background-color: #2c3e50;width:38px;height:28px;font-size:0.75rem;">N</span>
-                <input type="number" class="form-control form-control-sm shadow-sm text-center cobertura-input fw-bold"
-                    id="cob_N" value="1" min="0" max="20"
-                    style="width:60px;" title="Mínimo requerido para Noche">
-            </div>
+            {% endfor %}
             
         </div>
     </div>
@@ -122,8 +98,16 @@
 {% block scripts %}
 <script>
     // --- Configuración y Helpers (Hoisted) ---
-    const COLORES_TURNO = {"M": "#18bc9c", "N": "#2c3e50", "T": "#3498db", "INT": "#f39c12"};
+    // Construir mapa de colores desde el backend
+    const COLORES_TURNO = {
+        {% for t in turnos %}
+        "{{ t.abreviacion }}": "{{ t.color|default('#18bc9c', true) }}"{% if not loop.last %},{% endif %}
+        {% endfor %}
+    };
     
+    // Lista de turnos dinámicos
+    const LISTA_TURNOS = [{% for t in turnos %}"{{ t.abreviacion }}"{% if not loop.last %}, {% endif %}{% endfor %}];
+
     function getColorTurno(abr) {
         return COLORES_TURNO[abr] || '#adb5bd';
     }
@@ -142,12 +126,42 @@
             btn.disabled = true;
             btn.innerHTML = '<i class="fa fa-spinner fa-spin me-1"></i> Generando...';
             
-            setTimeout(() => {
-                btn.disabled = false;
-                btn.innerHTML = oldHtml;
-                console.log("SGT: [2] Llamando a mostrarMock...");
-                this.mostrarMock();
-            }, 500);
+            const payload = {
+                mes: document.getElementById('sel_mes').value,
+                anio: document.getElementById('sel_anio').value,
+                sucursal_id: document.getElementById('sel_sucursal').value
+            };
+            
+            // Añadir coberturas dinámicamente
+            $('.cobertura-input').each(function() {
+                payload[this.id] = this.value; // Ej: cob_M: 2
+            });
+
+            $.ajax({
+                url: '/planificacion/generar',
+                type: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify(payload),
+                success: (res) => {
+                    btn.disabled = false;
+                    btn.innerHTML = oldHtml;
+                    
+                    if (res.status === 'ok') {
+                        this.cuadranteData = res.data;
+                        console.log("SGT: [4] Datos listos, llamando a renderCuadrante...");
+                        this.renderCuadrante();
+                    } else {
+                        toastr.error(res.message || 'Error en el generador IA.');
+                    }
+                },
+                error: (xhr) => {
+                    btn.disabled = false;
+                    btn.innerHTML = oldHtml;
+                    let msg = 'Error en el servidor.';
+                    if(xhr.responseJSON && xhr.responseJSON.message) msg = xhr.responseJSON.message;
+                    toastr.error(msg);
+                }
+            });
         },
 
         mostrarMock: function() {
@@ -195,23 +209,42 @@
 
             let html = `<table class="cuadrante-table table mb-0"><thead><tr><th class="col-fecha">Día</th>`;
             html += trabajadores.map(t => `<th title="${t.nombre}">${t.nombre.split(' ')[0]}</th>`).join('');
-            html += `<th colspan="5" class="bg-light">Cobertura</th></tr></thead><tbody>`;
+            html += `<th colspan="${LISTA_TURNOS.length + 1}" class="bg-light text-center border-start border-2 border-secondary">Cobertura Requerida</th></tr>`;
+            
+            // Sub-header para coberturas
+            html += `<tr><th colspan="${trabajadores.length + 1}"></th>`;
+            LISTA_TURNOS.forEach(t => {
+                html += `<th class="text-center bg-light border-start border-2" style="font-size:0.75rem;" title="${t}">${t}</th>`;
+            });
+            html += `<th class="text-center text-muted bg-light" style="font-size:0.75rem;">L</th></tr></thead><tbody>`;
 
             dias.forEach(dia => {
                 const esDom = dia.dia_semana === 0;
-                const conts = { M:0, T:0, INT:0, N:0, L:0 };
+                const conts = { L:0 };
+                LISTA_TURNOS.forEach(t => conts[t] = 0);
+                
                 let celdas_html = trabajadores.map(t => {
                     const tAbr = (celdas[dia.fecha] && celdas[dia.fecha][t.id]) || 'L';
                     if (conts[tAbr] !== undefined) conts[tAbr]++;
                     const color = typeof getColorTurno === 'function' ? getColorTurno(tAbr) : '#adb5bd';
                     return `<td class="celda-turno" onclick="SGT.abrirPicker(this)" data-fecha="${dia.fecha}" data-wid="${t.id}">
-                        <span class="badge-turno ${tAbr === 'L' ? 'libre' : ''}" style="${tAbr !== 'L' ? 'background-color:' + color : ''}">${tAbr}</span>
+                        <span class="badge-turno ${tAbr === 'L' ? 'libre' : ''}" style="${tAbr !== 'L' ? 'background-color:' + color : ''}; min-width:40px; padding:0 5px;">${tAbr}</span>
                     </td>`;
                 }).join('');
 
                 html += `<tr><td class="col-fecha ${esDom ? 'domingo' : ''}">${dia.label}</td>${celdas_html}`;
-                html += `<td class="text-center small">${conts.M}</td><td class="text-center small">${conts.T}</td>`;
-                html += `<td class="text-center small">${conts.INT}</td><td class="text-center small">${conts.N}</td>`;
+                
+                LISTA_TURNOS.forEach((t, i) => {
+                    const req = parseInt($('#cob_' + t).val()) || 0;
+                    const count = conts[t];
+                    // Alertar si la cobertura es menor a la requerida
+                    let content = count;
+                    if(count < req) {
+                        content = `<span class="badge bg-danger shadow-sm px-2 rounded-pill" title="Faltan ${req - count}"><i class="fa fa-exclamation-circle"></i> ${count}</span>`;
+                    }
+                    html += `<td class="text-center small ${i===0 ? 'border-start border-2 border-secondary' : ''}">${content}</td>`;
+                });
+                
                 html += `<td class="text-center text-muted small">${conts.L}</td></tr>`;
             });
 
@@ -289,7 +322,8 @@
         const fila = $(celda).closest('tr');
         console.log("Actualizando contadores para fila:", fila);
         
-        const contadores = { M: 0, T: 0, INT: 0, N: 0, L: 0 };
+        const contadores = { L: 0 };
+        LISTA_TURNOS.forEach(t => contadores[t] = 0);
         fila.find('.celda-turno').each(function () {
             const abr = $(this).find('.badge-turno').text().trim();
             if (contadores[abr] !== undefined) contadores[abr]++;
@@ -306,7 +340,7 @@
         
         console.log("Requerimientos detectados:", req);
 
-        const turnos_a_actualizar = ['M', 'T', 'INT', 'N', 'L'];
+        const turnos_a_actualizar = [...LISTA_TURNOS, 'L'];
         const tds = fila.find('td:not(.col-fecha):not(.celda-turno)');
         
         tds.each((i, td) => {
