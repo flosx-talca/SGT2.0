@@ -1,0 +1,81 @@
+{% extends "_partial.html" if is_htmx else "layout.html" %}
+
+{% block title %}Tipos de Ausencia{% endblock %}
+
+{% block header %}Gestión de Ausencias{% endblock %}
+{% block page_title %}Tipos de Ausencia{% endblock %}
+
+{% block actions %}
+<button class="btn btn-primary shadow-sm" onclick="Modal('Agregar', 0, '{{ url_for('tipo_ausencia.modal') }}')">
+    <i class="fa fa-plus me-1"></i> Nuevo Tipo
+</button>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="card shadow-sm border-0">
+            <div class="card-header bg-white py-3 border-bottom d-flex justify-content-between align-items-center">
+                <div>
+                    <h5 class="mb-0 fw-bold text-dark"><i class="fa fa-user-minus me-2 text-danger"></i>Tipos de Ausencia</h5>
+                    <small class="text-muted">Define los motivos de ausencia, sus colores y siglas para el cuadrante</small>
+                </div>
+                <select id="filtro_empresa_ausencias" class="form-select w-auto shadow-sm" onchange="refreshTablaAusencias()">
+                    <option value="0">Todas las Sucursales</option>
+                    {% for e in empresas_filtro %}
+                    <option value="{{ e.id }}">{{ e.razon_social }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="card-body p-0">
+                <div id="contenedor-ausencias" class="row g-0 p-3">
+                    {% include 'partials/tipo_ausencia_cards.html' %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function refreshTablaAusencias() {
+    const empresa_id = $('#filtro_empresa_ausencias').val() || 0;
+    $('#fondo').addClass('visible');
+    $.get("{{ url_for('tipo_ausencia.tabla') }}", { empresa_id: empresa_id }, function(html) {
+        $('#contenedor-ausencias').html(html);
+    }).always(function() {
+        $('#fondo').removeClass('visible');
+    });
+}
+
+function eliminarAusencia(id, nombre) {
+    Swal.fire({
+        title: `¿Eliminar tipo "${nombre}"?`,
+        text: 'Esta acción desactivará el tipo de ausencia del sistema.',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#e74c3c',
+        cancelButtonColor: '#95a5a6',
+        confirmButtonText: 'Sí, desactivar',
+        cancelButtonText: 'Cancelar'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            $('#fondo').addClass('visible');
+            $.post("{{ url_for('tipo_ausencia.eliminar') }}", { id: id })
+                .done(function(res) {
+                    if (res.ok) {
+                        toastr.success(res.msg);
+                        refreshTablaAusencias();
+                    } else {
+                        toastr.error(res.msg);
+                    }
+                })
+                .always(function() {
+                    $('#fondo').removeClass('visible');
+                });
+        }
+    });
+}
+</script>
+{% endblock %}

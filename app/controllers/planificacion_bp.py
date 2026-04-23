@@ -75,7 +75,7 @@ def generar():
                 while d <= f_fin:
                     f_str = d.strftime('%Y-%m-%d')
                     if f_str in dias_del_mes:
-                        ausencias[(t.id, f_str)] = a.motivo
+                        ausencias[(t.id, f_str)] = a.tipo_ausencia.abreviacion if a.tipo_ausencia else "A"
                     from datetime import timedelta
                     d += timedelta(days=1)
                     

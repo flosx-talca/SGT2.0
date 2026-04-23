@@ -200,10 +200,9 @@
                     <label class="form-label small text-muted mb-1">Motivo</label>
                     <select class="form-select form-select-sm border-secondary-subtle" id="motivo_ausencia">
                         <option value="" selected disabled>Seleccione...</option>
-                        <option value="VAC">Vacaciones</option>
-                        <option value="LM">Licencia Médica</option>
-                        <option value="PER">Permiso</option>
-                        <option value="OTR">Otro</option>
+                        {% for ta in tipos_ausencia %}
+                        <option value="{{ ta.id }}" data-nombre="{{ ta.nombre }}" data-color="{{ ta.color }}">{{ ta.nombre }}</option>
+                        {% endfor %}
                     </select>
                 </div>
                 <div class="col-md-3 d-flex align-items-end">
@@ -231,10 +230,10 @@
                                     <i class="fa fa-calendar-day me-2 text-muted"></i> {{ a.fecha_inicio.strftime('%d/%m/%Y') }} - {{ a.fecha_fin.strftime('%d/%m/%Y') }}
                                     <input type="hidden" name="ausencia_ini[]" value="{{ a.fecha_inicio }}">
                                     <input type="hidden" name="ausencia_fin[]" value="{{ a.fecha_fin }}">
-                                    <input type="hidden" name="ausencia_motivo[]" value="{{ a.motivo }}">
+                                    <input type="hidden" name="ausencia_motivo[]" value="{{ a.tipo_ausencia_id }}">
                                 </td>
                                 <td class="text-center align-middle">
-                                    <span class="badge {{ 'bg-success' if a.motivo == 'VAC' else 'bg-danger' if a.motivo == 'LM' else 'bg-info text-dark' if a.motivo == 'PER' else 'bg-warning text-dark' }} px-2">{{ a.motivo }}</span>
+                                    <span class="badge px-2" style="background-color: {{ a.tipo_ausencia.color if a.tipo_ausencia else '#95a5a6' }};">{{ a.tipo_ausencia.nombre if a.tipo_ausencia else 'Desconocido' }}</span>
                                 </td>
                                 {% if modo != 'Visualizar' %}
                                 <td class="text-end pe-3 align-middle">
@@ -284,9 +283,12 @@ $(document).ready(function() {
     $('#btn_add_ausencia').click(function() {
         const f_ini = $('#fecha_inicio').val();
         const f_fin = $('#fecha_fin').val();
-        const motivo = $('#motivo_ausencia').val();
+        const $option = $('#motivo_ausencia option:selected');
+        const motivo_id = $option.val();
+        const motivo_nombre = $option.data('nombre');
+        const motivo_color = $option.data('color') || '#95a5a6';
 
-        if(!f_ini || !f_fin || !motivo) {
+        if(!f_ini || !f_fin || !motivo_id) {
             toastr.warning('Por favor complete rango de fechas y motivo');
             return;
         }
@@ -297,12 +299,6 @@ $(document).ready(function() {
 
         $('#row_no_data').hide();
 
-        let badgeClass = 'bg-secondary';
-        if(motivo === 'VAC') badgeClass = 'bg-success';
-        if(motivo === 'LM') badgeClass = 'bg-danger';
-        if(motivo === 'PER') badgeClass = 'bg-info text-dark';
-        if(motivo === 'OTR') badgeClass = 'bg-warning text-dark';
-
         const formatF = (d) => d.split('-').reverse().join('/');
         
         const tr = `
@@ -311,10 +307,10 @@ $(document).ready(function() {
                     <i class="fa fa-calendar-day me-2 text-muted"></i> ${formatF(f_ini)} - ${formatF(f_fin)}
                     <input type="hidden" name="ausencia_ini[]" value="${f_ini}">
                     <input type="hidden" name="ausencia_fin[]" value="${f_fin}">
-                    <input type="hidden" name="ausencia_motivo[]" value="${motivo}">
+                    <input type="hidden" name="ausencia_motivo[]" value="${motivo_id}">
                 </td>
                 <td class="text-center align-middle">
-                    <span class="badge ${badgeClass} px-2">${motivo}</span>
+                    <span class="badge px-2" style="background-color: ${motivo_color};">${motivo_nombre}</span>
                 </td>
                 <td class="text-end pe-3 align-middle">
                     <button type="button" class="btn btn-sm btn-outline-danger btn-remove-ausencia" style="padding: 0.1rem 0.3rem;"><i class="fa fa-times"></i></button>

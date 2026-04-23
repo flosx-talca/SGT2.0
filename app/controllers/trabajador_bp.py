@@ -1,6 +1,6 @@
 from flask import Blueprint, render_template, request, jsonify
 from app.database import db
-from app.models.business import Trabajador, Empresa, Servicio, Turno, TrabajadorPreferencia, TrabajadorAusencia
+from app.models.business import Trabajador, Empresa, Servicio, Turno, TrabajadorPreferencia, TrabajadorAusencia, TipoAusencia
 
 trabajador_bp = Blueprint('trabajador', __name__, url_prefix='/trabajadores')
 
@@ -28,13 +28,15 @@ def modal():
     # Obtener tipos de turnos únicos para la tabla de preferencias
     turnos_db = Turno.query.filter_by(activo=True).all()
     tipos_turno = sorted(list(set([t.abreviacion for t in turnos_db]))) if turnos_db else ['M', 'I', 'T', 'N']
+    tipos_ausencia = TipoAusencia.query.filter_by(activo=True).all()
     
     return render_template('modal-trabajador.html', 
                            modo=modo, 
                            registro=registro, 
                            empresas=empresas, 
                            servicios=servicios,
-                           tipos_turno=tipos_turno)
+                           tipos_turno=tipos_turno,
+                           tipos_ausencia=tipos_ausencia)
 
 @trabajador_bp.route('/guardar', methods=['POST'])
 def guardar():
@@ -108,10 +110,11 @@ def guardar():
         TrabajadorAusencia.query.filter_by(trabajador_id=trabajador.id).delete()
         aus_inis = request.form.getlist('ausencia_ini[]')
         aus_fins = request.form.getlist('ausencia_fin[]')
-        aus_motivos = request.form.getlist('ausencia_motivo[]')
-        for ini, fin, motivo in zip(aus_inis, aus_fins, aus_motivos):
-            nueva_aus = TrabajadorAusencia(trabajador_id=trabajador.id, fecha_inicio=ini, fecha_fin=fin, motivo=motivo)
-            db.session.add(nueva_aus)
+        aus_tipos = request.form.getlist('ausencia_motivo[]')
+        for ini, fin, tipo_id in zip(aus_inis, aus_fins, aus_tipos):
+            if tipo_id:
+                nueva_aus = TrabajadorAusencia(trabajador_id=trabajador.id, fecha_inicio=ini, fecha_fin=fin, tipo_ausencia_id=int(tipo_id))
+                db.session.add(nueva_aus)
 
         db.session.commit()
         return jsonify({'ok': True, 'msg': msg})

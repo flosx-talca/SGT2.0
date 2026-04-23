@@ -1,5 +1,6 @@
 from flask import Blueprint, render_template, request
-from app.models.business import Servicio, Turno
+from app.models.business import Servicio, Turno, TipoAusencia
+from datetime import datetime
 
 main_bp = Blueprint('main', __name__)
 
@@ -15,7 +16,9 @@ def login():
 def planificacion():
     servicios = Servicio.query.filter_by(activo=True).all()
     turnos = Turno.query.filter_by(activo=True).all()
-    return render_template('simulacion.html', servicios=servicios, turnos=turnos) 
+    tipos_ausencia = TipoAusencia.query.filter_by(activo=True).all()
+    now = datetime.now()
+    return render_template('simulacion.html', servicios=servicios, turnos=turnos, tipos_ausencia=tipos_ausencia, current_year=now.year, current_month=now.month) 
 
 @main_bp.route('/reglas-empresa')
 def reglas_empresa():
@@ -33,7 +36,9 @@ def reglas_config():
 def simulacion():
     servicios = Servicio.query.filter_by(activo=True).all()
     turnos = Turno.query.filter_by(activo=True).all()
-    return render_template('simulacion.html', servicios=servicios, turnos=turnos)
+    tipos_ausencia = TipoAusencia.query.filter_by(activo=True).all()
+    now = datetime.now()
+    return render_template('simulacion.html', servicios=servicios, turnos=turnos, tipos_ausencia=tipos_ausencia, current_year=now.year, current_month=now.month)
 
 @main_bp.route('/reglas')
 def reglas():

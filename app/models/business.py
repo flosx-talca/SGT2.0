@@ -61,6 +61,17 @@ class Turno(db.Model):
     creado_en = db.Column(db.DateTime, default=datetime.utcnow)
     actualizado_en = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
+class TipoAusencia(db.Model):
+    __tablename__ = 'tipo_ausencia'
+    id = db.Column(db.Integer, primary_key=True)
+    empresa_id = db.Column(db.Integer, db.ForeignKey('empresa.id', ondelete='CASCADE'), nullable=False)
+    nombre = db.Column(db.String(50), nullable=False)
+    abreviacion = db.Column(db.String(5), nullable=False)
+    color = db.Column(db.String(10), default='#95a5a6')
+    activo = db.Column(db.Boolean, default=True)
+    creado_en = db.Column(db.DateTime, default=datetime.utcnow)
+    actualizado_en = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
 class Trabajador(db.Model):
     __tablename__ = 'trabajador'
     id = db.Column(db.Integer, primary_key=True)
@@ -95,7 +106,8 @@ class TrabajadorAusencia(db.Model):
     trabajador_id = db.Column(db.Integer, db.ForeignKey('trabajador.id', ondelete='CASCADE'), nullable=False)
     fecha_inicio = db.Column(db.Date, nullable=False)
     fecha_fin = db.Column(db.Date, nullable=False)
-    motivo = db.Column(db.String(20), nullable=False)
+    tipo_ausencia_id = db.Column(db.Integer, db.ForeignKey('tipo_ausencia.id', ondelete='CASCADE'), nullable=True) # Temporalmente True para migrar
+    tipo_ausencia = db.relationship('TipoAusencia', lazy=True)
     creado_en = db.Column(db.DateTime, default=datetime.utcnow)
 
 class Regla(db.Model):

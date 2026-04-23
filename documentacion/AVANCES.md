@@ -42,3 +42,9 @@ Se basa directamente en `especificacion-funcional-sistema-turnos.md`.
       - Se solucionó un problema de redeclaración de variables de inicialización de DataTables (`SyntaxError` con `let`) que rompía el buscador al navegar vía HTMX en toda la plataforma, reemplazándose por `var`.
       - Se corrigió un error interno en el modal de Empresas causado por una discrepancia de nombre de columna (`Comuna.nombre` por `Comuna.descripcion`), restableciendo su correcto funcionamiento.
 
+
+  - **[2026-04-22 - Tipos de Ausencia Dinámicos]**: 
+    - Se creó la entidad `TipoAusencia` para gestionar permisos, licencias y vacaciones desde la Base de Datos, eliminando dependencias de código estático.
+    - Se añadió un mantenedor CRUD completo (`tipo_ausencia_bp.py`) con capacidad de definir la Sigla y el Color de la ausencia, integrado en el menú principal.
+    - El formulario del Trabajador ahora carga estos motivos de manera dinámica, asignando el ID correcto a la tabla `TrabajadorAusencia`.
+    - El simulador CP-SAT (`explain.py` y `simulacion.html`) fue optimizado para inyectar directamente la abreviación de la BD y pintar la celda usando el color configurado, logrando que el sistema escale sin necesidad de intervenir el código ante nuevos permisos.

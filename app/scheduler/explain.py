@@ -24,7 +24,7 @@ def extract_solution(solver, status, x, trabajadores, dias_del_mes, turnos, ause
             for w in trabajadores:
                 # Verificamos si tiene ausencia primero
                 if (w, d) in ausencias:
-                    celdas[d][w] = ausencias[(w, d)] # Ej: 'VAC', 'LM'
+                    celdas[d][w] = str(ausencias[(w, d)]).strip()
                     continue
                 
                 # Buscar qué turno se le asignó
