@@ -1,5 +1,6 @@
 import calendar
-from datetime import date
+import sys
+from datetime import date, timedelta, datetime
 from flask import Blueprint, render_template, request, jsonify
 from app.database import db
 from app.models.business import Trabajador, Turno, Servicio, ReglaEmpresa
@@ -55,11 +56,26 @@ def generar():
         })
         
     # Coberturas (dinámicas basadas en los turnos de BD)
-    coberturas = {}
+    cob_global = {}
+    cob_domingo = {}
     for t in turnos:
-        # Busca el input cob_{abreviacion} (ej: cob_M, cob_T)
-        val = data.get(f'cob_{t}', 0)
-        coberturas[t] = int(val) if val else 0
+        # Global
+        val_g = data.get(f'cob_{t}', 0)
+        cob_global[t] = int(val_g) if val_g else 0
+        # Domingo
+        val_s = data.get(f'cob_sun_{t}')
+        if val_s is not None and val_s != "":
+            cob_domingo[t] = int(val_s)
+        else:
+            cob_domingo[t] = cob_global[t]
+
+    coberturas_por_dia = {}
+    for d_str in dias_del_mes:
+        py_date = datetime.strptime(d_str, '%Y-%m-%d').date()
+        if py_date.weekday() == 6: # Domingo
+            coberturas_por_dia[d_str] = cob_domingo
+        else:
+            coberturas_por_dia[d_str] = cob_global
     
     # Extraer metadatos de trabajadores (tipo contrato, horas)
     trabajadores_meta = {
@@ -87,6 +103,7 @@ def generar():
                 reglas_bd['min_free_sundays'] = params.get('value', 2)
     
     # Extraer ausencias y preferencias
+    # Extraer ausencias y preferencias
     ausencias = {}
     preferencias = {}
     for t in trabajadores_db:
@@ -94,22 +111,19 @@ def generar():
         for a in t.ausencias:
             f_ini = a.fecha_inicio
             f_fin = a.fecha_fin
-            # Marcar días en el rango si caen en el mes actual
             if f_ini and f_fin:
-                d = f_ini
-                while d <= f_fin:
-                    f_str = d.strftime('%Y-%m-%d')
+                curr = f_ini
+                while curr <= f_fin:
+                    f_str = curr.strftime('%Y-%m-%d')
                     if f_str in dias_del_mes:
-                        ausencias[(t.id, f_str)] = a.tipo_ausencia.abreviacion if a.tipo_ausencia else "A"
-                    from datetime import timedelta
-                    d += timedelta(days=1)
-                    
+                        abr = a.tipo_ausencia.abreviacion if a.tipo_ausencia else "A"
+                        ausencias[(t.id, f_str)] = abr
+                    curr += timedelta(days=1)
+    
+    for t in trabajadores_db:
         # Preferencias
         for p in t.preferencias:
-            # p.dia_semana (0=Lunes, 6=Domingo)
-            # Aplicar preferencia a todos los días del mes que coincidan con ese día de la semana
             for dia_str, dia_obj in zip(dias_del_mes, dias_dict):
-                # Python calendar weekday
                 py_weekday = calendar.weekday(int(dia_str[0:4]), int(dia_str[5:7]), int(dia_str[8:10]))
                 if p.dia_semana == py_weekday:
                     preferencias[(t.id, dia_str)] = p.turno
@@ -117,7 +131,7 @@ def generar():
     # Construir y resolver el modelo
     try:
         model, x = build_model(
-            t_ids, dias_del_mes, turnos, coberturas, ausencias, preferencias,
+            t_ids, dias_del_mes, turnos, coberturas_por_dia, ausencias, preferencias,
             reglas=reglas_bd,
             trabajadores_meta=trabajadores_meta
         )
@@ -133,7 +147,7 @@ def generar():
         celdas = extract_solution(solver, status, x, t_ids, dias_del_mes, turnos, ausencias)
         
         # Calcular métricas básicas
-        turnos_necesarios = sum(coberturas.values()) * len(dias_del_mes)
+        turnos_necesarios = sum(sum(c.values()) for c in coberturas_por_dia.values())
         
         return jsonify({
             'status': 'ok',

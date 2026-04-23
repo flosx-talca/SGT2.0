@@ -8,25 +8,25 @@ def build_model(trabajadores, dias_del_mes, turnos, coberturas, ausencias, prefe
 
     Reglas implementadas:
       HARD-1: Máximo 1 turno por día por trabajador.
-      HARD-2: Ausencias bloquean cualquier asignación.
-      HARD-3: Preferencias de turno (restricciones duras del mantenedor).
-      HARD-4: Tras 6 días consecutivos de trabajo → 2 días libres obligatorios.
-               Implementado como: en cualquier ventana de 8 días, máximo 6 trabajados.
-               (Equivalencia matemática demostrable sin variables auxiliares buggeadas.)
-      SOFT-5 (P=10000): Cobertura mínima por turno (deficit penalizado).
-      SOFT-6 (P=2000):  Mínimo N domingos libres al mes (min_free_sundays).
-      SOFT-7 (P=500):   Máximo días por semana (working_days_limit max).
-      SOFT-8 (P=200):   Mínimo días por semana (working_days_limit min).
-      SOFT-9 (P=-10):   Recompensar utilización del personal (reduce Libres).
-      SOFT-10 (P=1):    Penalizar fragmentación (turnos sueltos).
+      HARD-2: Ausencias bloquean cualquier asignación (Licencias, Vacaciones).
+      HARD-3: Ley 6x2: Máximo 6 días trabajados en cualquier ventana de 8 días.
+      HARD-4: Ley Domingos: Mínimo 2 domingos libres al mes.
+      
+      P1 (peso 1.000.000): Cobertura de dotación (evitar Déficit).
+      P2 (peso 10.000):    Dotación exacta por turno (evitar Exceso).
+      P3 (peso 10.000):    Respetar preferencias del trabajador (Soft Rule).
+      P4 (peso 1.000):     Máximo días semanales (Diferenciado por Contrato/Horas).
+      P5 (peso 500):       Mínimo días semanales (Diferenciado por Contrato/Horas).
+      P6 (peso 10):        Penalizar fragmentación (turnos aislados).
+      P7 (recompensa):     Utilización de personal disponible.
 
     Args:
         trabajadores (list):      Lista de IDs de trabajadores.
-        dias_del_mes (list):      Lista de fechas 'YYYY-MM-DD'.
+        dias_del_mes (list):      Lista de strings 'YYYY-MM-DD'.
         turnos (list):            Lista de abreviaciones de turnos.
-        coberturas (dict):        {turno: cantidad_requerida}.
-        ausencias (dict):         {(worker_id, fecha): abreviacion}.
-        preferencias (dict):      {(worker_id, fecha): turno}.
+        coberturas (dict):        Dict { 'fecha': { 'turno': req } } o { 'turno': req } (si es global).
+        ausencias (dict):         Dict { (worker_id, fecha): motivo }.
+        preferencias (dict):      Dict { (worker_id, fecha): turno }.
         reglas (dict):            Parámetros leídos de ReglaEmpresa en BD.
         trabajadores_meta (dict): {worker_id: {'tipo_contrato': ..., 'horas_semanales': ...}}
     """
@@ -75,11 +75,17 @@ def build_model(trabajadores, dias_del_mes, turnos, coberturas, ausencias, prefe
                 model.Add(x[w, d, t] == 0)
 
     # ═══════════════════════════════════════════════════════════════════════════
-    # HARD-4: Preferencias de turno del mantenedor (restricciones duras)
+    # SOFT-4 (P=5000): Preferencias de turno del mantenedor
+    # Se convierte a SOFT para evitar INFEASIBLE si choca con ausencias o la regla 6-2.
     # ═══════════════════════════════════════════════════════════════════════════
+    pref_violadas = []
     for (w, d), pref_t in preferencias.items():
         if w in trabajadores and d in dias_del_mes and pref_t in turnos:
-            model.Add(x[w, d, pref_t] == 1)
+            # Si no se cumple la preferencia, penalizamos
+            violation = model.NewBoolVar(f'pref_viol_{w}_{d}')
+            model.Add(x[w, d, pref_t] == 1).OnlyEnforceIf(violation.Not())
+            model.Add(x[w, d, pref_t] == 0).OnlyEnforceIf(violation)
+            pref_violadas.append(violation)
 
     # ═══════════════════════════════════════════════════════════════════════════
     # HARD-5: 6 días consecutivos → 2 días libres obligatorios
@@ -97,42 +103,67 @@ def build_model(trabajadores, dias_del_mes, turnos, coberturas, ausencias, prefe
             )
 
     # ═══════════════════════════════════════════════════════════════════════════
-    # SOFT-6 (P=10000): Cobertura mínima por turno
-    # Penalización alta: cubrir la dotación es la prioridad principal de la IA.
+    # HARD-6: Mínimo de domingos libres al mes (Ley)
     # ═══════════════════════════════════════════════════════════════════════════
-    deficits = []
-    for d in dias_del_mes:
-        for t in turnos:
-            req = coberturas.get(t, 0)
-            if req > 0:
-                assigned = sum(x[w, d, t] for w in trabajadores)
-                deficit = model.NewIntVar(0, req, f'def_{d}_{t}')
-                model.Add(assigned + deficit >= req)
-                deficits.append(deficit)
-
-    # ═══════════════════════════════════════════════════════════════════════════
-    # SOFT-7 (P=2000): Mínimo de domingos libres al mes
-    # ═══════════════════════════════════════════════════════════════════════════
-    domingos_deficit = []
     if domingos:
         total_dom = len(domingos)
         max_dom_trabajo = max(0, total_dom - min_domingos_lib)
         for w in trabajadores:
-            dom_trabaj = sum(x[w, d, t] for d in domingos for t in turnos)
-            dom_extra = model.NewIntVar(0, total_dom, f'dom_extra_{w}')
-            model.Add(dom_trabaj - max_dom_trabajo <= dom_extra)
-            domingos_deficit.append(dom_extra)
+            model.Add(
+                sum(x[w, d, t] for d in domingos for t in turnos) <= max_dom_trabajo
+            )
 
     # ═══════════════════════════════════════════════════════════════════════════
-    # SOFT-8 (P=500): Máximo de días trabajados por semana (ventana 7 días)
+    # SOFT-6: Cobertura por turno (Déficit y Exceso)
+    # P1: Evitar déficit (1.000.000)
+    # P2: Evitar exceso (10.000) -> Para respetar la dotación exacta por turno.
+    # ═══════════════════════════════════════════════════════════════════════════
+    deficits = []
+    excesses = []
+    for d in dias_del_mes:
+        # Soporte para coberturas por día o globales
+        cob_hoy = coberturas.get(d, coberturas) 
+        
+        for t in turnos:
+            req = cob_hoy.get(t, 0)
+            if req > 0:
+                assigned = sum(x[w, d, t] for w in trabajadores)
+                
+                # Déficit (Faltan personas)
+                deficit = model.NewIntVar(0, req, f'def_{d}_{t}')
+                model.Add(assigned + deficit >= req)
+                deficits.append(deficit)
+
+                # Exceso (Sobran personas)
+                excess = model.NewIntVar(0, len(trabajadores), f'exc_{d}_{t}')
+                model.Add(assigned - excess <= req)
+                excesses.append(excess)
+
+    # ═══════════════════════════════════════════════════════════════════════════
+    # SOFT-8 (P=1000): Máximo de días trabajados por semana (ventana 7 días)
     # ═══════════════════════════════════════════════════════════════════════════
     dias_extra_max = []
     for w in trabajadores:
+        # Ajustar límite según contrato individual
+        meta = trabajadores_meta.get(w, {})
+        tipo = meta.get('tipo_contrato', 'full-time').lower()
+        horas = meta.get('horas_semanales', 45) or 45
+        
+        # Lógica de tope semanal:
+        # Full-time: max 5 o 6 días (según regla empresa)
+        # Part-time (30h o menos): max 4 días
+        # Muy Part-time (20h o menos): max 2-3 días
+        limite_w = max_dias_semana
+        if 'part' in tipo or horas <= 30:
+            limite_w = 4
+        if horas <= 20:
+            limite_w = 3
+
         for i in range(N - 6):
             ventana_7 = dias_del_mes[i:i+7]
             trabajados = sum(x[w, d, t] for d in ventana_7 for t in turnos)
             extra = model.NewIntVar(0, 7, f'extra_max_{w}_{i}')
-            model.Add(trabajados - max_dias_semana <= extra)
+            model.Add(trabajados - limite_w <= extra)
             dias_extra_max.append(extra)
 
     # ═══════════════════════════════════════════════════════════════════════════
@@ -141,14 +172,26 @@ def build_model(trabajadores, dias_del_mes, turnos, coberturas, ausencias, prefe
     # ═══════════════════════════════════════════════════════════════════════════
     dias_bajo_min = []
     for w in trabajadores:
+        # Ajustar mínimo según contrato individual
+        meta = trabajadores_meta.get(w, {})
+        tipo = meta.get('tipo_contrato', 'full-time').lower()
+        horas = meta.get('horas_semanales', 45) or 45
+        
+        min_w = min_dias_semana
+        if 'part' in tipo or horas <= 30:
+            min_w = 2 # Un part-time no suele tener un "mínimo" alto
+        if horas <= 20:
+            min_w = 1
+
         for i in range(N - 6):
             ventana_7 = dias_del_mes[i:i+7]
             ausencias_en_ventana = sum(1 for d in ventana_7 if (w, d) in ausencias)
             dias_disponibles = 7 - ausencias_en_ventana
-            if dias_disponibles >= min_dias_semana:
+            
+            if dias_disponibles >= min_w:
                 trabajados = sum(x[w, d, t] for d in ventana_7 for t in turnos)
-                faltante = model.NewIntVar(0, min_dias_semana, f'bajo_min_{w}_{i}')
-                model.Add(trabajados + faltante >= min_dias_semana)
+                faltante = model.NewIntVar(0, min_w, f'bajo_min_{w}_{i}')
+                model.Add(trabajados + faltante >= min_w)
                 dias_bajo_min.append(faltante)
 
     # ═══════════════════════════════════════════════════════════════════════════
@@ -168,26 +211,50 @@ def build_model(trabajadores, dias_del_mes, turnos, coberturas, ausencias, prefe
             penalizaciones.append(pen)
 
     # ═══════════════════════════════════════════════════════════════════════════
+    # SOFT-11 (P=100.000): Equidad de Carga (Load Balancing)
+    # Minimizamos la DIFERENCIA entre el que más trabaja y el que menos.
+    # Esto obliga a que todos se acerquen al mismo promedio.
+    # ═══════════════════════════════════════════════════════════════════════════
+    max_total_trabajado = model.NewIntVar(0, N, 'max_total_trabajado')
+    min_total_trabajado = model.NewIntVar(0, N, 'min_total_trabajado')
+    for w in trabajadores:
+        total_w = sum(x[w, d, t] for d in dias_del_mes for t in turnos)
+        model.Add(total_w <= max_total_trabajado)
+        model.Add(total_w >= min_total_trabajado)
+    
+    # El "spread" o rango de carga
+    rango_carga = model.NewIntVar(0, N, 'rango_carga')
+    model.Add(rango_carga == max_total_trabajado - min_total_trabajado)
+
+    # ═══════════════════════════════════════════════════════════════════════════
     # Función objetivo multi-criterio
     # ═══════════════════════════════════════════════════════════════════════════
-    obj_deficit  = sum(deficits)         * 10000 if deficits else 0
-    obj_dom      = sum(domingos_deficit) * 2000  if domingos_deficit else 0
-    obj_max_sem  = sum(dias_extra_max)   * 500   if dias_extra_max else 0
-    obj_min_sem  = sum(dias_bajo_min)    * 200   if dias_bajo_min else 0
-    obj_frag     = sum(penalizaciones)   * 1     if penalizaciones else 0
+    # P1: Cobertura (Prioridad Absoluta)
+    obj_deficit  = sum(deficits)         * 10000000 if deficits else 0
+    obj_excess   = sum(excesses)         * 100000   if excesses else 0
+    # P2: Equidad y Preferencias
+    obj_equidad  = rango_carga           * 100000 
+    obj_pref     = sum(pref_violadas)    * 10000    if pref_violadas else 0
+    # P3: Reglas de descanso y carga
+    obj_max_sem  = sum(dias_extra_max)   * 1000     if dias_extra_max else 0
+    obj_min_sem  = sum(dias_bajo_min)    * 2000     if dias_bajo_min else 0
+    obj_frag     = sum(penalizaciones)   * 10       if penalizaciones else 0
 
-    # Recompensar asignación a turnos requeridos (reduce "Libres" innecesarios)
-    reward = sum(
-        x[w, d, t]
-        for w in trabajadores
-        for d in dias_del_mes
-        for t in turnos
-        if coberturas.get(t, 0) > 0
-    )
+    # P4: Utilización (Solo si no perjudica a las anteriores)
+    # Recompensamos asignaciones, pero solo si hay un requerimiento ese día para ese turno.
+    reward_list = []
+    for d in dias_del_mes:
+        cob_hoy = coberturas.get(d, coberturas)
+        for t in turnos:
+            if cob_hoy.get(t, 0) > 0:
+                for w in trabajadores:
+                    reward_list.append(x[w, d, t])
+
+    reward = sum(reward_list)
 
     model.Minimize(
-        obj_deficit + obj_dom + obj_max_sem + obj_min_sem + obj_frag
-        - reward * 10
+        obj_deficit + obj_excess + obj_pref + obj_max_sem + obj_min_sem + obj_equidad + obj_frag
+        - reward * 1
     )
 
     return model, x

@@ -57,7 +57,22 @@
                     style="width:60px;" title="Mínimo requerido para {{ t.nombre }}">
             </div>
             {% endfor %}
+        </div>
+        
+        <!-- Fila extra para Domingos -->
+        <div class="d-flex align-items-center gap-4 flex-wrap mt-3 pt-2 border-top">
+            <small class="fw-bold text-primary"><i class="fa fa-calendar-check me-1"></i> DOTACIÓN ESPECIAL DOMINGOS (Opcional):</small>
             
+            {% for t in turnos %}
+            <div class="d-flex align-items-center gap-2">
+                <span class="badge-turno shadow-sm"
+                    style="border: 1px solid {{ t.color|default('#18bc9c', true) }}; background-color: white; color: {{ t.color|default('#18bc9c', true) }}; min-width:40px;height:28px;font-size:0.75rem;padding:0 5px;">{{ t.abreviacion }}</span>
+                <input type="number" class="form-control form-control-sm shadow-sm text-center cobertura-dom-input fw-bold"
+                    id="cob_sun_{{ t.abreviacion }}" placeholder="---" min="0" max="20"
+                    style="width:60px;" title="Opcional: Dotación para domingos en {{ t.nombre }}">
+            </div>
+            {% endfor %}
+            <small class="text-muted italic" style="font-size: 0.7rem;">* Si se deja vacío, usa la dotación diaria.</small>
         </div>
     </div>
 </div>
@@ -157,6 +172,11 @@
             // Añadir coberturas dinámicamente
             $('.cobertura-input').each(function() {
                 payload[this.id] = this.value; // Ej: cob_M: 2
+            });
+            $('.cobertura-dom-input').each(function() {
+                if (this.value !== "") {
+                    payload[this.id] = this.value; // Ej: cob_sun_M: 1
+                }
             });
 
             $.ajax({

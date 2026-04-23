@@ -72,6 +72,9 @@ class TipoAusencia(db.Model):
     creado_en = db.Column(db.DateTime, default=datetime.utcnow)
     actualizado_en = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
+    empresa = db.relationship('Empresa', backref=db.backref('tipos_ausencia', lazy=True))
+
+
 class Trabajador(db.Model):
     __tablename__ = 'trabajador'
     id = db.Column(db.Integer, primary_key=True)
@@ -106,7 +109,8 @@ class TrabajadorAusencia(db.Model):
     trabajador_id = db.Column(db.Integer, db.ForeignKey('trabajador.id', ondelete='CASCADE'), nullable=False)
     fecha_inicio = db.Column(db.Date, nullable=False)
     fecha_fin = db.Column(db.Date, nullable=False)
-    tipo_ausencia_id = db.Column(db.Integer, db.ForeignKey('tipo_ausencia.id', ondelete='CASCADE'), nullable=True) # Temporalmente True para migrar
+    motivo = db.Column(db.String(255), nullable=False, default='') # Evitar NotNullViolation
+    tipo_ausencia_id = db.Column(db.Integer, db.ForeignKey('tipo_ausencia.id', ondelete='CASCADE'), nullable=True)
     tipo_ausencia = db.relationship('TipoAusencia', lazy=True)
     creado_en = db.Column(db.DateTime, default=datetime.utcnow)
 

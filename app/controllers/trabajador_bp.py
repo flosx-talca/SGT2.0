@@ -126,7 +126,15 @@ def guardar():
         aus_tipos = request.form.getlist('ausencia_motivo[]')
         for ini, fin, tipo_id in zip(aus_inis, aus_fins, aus_tipos):
             if tipo_id:
-                nueva_aus = TrabajadorAusencia(trabajador_id=trabajador.id, fecha_inicio=ini, fecha_fin=fin, tipo_ausencia_id=int(tipo_id))
+                tipo_obj = TipoAusencia.query.get(int(tipo_id))
+                nombre_motivo = tipo_obj.nombre if tipo_obj else "Ausencia"
+                nueva_aus = TrabajadorAusencia(
+                    trabajador_id=trabajador.id, 
+                    fecha_inicio=ini, 
+                    fecha_fin=fin, 
+                    tipo_ausencia_id=int(tipo_id),
+                    motivo=nombre_motivo # Llenamos el campo obligatorio de la BD
+                )
                 db.session.add(nueva_aus)
 
         db.session.commit()

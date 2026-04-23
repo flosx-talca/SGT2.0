@@ -14,8 +14,8 @@ def solve_model(model):
     solver = cp_model.CpSolver()
     
     # Configuramos un límite de tiempo para no colgar la UI
-    # En problemas grandes, 15 segundos es un buen compromiso para retornar la mejor solución factible encontrada.
-    solver.parameters.max_time_in_seconds = 15.0
+    # Para problemas de cuadrantes mensuales, 30 segundos permiten una optimización mucho más profunda.
+    solver.parameters.max_time_in_seconds = 30.0
     
     status = solver.Solve(model)
     return solver, status
