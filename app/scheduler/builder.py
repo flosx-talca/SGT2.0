@@ -10,6 +10,7 @@ W_DEFICIT  = 10_000_000   # cobertura mínima — prioridad absoluta
 W_EXCESO   =    100_000   # exceso de cobertura
 W_EQUIDAD  =    100_000   # equidad mensual por grupo de contrato
 W_EQ_SEM   =      5_000   # equidad semanal por grupo de contrato
+W_META     =     50_000   # penalización por desviarse de la meta mensual
 W_MIN_SEM  =      2_000   # mínimo días/semana según contrato
 W_MAX_SEM  =      1_000   # máximo días/semana según contrato
 W_FRAG     =        100   # anti-fragmentación (día trabajado aislado)
@@ -272,7 +273,13 @@ def build_model(trabajadores, dias_del_mes, turnos, coberturas,
             #   extra_ok=False: tope = ceil (sin extra)
             #   extra_ok=True:  tope = ceil + 1
             tope_turnos = math.ceil(tope_horas / duracion)
-            if extra_ok:
+            # El turno extra solo aplica en semanas completas (7 días)
+            # Y solo si el contrato es de horas exactas (sin fracción)
+            # Razón: contratos fraccionarios (30h/8h=3.75) ya tienen
+            # el turno extra implícito en el ceil. Sumarlo de nuevo
+            # genera sobrecarga (5 días para alguien de 30h).
+            # Contratos exactos (40h/8h=5.0) sí pueden sumar 1 extra.
+            if extra_ok and n_dias == 7 and horas % duracion == 0:
                 tope_turnos += 1
             tope_turnos = min(tope_turnos, max_dias_semana)
             model.Add(
@@ -328,6 +335,7 @@ def build_model(trabajadores, dias_del_mes, turnos, coberturas,
     # ceil → empleador asume turno fraccionario
     # ±1 → absorbe conflictos con HR7/HR6/HR2
     # ════════════════════════════════════════════════════════════════════════════
+    desviaciones_meta = []
     for w in trabajadores:
         meta_w   = trabajadores_meta.get(w, {})
         horas    = meta_w.get('horas_semanales', jornada_default) or jornada_default
@@ -345,9 +353,6 @@ def build_model(trabajadores, dias_del_mes, turnos, coberturas,
                           cal_module.weekday(int(d[:4]), int(d[5:7]), int(d[8:10])) == 6)
         dom_libres   = max(0, min_domingos_lib - dom_bloq_w)
         disponibles  = N - bloq_w - dom_libres
-        
-        dom_libres = max(0, min_domingos_lib - dom_bloq_w)
-        print(f"  Worker {w}: dom_mes={dom_mes} dom_libres={dom_libres} disponibles={disponibles}")
 
         # extra_ok=False → floor: respetar estrictamente el contrato
         # extra_ok=True  → ceil: empleador paga la fracción semanal
@@ -363,8 +368,17 @@ def build_model(trabajadores, dias_del_mes, turnos, coberturas,
         # La tolerancia viene del ±1 en las reglas SOFT semanales (W_MIN_SEM/W_MAX_SEM).
         # Si hay demasiados domingos libres o ausencias que impidan la meta
         # → es un problema de configuración del mantenedor, no del builder.
-        model.Add(total_w >= meta_mensual)
-        model.Add(total_w <= min(disponibles, meta_mensual))
+        # Rango [meta-1, meta+1]:
+        # -1 absorbe conflictos con HR6/HR7/HR9
+        # +1 permite cubrir turnos vacíos cuando la dotación lo requiere
+        model.Add(total_w >= max(0, meta_mensual - 1))
+        model.Add(total_w <= min(disponibles, meta_mensual + 1))
+
+        # Penalizar desviación de la meta mensual (SOFT)
+        # Empuja al solver a acercarse a meta_mensual sin bloquearlo
+        desviacion_w = model.NewIntVar(0, disponibles, f'dev_meta_{w}')
+        model.AddAbsEquality(desviacion_w, total_w - meta_mensual)
+        desviaciones_meta.append(desviacion_w)
 
     # ════════════════════════════════════════════════════════════════════════════
     # SOFT rules
@@ -487,6 +501,7 @@ def build_model(trabajadores, dias_del_mes, turnos, coberturas,
         (sum(excesses)         * W_EXCESO  if excesses         else 0) +
         (sum(rango_cargas)     * W_EQUIDAD if rango_cargas     else 0) +
         (sum(rango_cargas_sem) * W_EQ_SEM  if rango_cargas_sem else 0) +
+        (sum(desviaciones_meta) * W_META    if desviaciones_meta else 0) +
         (sum(dias_bajo_min)    * W_MIN_SEM if dias_bajo_min    else 0) +
         (sum(dias_extra_max)   * W_MAX_SEM if dias_extra_max   else 0) +
         (sum(penalizaciones)   * W_FRAG    if penalizaciones   else 0) +

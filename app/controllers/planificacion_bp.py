@@ -242,18 +242,26 @@ def generar():
         from collections import Counter
         import math
         bloq_por_worker = Counter(w for (w, d) in bloqueados)
+        # Reemplazar el bloque [BLOQUEADOS Y META REAL]:
         print(f"\n[BLOQUEADOS Y META REAL por worker]")
         for w in t_ids:
+            import math
             b    = bloq_por_worker.get(w, 0)
             meta = trabajadores_meta.get(w, {})
             h    = meta.get('horas_semanales', 42)
             dur  = meta.get('duracion_turno', 8)
             ext  = meta.get('permite_horas_extra', False)
-            disp = 31 - b   # ← cambia 31 por el num_days real si quieres
-            raw  = disp / 7 * (h / dur)
-            m    = math.ceil(raw) if ext else math.floor(raw)
-            print(f"  Worker {w}: bloq={b} disp={disp} raw={raw:.2f} meta={m} extra={ext}")
-        print('='*50)
+            # Descontar domingos libres igual que el builder
+            dom_mes    = sum(1 for d in dias_del_mes
+                            if calendar.weekday(int(d[:4]),int(d[5:7]),int(d[8:10])) == 6)
+            dom_bloq   = sum(1 for (ww, d) in bloqueados
+                            if ww == w and
+                            calendar.weekday(int(d[:4]),int(d[5:7]),int(d[8:10])) == 6)
+            dom_libres = max(0, 1 - dom_bloq)   # min_free_sundays=1
+            disp       = (31 if not b else num_days) - b - dom_libres
+            raw        = disp / 7 * (h / dur)
+            m          = math.ceil(raw) if ext else math.floor(raw)
+            print(f"  Worker {w}: bloq={b} dom_libres={dom_libres} disp={disp} raw={raw:.2f} meta={m} extra={ext}")
         # ── FIN DEBUG ─────────────────────────────────────────────────
 
         # UNKNOWN = timeout → error bloqueante, no hay nada que mostrar
