@@ -174,6 +174,7 @@ CREATE TABLE IF NOT EXISTS trabajador_preferencia (
     trabajador_id INTEGER NOT NULL REFERENCES trabajador(id) ON DELETE CASCADE,
     dia_semana INTEGER NOT NULL CHECK (dia_semana >= 0 AND dia_semana <= 6),
     turno VARCHAR(5) NOT NULL,
+    tipo VARCHAR(20) NOT NULL DEFAULT 'preferencia',
     UNIQUE (trabajador_id, dia_semana, turno)
 );
 

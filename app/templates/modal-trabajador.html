@@ -144,6 +144,7 @@
                                 <span class="badge px-2" style="background-color: {{ tipo.color }};">{{ tipo.abreviacion }}</span>
                             </th>
                             {% endfor %}
+                            <th class="text-center text-muted" style="width: 20%;">Tipo</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -168,10 +169,33 @@
                                        style="cursor: pointer; width: 1.2rem; height: 1.2rem; margin-top: 0;">
                             </td>
                             {% endfor %}
+                            <td class="text-center align-middle">
+                                {% set ns_tipo = namespace(val='preferencia') %}
+                                {% if registro %}
+                                    {% for p in registro.preferencias %}
+                                        {% if p.dia_semana == i %}
+                                            {% set ns_tipo.val = p.tipo %}
+                                        {% endif %}
+                                    {% endfor %}
+                                {% endif %}
+                                <select name="pref_tipo_{{ i }}" class="form-select form-select-sm border-secondary-subtle py-0" 
+                                        id="tipo_dia_{{ i }}" onchange="actualizarTipoDia({{ i }})"
+                                        {% if modo == 'Visualizar' %}disabled{% endif %} style="font-size: 0.75rem;">
+                                    <option value="preferencia" {{ 'selected' if ns_tipo.val == 'preferencia' else '' }}>Preferencia</option>
+                                    <option value="fijo" {{ 'selected' if ns_tipo.val == 'fijo' else '' }}>Fijo Oblig.</option>
+                                    <option value="solo_turno" {{ 'selected' if ns_tipo.val == 'solo_turno' else '' }}>Solo Turno</option>
+                                </select>
+                            </td>
                         </tr>
                         {% endfor %}
                     </tbody>
                 </table>
+            </div>
+            <div class="alert alert-light border small mt-2 py-2 mb-0">
+                <i class="fa fa-info-circle me-1 text-primary"></i>
+                <strong>Fijo:</strong> Debe trabajar ese día en ese turno. 
+                <strong>Preferencia:</strong> Si trabaja ese día, solo estos turnos. 
+                <strong>Solo Turno:</strong> Restricción global para todos los días.
             </div>
         </div>
 
@@ -337,7 +361,40 @@ $(document).ready(function() {
     }).on('hide.bs.collapse', function () {
         $(this).prev('h6').find('i.fa-chevron-up').removeClass('fa-chevron-up').addClass('fa-chevron-down');
     });
+
+    // Validaciones iniciales para tipos de preferencia
+    for(let i=0; i<7; i++) {
+        actualizarTipoDia(i, true);
+    }
 });
+
+function actualizarTipoDia(dia, inicial = false) {
+    const tipo = $(`#tipo_dia_${dia}`).val();
+    const checkboxes = $(`input[name="pref_${dia}[]"]`);
+
+    if (tipo === 'fijo') {
+        // En modo fijo, si marca uno, desmarca el resto
+        checkboxes.off('change').on('change', function() {
+            if ($(this).is(':checked')) {
+                checkboxes.not(this).prop('checked', false);
+            }
+        });
+        
+        // Si ya hay varios marcados al cambiar el tipo, dejar solo el primero
+        const marcados = checkboxes.filter(':checked');
+        if (marcados.length > 1) {
+            marcados.not(':first').prop('checked', false);
+            if (!inicial) toastr.info('Fijo obligatorio: solo se permite un turno por día.');
+        }
+    } else {
+        // En otros modos no hay restricción de cantidad en UI
+        checkboxes.off('change');
+    }
+
+    if (tipo === 'solo_turno' && !inicial) {
+        toastr.info('Solo este turno: Se aplicará como restricción global para todos los días.');
+    }
+}
 
 function guardarTrabajador() {
     const id = $('#id_trabajador').val();

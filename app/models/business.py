@@ -122,6 +122,8 @@ class TrabajadorPreferencia(db.Model):
     trabajador_id = db.Column(db.Integer, db.ForeignKey('trabajador.id', ondelete='CASCADE'), nullable=False)
     dia_semana = db.Column(db.Integer, nullable=False)
     turno = db.Column(db.String(5), nullable=False)
+    # tipo: 'preferencia', 'fijo', 'solo_turno'
+    tipo = db.Column(db.String(20), nullable=False, default='preferencia')
 
 
 class TrabajadorAusencia(db.Model):

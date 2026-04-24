@@ -48,3 +48,10 @@ Se basa directamente en `especificacion-funcional-sistema-turnos.md`.
     - Se añadió un mantenedor CRUD completo (`tipo_ausencia_bp.py`) con capacidad de definir la Sigla y el Color de la ausencia, integrado en el menú principal.
     - El formulario del Trabajador ahora carga estos motivos de manera dinámica, asignando el ID correcto a la tabla `TrabajadorAusencia`.
     - El simulador CP-SAT (`explain.py` y `simulacion.html`) fue optimizado para inyectar directamente la abreviación de la BD y pintar la celda usando el color configurado, logrando que el sistema escale sin necesidad de intervenir el código ante nuevos permisos.
+
+- **[2026-04-24 - Especialización de Preferencias (Fijo/Preferencia/Solo Turno)]**:
+    - **Base de Datos**: Se extendió la tabla `TrabajadorPreferencia` con el campo `tipo` para distinguir entre turnos Fijos (obligatorios), Preferencias diarias (si trabaja, solo esos turnos) y Solo Turno (restricción exclusiva global).
+    - **Motor CP-SAT**: Se actualizaron `builder.py` y `preparar_restricciones` para procesar los tres tipos de comportamiento. Se introdujo la regla **HR2b** (bloqueo de turnos no preferidos por día) y se optimizó **HR3** para el caso de trabajadores exclusivos.
+    - **UX/UI**: El modal del Trabajador ahora incluye un selector de tipo por cada día de la semana, con validaciones en JavaScript para asegurar que en modo "Fijo" solo se seleccione un turno.
+    - **Estabilidad**: Se corrigió un bug donde el solver ignoraba las restricciones de exclusividad de turno al no estar correctamente mapeadas en el constructor del modelo.
+    - **Infraestructura**: Se actualizó el archivo `proyecto.sql` y se generaron scripts de migración manual y vía Alembic para asegurar la consistencia del entorno.

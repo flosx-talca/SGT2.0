@@ -126,10 +126,14 @@ def guardar():
         # Procesar preferencias de turno por día de semana
         TrabajadorPreferencia.query.filter_by(trabajador_id=trabajador.id).delete()
         for i in range(7):  # 0=Lunes … 6=Domingo
-            prefs = request.form.getlist(f'pref_{i}[]')
+            prefs  = request.form.getlist(f'pref_{i}[]')
+            tipo_i = request.form.get(f'pref_tipo_{i}', 'preferencia')
             for p in prefs:
                 db.session.add(TrabajadorPreferencia(
-                    trabajador_id=trabajador.id, dia_semana=i, turno=p
+                    trabajador_id=trabajador.id, 
+                    dia_semana=i, 
+                    turno=p,
+                    tipo=tipo_i
                 ))
 
         # Procesar ausencias

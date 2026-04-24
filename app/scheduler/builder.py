@@ -22,35 +22,11 @@ W_ASIG     =  1_000_000   # fijos: muy alto, cede solo ante HR4/HR5/HR7/HR10
 def preparar_restricciones(trabajadores_db, dias_del_mes, ausencias):
     """
     Pre-procesamiento ANTES del solver.
-
-    Clasifica cada (trabajador, día) en tres categorías:
-
-      BLOQUEADO → vacaciones, licencia, permiso, compensatorio
-                  x[w,d,t] = 0 en todos los turnos ese día.
-
-      FIJO      → patrón día/turno definido en mantenedor del trabajador.
-                  x[w,d,t_fijo] = 1, x[w,d,otros] = 0.
-                  NO aplica domingos (HR7 los maneja el solver).
-                  NO aplica si el día está bloqueado.
-
-      LIBRE     → solver optimiza sin restricción adicional.
-
-    Orden de precedencia:
-      1. BLOQUEADO prevalece sobre todo
-      2. FIJO prevalece sobre libre
-      3. LIBRE → solver decide
-
-    Args:
-        trabajadores_db: lista de objetos Trabajador ORM (con .id y .preferencias)
-        dias_del_mes:    lista de strings 'YYYY-MM-DD'
-        ausencias:       dict { (worker_id, fecha_str): motivo }
-
-    Returns:
-        bloqueados: set  { (worker_id, fecha_str) }
-        fijos:      dict { (worker_id, fecha_str): turno_abreviacion }
+    Ahora distingue los 3 tipos de preferencia: FIJO, PREFERENCIA, SOLO_TURNO.
     """
     bloqueados = set()
     fijos      = {}
+    turnos_bloqueados_por_dia = {}  # { (worker_id, fecha): set(turnos_permitidos) }
 
     # Domingos del mes — patrones no aplican domingos
     domingos_mes = {
@@ -65,24 +41,61 @@ def preparar_restricciones(trabajadores_db, dias_del_mes, ausencias):
             if w_id == t.id:
                 bloqueados.add((t.id, fecha_str))
 
-        # ── 2. FIJOS ──────────────────────────────────────────────────────────
-        for p in t.preferencias:
-            for dia_str in dias_del_mes:
-                if dia_str in domingos_mes:
-                    continue                          # solver maneja domingos
-                if (t.id, dia_str) in bloqueados:
-                    continue                          # bloqueado tiene precedencia
-                py_weekday = cal_module.weekday(
-                    int(dia_str[:4]), int(dia_str[5:7]), int(dia_str[8:10])
-                )
-                if p.dia_semana == py_weekday:
-                    fijos[(t.id, dia_str)] = p.turno
+        # ── Agrupar preferencias por día de semana y tipo ─────────────────────
+        prefs_por_dia   = {}  # { dia_semana: { tipo: [turnos] } }
+        turnos_solo     = []  # turnos de tipo 'solo_turno'
 
-    return bloqueados, fijos
+        for p in t.preferencias:
+            if p.tipo == 'solo_turno':
+                turnos_solo.append(p.turno)
+            else:
+                if p.dia_semana not in prefs_por_dia:
+                    prefs_por_dia[p.dia_semana] = {'fijo': [], 'preferencia': []}
+                # Asegurar que los tipos existan en el dict
+                if p.tipo not in prefs_por_dia[p.dia_semana]:
+                    prefs_por_dia[p.dia_semana][p.tipo] = []
+                prefs_por_dia[p.dia_semana][p.tipo].append(p.turno)
+
+        # ── Procesar FIJOS y PREFERENCIAS por día de semana ───────────────────
+        for dia_str in dias_del_mes:
+            if dia_str in domingos_mes:
+                continue                          # solver maneja domingos
+            if (t.id, dia_str) in bloqueados:
+                continue                          # bloqueado tiene precedencia
+
+            py_weekday = cal_module.weekday(
+                int(dia_str[:4]), int(dia_str[5:7]), int(dia_str[8:10])
+            )
+
+            if py_weekday not in prefs_por_dia:
+                continue
+
+            prefs_dia = prefs_por_dia[py_weekday]
+
+            # FIJO: DEBE trabajar ese día ese turno
+            if prefs_dia.get('fijo'):
+                # Solo puede haber 1 turno fijo por día (el primero por seguridad)
+                t_fijo = prefs_dia['fijo'][0]
+                fijos[(t.id, dia_str)] = t_fijo
+
+            # PREFERENCIA: si trabaja, solo estos turnos
+            elif prefs_dia.get('preferencia'):
+                key = (t.id, dia_str)
+                turnos_bloqueados_por_dia[key] = set(prefs_dia['preferencia'])
+
+        # ── SOLO_TURNO: aplica todos los días ─────────────────────────────────
+        # Se guarda temporalmente en el objeto para que planificacion_bp lo lea
+        if turnos_solo:
+            t._turnos_solo = list(set(turnos_solo))
+        else:
+            t._turnos_solo = None
+
+    return bloqueados, fijos, turnos_bloqueados_por_dia
 
 
 def build_model(trabajadores, dias_del_mes, turnos, coberturas,
                 bloqueados, fijos,
+                turnos_bloqueados_por_dia=None,
                 reglas=None, trabajadores_meta=None, turnos_meta=None):
     """
     Construye el modelo CP-SAT mensual de planificación de turnos.
@@ -188,20 +201,29 @@ def build_model(trabajadores, dias_del_mes, turnos, coberturas,
                 model.Add(x[w, d, t] == 0)
 
     # ════════════════════════════════════════════════════════════════════════════
-    # SR-FIJO: Patrones fijos por día de semana (SOFT con peso muy alto)
-    # Es SOFT porque puede entrar en conflicto con:
-    #   HR5: tope horas semanales (ej. 30h no puede trabajar 6 días/sem)
-    #   HR10: total mensual del contrato
-    # Peso W_ASIG = 1.000.000 → el solver los respeta siempre que no viole
-    # restricciones contractuales o legales.
+    # HR2-FIJO: Patrones fijos → HARD obligatorio
+    # El trabajador DEBE estar ese día en ese turno.
+    # Ejemplo: recibe camiones lunes/mié/vie — nadie más puede hacerlo.
+    # Es HARD porque el negocio lo requiere sin excepción.
+    # NOTA: HR10 (total mensual) usa math.ceil para que los días fijos
+    # quepan dentro del contrato. Si el trabajador tiene más fijos que
+    # días permitidos por su contrato → INFEASIBLE (revisar configuración).
     # ════════════════════════════════════════════════════════════════════════════
-    fijo_violados = []
     for (w, d), t_fijo in fijos.items():
         if w in trabajadores and d in dias_del_mes and t_fijo in turnos:
-            violation = model.NewBoolVar(f'fviol_{w}_{d}')
-            model.Add(x[w, d, t_fijo] == 1).OnlyEnforceIf(violation.Not())
-            model.Add(x[w, d, t_fijo] == 0).OnlyEnforceIf(violation)
-            fijo_violados.append(violation)
+            model.Add(x[w, d, t_fijo] == 1)
+
+    # ════════════════════════════════════════════════════════════════════════════
+    # HR2b: PREFERENCIA por día → bloquear turnos NO permitidos ese día
+    # Si el trabajador tiene preferencia[lunes] = {M, T}
+    # → bloquear I y N ese lunes (pero puede quedar libre)
+    # ════════════════════════════════════════════════════════════════════════════
+    if turnos_bloqueados_por_dia:
+        for (w, d), turnos_permitidos_dia in turnos_bloqueados_por_dia.items():
+            if w in trabajadores and d in dias_del_mes:
+                for t in turnos:
+                    if t not in turnos_permitidos_dia:
+                        model.Add(x[w, d, t] == 0)
 
     # ════════════════════════════════════════════════════════════════════════════
     # HR3: Turnos no permitidos por trabajador
@@ -431,7 +453,6 @@ def build_model(trabajadores, dias_del_mes, turnos, coberturas,
 
     # ── Función objetivo ─────────────────────────────────────────────────────
     model.Minimize(
-        (sum(fijo_violados)    * W_ASIG    if fijo_violados    else 0) +
         (sum(deficits)         * W_DEFICIT if deficits         else 0) +
         (sum(excesses)         * W_EXCESO  if excesses         else 0) +
         (sum(rango_cargas)     * W_EQUIDAD if rango_cargas     else 0) +
