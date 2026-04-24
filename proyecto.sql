@@ -160,7 +160,7 @@ CREATE TABLE IF NOT EXISTS trabajador (
     email VARCHAR(150),
     telefono VARCHAR(20),
     tipo_contrato VARCHAR(50) NOT NULL DEFAULT 'full-time',
-    horas_semanales INTEGER,
+    horas_semanales INTEGER NOT NULL DEFAULT 42,
     activo BOOLEAN DEFAULT TRUE,
     creado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     actualizado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -216,6 +216,7 @@ CREATE TABLE IF NOT EXISTS turno (
     abreviacion VARCHAR(5) NOT NULL,
     hora_inicio TIME NOT NULL,
     hora_fin TIME NOT NULL,
+    es_nocturno BOOLEAN NOT NULL DEFAULT FALSE,
     color VARCHAR(10) DEFAULT '#18bc9c',
     dotacion_diaria INTEGER DEFAULT 1,
     activo BOOLEAN DEFAULT TRUE,
@@ -269,3 +270,14 @@ CREATE TABLE IF NOT EXISTS regla_empresa (
 );
 CREATE INDEX IF NOT EXISTS ix_regla_empresa_activo ON regla_empresa(activo);
 CREATE INDEX IF NOT EXISTS ix_regla_empresa_empresa_id ON regla_empresa(empresa_id);
+
+-- ==========================================
+-- 18. DATOS INICIALES: REGLAS
+-- ==========================================
+INSERT INTO regla (codigo, nombre, familia, tipo_regla, scope, campo, operador, params_base)
+VALUES 
+('dias_descanso_post_6', 'Días de descanso tras 6 días trabajados', 'descanso', 'hard', 'empresa', 'dias_descanso', 'gte', '{"value": 1}'),
+('jornada_semanal', 'Jornada semanal por defecto (horas)', 'contrato', 'hard', 'empresa', 'horas_semanales', 'eq', '{"value": 42}'),
+('duracion_turno', 'Duración estándar del turno (horas)', 'contrato', 'hard', 'empresa', 'duracion_turno', 'eq', '{"value": 8}')
+ON CONFLICT (codigo) DO NOTHING;
+
