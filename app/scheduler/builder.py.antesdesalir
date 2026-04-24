@@ -18,6 +18,7 @@ W_NOCHE    =         10   # balancear turnos noche equitativamente
 W_CONSEC   =         50   # reward días consecutivos (agrupa días libres)
 W_REWARD   =          1   # utilización del personal disponible
 W_ASIG     =  1_000_000   # fijos: muy alto, cede solo ante HR4/HR5/HR7/HR10
+W_BALANCE  =      3_000   # balance de turnos por tipo entre trabajadores
 
 
 def preparar_restricciones(trabajadores_db, dias_del_mes, ausencias):
@@ -202,20 +203,16 @@ def build_model(trabajadores, dias_del_mes, turnos, coberturas,
                 model.Add(x[w, d, t] == 0)
 
     # ════════════════════════════════════════════════════════════════════════════
-    # SR-FIJO: Patrones fijos por día de semana (SOFT con peso muy alto)
-    # Es SOFT porque puede entrar en conflicto con:
-    #   HR5: tope horas semanales (ej. 30h no puede trabajar 6 días/sem)
-    #   HR10: total mensual del contrato
-    # Peso W_ASIG = 1.000.000 → el solver los respeta siempre que no viole
-    # restricciones contractuales o legales.
+    # HR2-FIJO: Patrones fijos → HARD obligatorio
+    # El trabajador DEBE estar ese día en ese turno.
+    # Ejemplo: recibe camiones lunes/mié/vie — nadie más puede hacerlo.
+    # NOTA: Si tiene más fijos que su meta mensual permite → INFEASIBLE.
+    # Validar en el mantenedor: max fijos ≤ ceil(horas/duracion) por semana.
     # ════════════════════════════════════════════════════════════════════════════
-    fijo_violados = []
+    fijo_violados = []   # vacío — fijos son HARD, no generan violaciones
     for (w, d), t_fijo in fijos.items():
         if w in trabajadores and d in dias_del_mes and t_fijo in turnos:
-            violation = model.NewBoolVar(f'fviol_{w}_{d}')
-            model.Add(x[w, d, t_fijo] == 1).OnlyEnforceIf(violation.Not())
-            model.Add(x[w, d, t_fijo] == 0).OnlyEnforceIf(violation)
-            fijo_violados.append(violation)
+            model.Add(x[w, d, t_fijo] == 1)
 
     # ════════════════════════════════════════════════════════════════════════════
     # HR2b: PREFERENCIA por día → bloquear turnos NO permitidos ese día
@@ -485,6 +482,33 @@ def build_model(trabajadores, dias_del_mes, turnos, coberturas,
             model.AddBoolOr([th.Not(), tm.Not()]).OnlyEnforceIf(par.Not())
             reward_consec.append(par)
 
+    # ════════════════════════════════════════════════════════════════════════════
+    # SR-BALANCE: Equidad de distribución de turnos por tipo entre trabajadores
+    # Para cada turno de la empresa, minimiza la diferencia entre el worker
+    # que más veces lo hace y el que menos.
+    # Excluye workers con solo_turno (ya tienen restricción de tipo).
+    # Proporcional a la dotación: M=2 → cada worker hace ~2x más M que T=1.
+    # ════════════════════════════════════════════════════════════════════════════
+    balance_por_turno = []
+    workers_libres = [
+        w for w in trabajadores
+        if not trabajadores_meta.get(w, {}).get('turnos_permitidos', None)
+    ]
+    if len(workers_libres) >= 2:
+        for t in turnos:
+            totales_t = [
+                sum(x[w, d, t] for d in dias_del_mes)
+                for w in workers_libres
+            ]
+            max_t = model.NewIntVar(0, N, f'max_bal_{t}')
+            min_t = model.NewIntVar(0, N, f'min_bal_{t}')
+            for tw in totales_t:
+                model.Add(tw <= max_t)
+                model.Add(tw >= min_t)
+            rango_t = model.NewIntVar(0, N, f'rng_bal_{t}')
+            model.Add(rango_t == max_t - min_t)
+            balance_por_turno.append(rango_t)
+
     # SR10: Reward utilización
     reward_list = [
         x[w, d, t]
@@ -504,6 +528,7 @@ def build_model(trabajadores, dias_del_mes, turnos, coberturas,
         (sum(desviaciones_meta) * W_META    if desviaciones_meta else 0) +
         (sum(dias_bajo_min)    * W_MIN_SEM if dias_bajo_min    else 0) +
         (sum(dias_extra_max)   * W_MAX_SEM if dias_extra_max   else 0) +
+        (sum(balance_por_turno) * W_BALANCE if balance_por_turno else 0) +
         (sum(penalizaciones)   * W_FRAG    if penalizaciones   else 0) +
         (sum(pen_noche)        * W_NOCHE   if pen_noche        else 0) -
         (sum(reward_list)      * W_REWARD  if reward_list      else 0) -

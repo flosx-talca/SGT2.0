@@ -4,7 +4,7 @@ from datetime import timedelta, datetime
 from flask import Blueprint, render_template, request, jsonify
 from app.database import db
 from app.models.business import Trabajador, Turno, ReglaEmpresa
-from app.scheduler.builder.py import build_model
+from app.scheduler.builder import build_model
 from app.scheduler.solver import solve_model
 from app.scheduler.explain import extract_solution
 from app.scheduler.conflict import get_conflict_report
