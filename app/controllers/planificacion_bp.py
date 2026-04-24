@@ -191,35 +191,11 @@ def generar():
                     ausencias[(t.id, f_str)] = abr
                 curr += timedelta(days=1)
 
-    # ── Asignaciones fijas por día de semana ──────────────────────────────────
-    # Las preferencias del mantenedor son HARD (labor específica del trabajador).
-    # Se expanden para todos los días del mes que coincidan con ese día de semana.
-    # No se aplica si el trabajador tiene ausencia ese día.
-    asignaciones_fijas = {}
-    for t in trabajadores_db:
-        for p in t.preferencias:
-            for dia_str, dia_obj in zip(dias_del_mes, dias_dict):
-                py_weekday = calendar.weekday(
-                    int(dia_str[0:4]), int(dia_str[5:7]), int(dia_str[8:10])
-                )
-                if p.dia_semana == py_weekday:
-                    # Solo si no tiene ausencia ese día
-                    if (t.id, dia_str) not in ausencias:
-                        asignaciones_fijas[(t.id, dia_str)] = p.turno
-
-    # ── Filtrar domingos de asignaciones_fijas ───────────────────────────────
-    # Los domingos tienen restricción legal de descanso (min_free_sundays) que
-    # tiene precedencia sobre cualquier preferencia de turno.
-    # Si se fuerza trabajo en TODOS los domingos del mes, entra en conflicto
-    # con HARD-6 → INFEASIBLE. Se eliminan las asignaciones dominicales.
-    domingos_mes = {
-        d for d in dias_del_mes
-        if calendar.weekday(int(d[:4]), int(d[5:7]), int(d[8:10])) == 6
-    }
-    asignaciones_fijas = {
-        (w, d): t for (w, d), t in asignaciones_fijas.items()
-        if d not in domingos_mes
-    }
+    # ── Pre-procesamiento: bloqueados y fijos ────────────────────────────────
+    from app.scheduler.builder import preparar_restricciones
+    bloqueados, fijos = preparar_restricciones(
+        trabajadores_db, dias_del_mes, ausencias
+    )
 
     # ── Construir y resolver el modelo ────────────────────────────────────────
     try:
@@ -228,13 +204,26 @@ def generar():
             dias_del_mes,
             turnos,
             coberturas_por_dia,
-            ausencias,
-            asignaciones_fijas,          # antes era 'preferencias' (SOFT), ahora HARD
+            bloqueados,
+            fijos,
             reglas=reglas_bd,
             trabajadores_meta=trabajadores_meta,
-            turnos_meta=turnos_meta,     # nuevo parámetro
+            turnos_meta=turnos_meta,
         )
         solver, status = solve_model(model)
+
+        from ortools.sat.python import cp_model as _cp
+        print(f"\n{'='*50}")
+        print(f"STATUS: {['UNKNOWN','MODEL_INVALID','FEASIBLE','INFEASIBLE','OPTIMAL'][status]}")
+        print(f"Trabajadores: {len(t_ids)}")
+        print(f"Turnos: {turnos}")
+        print(f"Bloqueados: {len(bloqueados)}")
+        print(f"Fijos: {len(fijos)}")
+        print(f"reglas_bd: {reglas_bd}")
+        print(f"turnos_meta: {turnos_meta}")
+        for w, meta in trabajadores_meta.items():
+            print(f"  Worker {w}: {meta}")
+        print(f"{'='*50}\n")
 
         # UNKNOWN = timeout → error bloqueante, no hay nada que mostrar
         if status == cp_model.UNKNOWN:
