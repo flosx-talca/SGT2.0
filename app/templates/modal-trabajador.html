@@ -214,42 +214,19 @@
         </h6>
         
         <div class="collapse" id="collapseAusencias">
-            <p class="small text-muted mb-3">Fechas en las que el trabajador no estará prestando servicios.</p>
-    
-            {% if modo != 'Visualizar' %}
-            <div class="row g-2 mb-3">
-                <div class="col-md-5">
-                    <label class="form-label small text-muted mb-1">Rango de Fechas</label>
-                    <div class="input-group input-group-sm">
-                        <input type="date" class="form-control border-secondary-subtle" id="fecha_inicio">
-                        <span class="input-group-text bg-light border-secondary-subtle px-2">a</span>
-                        <input type="date" class="form-control border-secondary-subtle" id="fecha_fin">
-                    </div>
-                </div>
-                <div class="col-md-4">
-                    <label class="form-label small text-muted mb-1">Motivo</label>
-                    <select class="form-select form-select-sm border-secondary-subtle" id="motivo_ausencia">
-                        <option value="" selected disabled>Seleccione...</option>
-                        {% for ta in tipos_ausencia %}
-                        <option value="{{ ta.id }}" data-nombre="{{ ta.nombre }}" data-color="{{ ta.color }}">{{ ta.nombre }}</option>
-                        {% endfor %}
-                    </select>
-                </div>
-                <div class="col-md-3 d-flex align-items-end">
-                    <button type="button" class="btn btn-sm btn-primary w-100 shadow-sm" id="btn_add_ausencia">
-                        <i class="fa fa-plus me-1"></i> Añadir
-                    </button>
-                </div>
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <p class="small text-muted mb-0">Listado histórico de ausencias registradas.</p>
+                <a href="{{ url_for('ausencia.index') }}" class="btn btn-xs btn-outline-primary py-1 px-2 shadow-sm" style="font-size: 0.75rem;">
+                    <i class="fa fa-external-link-alt me-1"></i> Gestionar Ausencias
+                </a>
             </div>
-            {% endif %}
     
             <div class="table-responsive border rounded">
                 <table class="table table-sm table-hover align-middle text-center mb-0" style="font-size: 0.85rem;" id="tabla_ausencias">
                     <thead class="table-light">
                         <tr>
-                            <th class="text-start ps-3 text-muted">Fechas</th>
-                            <th class="text-center text-muted" style="width: 25%;">Motivo</th>
-                            {% if modo != 'Visualizar' %}<th class="text-end pe-3 text-muted" style="width: 1%;">Acción</th>{% endif %}
+                            <th class="text-start ps-3 text-muted">Rango de Fechas</th>
+                            <th class="text-center text-muted">Tipo / Motivo</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -258,23 +235,17 @@
                             <tr>
                                 <td class="text-start ps-3 fw-bold text-secondary">
                                     <i class="fa fa-calendar-day me-2 text-muted"></i> {{ a.fecha_inicio.strftime('%d/%m/%Y') }} - {{ a.fecha_fin.strftime('%d/%m/%Y') }}
-                                    <input type="hidden" name="ausencia_ini[]" value="{{ a.fecha_inicio }}">
-                                    <input type="hidden" name="ausencia_fin[]" value="{{ a.fecha_fin }}">
-                                    <input type="hidden" name="ausencia_motivo[]" value="{{ a.tipo_ausencia_id }}">
                                 </td>
-                                <td class="text-center align-middle">
-                                    <span class="badge px-2" style="background-color: {{ a.tipo_ausencia.color if a.tipo_ausencia else '#95a5a6' }};">{{ a.tipo_ausencia.nombre if a.tipo_ausencia else 'Desconocido' }}</span>
+                                <td class="text-center">
+                                    <span class="badge" style="background-color: {{ a.tipo_ausencia.color if a.tipo_ausencia else '#6c757d' }}">
+                                        {{ a.tipo_ausencia.nombre if a.tipo_ausencia else 'Ausencia' }}
+                                    </span>
                                 </td>
-                                {% if modo != 'Visualizar' %}
-                                <td class="text-end pe-3 align-middle">
-                                    <button type="button" class="btn btn-sm btn-outline-danger btn-remove-ausencia" style="padding: 0.1rem 0.3rem;"><i class="fa fa-times"></i></button>
-                                </td>
-                                {% endif %}
                             </tr>
                             {% endfor %}
                         {% endif %}
                         <tr id="row_no_data" style="{{ 'display:none;' if registro and registro.ausencias else '' }}">
-                            <td colspan="{{ 3 if modo != 'Visualizar' else 2 }}" class="text-muted fst-italic py-3 small">Sin ausencias registradas...</td>
+                            <td colspan="2" class="text-muted fst-italic py-3 small">Sin ausencias registradas...</td>
                         </tr>
                     </tbody>
                 </table>
@@ -308,58 +279,6 @@ $(document).ready(function() {
             $('#div_horas_part_time').fadeOut();
         }
     }).trigger('change');
-
-    // Lógica de Ausencias
-    $('#btn_add_ausencia').click(function() {
-        const f_ini = $('#fecha_inicio').val();
-        const f_fin = $('#fecha_fin').val();
-        const $option = $('#motivo_ausencia option:selected');
-        const motivo_id = $option.val();
-        const motivo_nombre = $option.data('nombre');
-        const motivo_color = $option.data('color') || '#95a5a6';
-
-        if(!f_ini || !f_fin || !motivo_id) {
-            toastr.warning('Por favor complete rango de fechas y motivo');
-            return;
-        }
-        if(f_ini > f_fin) {
-            toastr.warning('La fecha de inicio no puede ser posterior a la de fin');
-            return;
-        }
-
-        $('#row_no_data').hide();
-
-        const formatF = (d) => d.split('-').reverse().join('/');
-        
-        const tr = `
-            <tr>
-                <td class="text-start ps-3 fw-bold text-secondary">
-                    <i class="fa fa-calendar-day me-2 text-muted"></i> ${formatF(f_ini)} - ${formatF(f_fin)}
-                    <input type="hidden" name="ausencia_ini[]" value="${f_ini}">
-                    <input type="hidden" name="ausencia_fin[]" value="${f_fin}">
-                    <input type="hidden" name="ausencia_motivo[]" value="${motivo_id}">
-                </td>
-                <td class="text-center align-middle">
-                    <span class="badge px-2" style="background-color: ${motivo_color};">${motivo_nombre}</span>
-                </td>
-                <td class="text-end pe-3 align-middle">
-                    <button type="button" class="btn btn-sm btn-outline-danger btn-remove-ausencia" style="padding: 0.1rem 0.3rem;"><i class="fa fa-times"></i></button>
-                </td>
-            </tr>
-        `;
-
-        $('#tabla_ausencias tbody').append(tr);
-        $('#fecha_inicio').val('');
-        $('#fecha_fin').val('');
-        $('#motivo_ausencia').val('');
-    });
-
-    $(document).on('click', '.btn-remove-ausencia', function() {
-        $(this).closest('tr').remove();
-        if($('#tabla_ausencias tbody tr').length === 0 || ($('#tabla_ausencias tbody tr').length === 1 && $('#row_no_data').is(':visible'))) {
-            $('#row_no_data').show();
-        }
-    });
 
     // Rotar icono de collapse
     $('#collapsePreferencias, #collapseAusencias').on('show.bs.collapse', function () {

@@ -139,21 +139,9 @@ def guardar():
                     tipo=tipo_i
                 ))
 
-        # Procesar ausencias
-        TrabajadorAusencia.query.filter_by(trabajador_id=trabajador.id).delete()
-        aus_inis  = request.form.getlist('ausencia_ini[]')
-        aus_fins  = request.form.getlist('ausencia_fin[]')
-        aus_tipos = request.form.getlist('ausencia_motivo[]')
-        for ini, fin, tipo_id in zip(aus_inis, aus_fins, aus_tipos):
-            if tipo_id:
-                tipo_obj = TipoAusencia.query.get(int(tipo_id))
-                db.session.add(TrabajadorAusencia(
-                    trabajador_id    = trabajador.id,
-                    fecha_inicio     = ini,
-                    fecha_fin        = fin,
-                    tipo_ausencia_id = int(tipo_id),
-                    motivo           = tipo_obj.nombre if tipo_obj else 'Ausencia'
-                ))
+        # Las ausencias ahora se gestionan en ausencia_bp.py
+        
+        db.session.commit()
 
         db.session.commit()
         return jsonify({'ok': True, 'msg': msg})

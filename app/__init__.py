@@ -37,6 +37,7 @@ def create_app():
     from .controllers.regla_empresa_bp import regla_empresa_bp
     from .controllers.planificacion_bp import planificacion_bp
     from .controllers.tipo_ausencia_bp import tipo_ausencia_bp
+    from .controllers.ausencia_bp import ausencia_bp
 
     app.register_blueprint(main_bp)
     app.register_blueprint(region_bp)
@@ -54,5 +55,6 @@ def create_app():
     app.register_blueprint(regla_empresa_bp)
     app.register_blueprint(planificacion_bp)
     app.register_blueprint(tipo_ausencia_bp)
+    app.register_blueprint(ausencia_bp)
 
     return app

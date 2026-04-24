@@ -118,6 +118,9 @@
                     
                     <div class="d-flex gap-2 align-items-center">
                         <span id="estado_badge" class="me-2"></span>
+                        <button class="btn btn-outline-info btn-sm shadow-sm" onclick="abrirVerificadorCapacidad()">
+                            <i class="fa fa-chart-pie me-1"></i> Capacidad
+                        </button>
                         <button class="btn btn-outline-secondary btn-sm shadow-sm" onclick="SGT.mostrarMock()" id="btn_cargar">
                             <i class="fa fa-sync-alt me-1"></i> Cargar
                         </button>
@@ -185,6 +188,38 @@
     </div>
 </div>
 
+<!-- Floating Picker de Turnos -->
+<div id="turno_picker" class="card shadow-lg border-primary" style="display: none; width: 220px; z-index: 9999;">
+    <div class="card-header py-1 bg-primary text-white small fw-bold d-flex justify-content-between align-items-center">
+        <span>Cambiar Turno</span>
+        <i class="fa fa-times cursor-pointer" onclick="cerrarPicker()"></i>
+    </div>
+    <div class="card-body p-2 d-flex flex-wrap gap-1 justify-content-center bg-white">
+        <!-- Turnos Operativos -->
+        {% for t in turnos %}
+        <button class="btn btn-sm text-white fw-bold shadow-xs" 
+                style="background-color: {{ t.color|default('#18bc9c', true) }}; min-width: 45px;" 
+                onclick="seleccionarTurno('{{ t.abreviacion }}', '{{ t.color|default('#18bc9c', true) }}')">
+            {{ t.abreviacion }}
+        </button>
+        {% endfor %}
+        
+        <div class="w-100 my-1 border-top"></div>
+        
+        <!-- Tipos de Ausencia -->
+        {% for ta in tipos_ausencia %}
+        <button class="btn btn-sm text-white fw-bold shadow-xs" 
+                style="background-color: {{ ta.color|default('#95a5a6', true) }}; min-width: 45px;" 
+                onclick="seleccionarTurno('{{ ta.abreviacion }}', '{{ ta.color|default('#95a5a6', true) }}')">
+            {{ ta.abreviacion }}
+        </button>
+        {% endfor %}
+        
+        <!-- Libre -->
+        <button class="btn btn-sm btn-light border fw-bold shadow-xs" style="min-width: 45px;" onclick="seleccionarTurno('L', '#e9ecef')">L</button>
+    </div>
+</div>
+
 {% endblock %}
 
 {% block scripts %}
@@ -193,11 +228,11 @@
     // Construir mapa de colores desde el backend
     const COLORES_TURNO = {
         {% for t in turnos %}
-    "{{ t.abreviacion }}": "{{ t.color|default('#18bc9c', true) }}"{% if not loop.last or tipos_ausencia %}, {% endif %}
-    {% endfor %}
-    {% for ta in tipos_ausencia %}
-    "{{ ta.abreviacion }}": "{{ ta.color|default('#95a5a6', true) }}"{% if not loop.last %}, {% endif %}
-    {% endfor %}
+        "{{ t.abreviacion }}": "{{ t.color|default('#18bc9c', true) }}"{{ ',' if not loop.last or tipos_ausencia else '' }}
+        {% endfor %}
+        {% for ta in tipos_ausencia %}
+        "{{ ta.abreviacion }}": "{{ ta.color|default('#95a5a6', true) }}"{{ ',' if not loop.last else '' }}
+        {% endfor %}
     };
 
     // Lista de turnos dinámicos
@@ -210,7 +245,6 @@
     // --- Lógica Global de Simulación (v3 - Inyección Forzada) ---
     window.SGT = {
         cuadranteData: null,
-        celdaActiva: null,
 
         generarCuadrante: function () {
             console.log("SGT: [1] Iniciando generación...");
@@ -413,25 +447,14 @@
         abrirPicker: function (celda) {
             const rect = celda.getBoundingClientRect();
             const picker = $('#turno_picker');
-            this.celdaActiva = celda;
-            picker.css({ position: 'fixed', top: rect.bottom + 5, left: rect.left, zIndex: 2000 }).fadeIn();
+            window.celdaActiva = celda;
+            picker.css({ position: 'fixed', top: rect.bottom + 5, left: rect.left, zIndex: 9999 }).fadeIn();
         }
     };
 
-    // ─── Picker de turno ─────────────────────────────────────────────────────────
-    function abrirPicker(celda) {
-        const rect = celda.getBoundingClientRect();
-        const picker = $('#turno_picker');
-        celdaActiva = celda;
+    var celdaActiva = null;
 
-        picker.css({
-            position: 'fixed',
-            top: rect.bottom + 5,
-            left: rect.left,
-            display: 'flex'
-        });
-        if (window.event) window.event.stopPropagation();
-    }
+    // ─── Picker de turno ─────────────────────────────────────────────────────────
 
     function cerrarPicker() {
         $('#turno_picker').hide();
@@ -570,6 +593,22 @@
             }
         });
     });
+
+    // --- Verificador de Capacidad ---
+    function abrirVerificadorCapacidad() {
+        const mes = $('#sel_mes').val();
+        const anio = $('#sel_anio').val();
+        
+        $('#fondo').addClass('visible');
+        $.get(`/ausencias?mes=${mes}&anio=${anio}`, function(html) {
+            // Extraer solo la parte del semáforo para mostrarla en un modal rápido
+            // O mejor, redirigir a la pantalla de ausencias para que vea el detalle real
+            // Por ahora, redirigimos para que el usuario use la nueva pantalla completa
+            window.location.href = `/ausencias?mes=${mes}&anio=${anio}`;
+        }).always(function() {
+            $('#fondo').removeClass('visible');
+        });
+    }
 
     // Cerrar picker al hacer click fuera
     $(document).click(function (e) {

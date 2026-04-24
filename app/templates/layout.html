@@ -150,10 +150,15 @@
                        hx-get="{{ url_for('turno.index') }}" hx-target="#body-content" hx-push-url="true" hx-select="#body-content" hx-swap="outerHTML">
                         <i class="fa fa-clock"></i> Turnos
                     </a>
+                    <a class="nav-link {{ 'active' if request.endpoint == 'ausencia.index' else '' }}" 
+                       href="{{ url_for('ausencia.index') }}"
+                       hx-get="{{ url_for('ausencia.index') }}" hx-target="#body-content" hx-push-url="true" hx-select="#body-content" hx-swap="outerHTML">
+                        <i class="fa fa-calendar-times"></i> Ausencias
+                    </a>
                     <a class="nav-link {{ 'active' if request.endpoint == 'tipo_ausencia.index' else '' }}" 
                        href="{{ url_for('tipo_ausencia.index') }}"
                        hx-get="{{ url_for('tipo_ausencia.index') }}" hx-target="#body-content" hx-push-url="true" hx-select="#body-content" hx-swap="outerHTML">
-                        <i class="fa fa-user-minus"></i> Ausencias
+                        <i class="fa fa-user-minus"></i> Tipos de Ausencia
                     </a>
                     <a class="nav-link {{ 'active' if request.endpoint == 'planificacion' else '' }}" 
                        href="{{ url_for('main.planificacion') }}"
