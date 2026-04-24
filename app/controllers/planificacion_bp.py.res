@@ -4,7 +4,7 @@ from datetime import timedelta, datetime
 from flask import Blueprint, render_template, request, jsonify
 from app.database import db
 from app.models.business import Trabajador, Turno, ReglaEmpresa
-from app.scheduler.builder import build_model
+from app.scheduler.builder.py import build_model
 from app.scheduler.solver import solve_model
 from app.scheduler.explain import extract_solution
 from app.scheduler.conflict import get_conflict_report
@@ -139,28 +139,41 @@ def generar():
         py_date = datetime.strptime(d_str, '%Y-%m-%d').date()
         coberturas_por_dia[d_str] = cob_domingo if py_date.weekday() == 6 else cob_global
 
-    # ── trabajadores_meta ─────────────────────────────────────────────────────
-    # duracion_turno: calculada desde los turnos reales del trabajador
-    #   solo_turno → duración de esos turnos específicos
-    #   sin restricción → promedio de todos los turnos de la empresa
-    # permite_horas_extra: desde campo BD del trabajador (default False)
-    trabajadores_meta = {}
+    # ── Ausencias ─────────────────────────────────────────────────────────────
+    ausencias = {}
     for t in trabajadores_db:
-        if getattr(t, '_turnos_solo', None):
-            horas_w = [turnos_meta[abr]['horas']
-                       for abr in t._turnos_solo
-                       if abr in turnos_meta]
-        else:
-            horas_w = [v['horas'] for v in turnos_meta.values()]
+        for a in t.ausencias:
+            if not a.fecha_inicio or not a.fecha_fin:
+                continue
+            curr = a.fecha_inicio
+            while curr <= a.fecha_fin:
+                f_str = curr.strftime('%Y-%m-%d')
+                if f_str in dias_set:
+                    abr = a.tipo_ausencia.abreviacion if a.tipo_ausencia else 'A'
+                    ausencias[(t.id, f_str)] = abr
+                curr += timedelta(days=1)
 
-        duracion_w = round(sum(horas_w) / len(horas_w)) if horas_w else 8
+    # ── Pre-procesamiento: bloqueados, fijos y preferencias ─────────────────
+    # IMPORTANTE: debe ejecutarse ANTES de construir trabajadores_meta
+    # porque asigna t._turnos_solo en cada objeto trabajador
+    from app.scheduler.builder import preparar_restricciones
+    bloqueados, fijos, turnos_bloqueados_por_dia = preparar_restricciones(
+        trabajadores_db, dias_del_mes, ausencias
+    )
 
-        trabajadores_meta[t.id] = {
-            'horas_semanales':     t.horas_semanales or None,
-            'turnos_permitidos':   getattr(t, '_turnos_solo', None),
-            'duracion_turno':      duracion_w,
-            'permite_horas_extra': getattr(t, 'permite_horas_extra', False) or False,
+    # ── trabajadores_meta ─────────────────────────────────────────────────────
+    # horas_semanales:   meta mensual de turnos
+    # turnos_permitidos: desde tipo='solo_turno' (asignado por preparar_restricciones)
+    #   None  → puede hacer cualquier turno
+    #   ['N'] → solo puede hacer turno N
+    trabajadores_meta = {
+        t.id: {
+            'horas_semanales':   t.horas_semanales or None,
+            'turnos_permitidos': getattr(t, '_turnos_solo', None),
+            'permite_horas_extra': getattr(t, 'permite_horas_extra', False),
         }
+        for t in trabajadores_db
+    }
 
     # ── Reglas de la empresa desde BD ────────────────────────────────────────
     reglas_bd = {}
@@ -188,26 +201,6 @@ def generar():
     if 'duracion_turno' not in reglas_bd and turnos_meta:
         horas_lista = [v['horas'] for v in turnos_meta.values()]
         reglas_bd['duracion_turno'] = round(sum(horas_lista) / len(horas_lista))
-
-    # ── Ausencias ─────────────────────────────────────────────────────────────
-    ausencias = {}
-    for t in trabajadores_db:
-        for a in t.ausencias:
-            if not a.fecha_inicio or not a.fecha_fin:
-                continue
-            curr = a.fecha_inicio
-            while curr <= a.fecha_fin:
-                f_str = curr.strftime('%Y-%m-%d')
-                if f_str in dias_set:
-                    abr = a.tipo_ausencia.abreviacion if a.tipo_ausencia else 'A'
-                    ausencias[(t.id, f_str)] = abr
-                curr += timedelta(days=1)
-
-    # ── Pre-procesamiento: bloqueados, fijos y preferencias diarias ──────────
-    from app.scheduler.builder import preparar_restricciones
-    bloqueados, fijos, turnos_bloqueados_por_dia = preparar_restricciones(
-        trabajadores_db, dias_del_mes, ausencias
-    )
 
     # ── Construir y resolver el modelo ────────────────────────────────────────
     try:

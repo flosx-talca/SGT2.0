@@ -201,17 +201,20 @@ def build_model(trabajadores, dias_del_mes, turnos, coberturas,
                 model.Add(x[w, d, t] == 0)
 
     # ════════════════════════════════════════════════════════════════════════════
-    # HR2-FIJO: Patrones fijos → HARD obligatorio
-    # El trabajador DEBE estar ese día en ese turno.
-    # Ejemplo: recibe camiones lunes/mié/vie — nadie más puede hacerlo.
-    # Es HARD porque el negocio lo requiere sin excepción.
-    # NOTA: HR10 (total mensual) usa math.ceil para que los días fijos
-    # quepan dentro del contrato. Si el trabajador tiene más fijos que
-    # días permitidos por su contrato → INFEASIBLE (revisar configuración).
+    # SR-FIJO: Patrones fijos por día de semana (SOFT con peso muy alto)
+    # Es SOFT porque puede entrar en conflicto con:
+    #   HR5: tope horas semanales (ej. 30h no puede trabajar 6 días/sem)
+    #   HR10: total mensual del contrato
+    # Peso W_ASIG = 1.000.000 → el solver los respeta siempre que no viole
+    # restricciones contractuales o legales.
     # ════════════════════════════════════════════════════════════════════════════
+    fijo_violados = []
     for (w, d), t_fijo in fijos.items():
         if w in trabajadores and d in dias_del_mes and t_fijo in turnos:
-            model.Add(x[w, d, t_fijo] == 1)
+            violation = model.NewBoolVar(f'fviol_{w}_{d}')
+            model.Add(x[w, d, t_fijo] == 1).OnlyEnforceIf(violation.Not())
+            model.Add(x[w, d, t_fijo] == 0).OnlyEnforceIf(violation)
+            fijo_violados.append(violation)
 
     # ════════════════════════════════════════════════════════════════════════════
     # HR2b: PREFERENCIA por día → bloquear turnos NO permitidos ese día
@@ -262,8 +265,12 @@ def build_model(trabajadores, dias_del_mes, turnos, coberturas,
             semana      = dias_del_mes[i:i + 7]
             n_dias      = len(semana)
             tope_horas  = round(horas * n_dias / 7, 2)
-            # ceil en vez de int: 42h/8h=5.25 → 6 (empleador paga el turno extra)
-            # int truncaría a 5 → conflicto con fijos de 6 días/sem → INFEASIBLE
+            # Tope base: ceil para no bloquear fijos de 6 días en jornadas no exactas
+            #   42h/8h=5.25 → ceil=6 ← necesario para que fijos de 6 días funcionen
+            #   20h/8h=2.5  → ceil=3 ← base sin extras
+            # permite_horas_extra agrega 1 turno adicional encima del tope base
+            #   extra_ok=False: tope = ceil (sin extra)
+            #   extra_ok=True:  tope = ceil + 1
             tope_turnos = math.ceil(tope_horas / duracion)
             if extra_ok:
                 tope_turnos += 1
@@ -326,16 +333,27 @@ def build_model(trabajadores, dias_del_mes, turnos, coberturas,
         horas    = meta_w.get('horas_semanales', jornada_default) or jornada_default
         duracion = meta_w.get('duracion_turno',  duracion_default) or duracion_default
 
-        bloq_w       = sum(1 for (ww, d) in bloqueados if ww == w)
-        disponibles  = N - bloq_w
-        meta_mensual = math.ceil(disponibles / 7 * (horas / duracion))
+        bloq_w      = sum(1 for (ww, d) in bloqueados if ww == w)
+        disponibles = N - bloq_w
+        extra_ok    = meta_w.get('permite_horas_extra', False)
+
+        # extra_ok=False → floor: no exceder el contrato
+        #   30h/8h=3.75 → floor(16.61) = 16 ✅  round daría 17 ❌
+        # extra_ok=True  → ceil: empleador paga la fracción
+        #   30h/8h=3.75 → ceil(16.61)  = 17 ✅
+        raw_meta     = disponibles / 7 * (horas / duracion)
+        meta_mensual = math.ceil(raw_meta) if extra_ok else math.floor(raw_meta)
 
         if meta_mensual <= 0:
             continue
 
         total_w  = sum(x[w, d, t] for d in dias_del_mes for t in turnos)
+        # Techo siempre exacto (meta sin +1) para no exceder el contrato.
+        # Mínimo = meta-1 para absorber domingos libres y ausencias.
+        # extra_ok=False: meta=floor → máximo es floor
+        # extra_ok=True:  meta=ceil  → máximo es ceil
         model.Add(total_w >= max(0, meta_mensual - 1))
-        model.Add(total_w <= min(disponibles, meta_mensual + 1))
+        model.Add(total_w <= min(disponibles, meta_mensual))
 
     # ════════════════════════════════════════════════════════════════════════════
     # SOFT rules
@@ -453,6 +471,7 @@ def build_model(trabajadores, dias_del_mes, turnos, coberturas,
 
     # ── Función objetivo ─────────────────────────────────────────────────────
     model.Minimize(
+        (sum(fijo_violados)    * W_ASIG    if fijo_violados    else 0) +
         (sum(deficits)         * W_DEFICIT if deficits         else 0) +
         (sum(excesses)         * W_EXCESO  if excesses         else 0) +
         (sum(rango_cargas)     * W_EQUIDAD if rango_cargas     else 0) +
