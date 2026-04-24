@@ -353,6 +353,10 @@
             });
             html += `<th class="text-center text-muted bg-light border-start" style="width: 40px; font-size:0.75rem;">L</th></tr></thead><tbody>`;
 
+            // Inicializar contadores de totales por trabajador (columna)
+            const totalesTrabajador = {};
+            trabajadores.forEach(t => totalesTrabajador[t.id] = 0);
+
             dias.forEach(dia => {
                 const esDom = dia.dia_semana === 0;
                 const conts = { L: 0 };
@@ -363,7 +367,12 @@
                     const raw  = (celdas[dia.fecha] !== undefined) ? celdas[dia.fecha][t.id] : undefined;
                     const tAbr = (raw !== undefined && raw !== null && raw !== '') ? raw : 'L';
                     const sinResolver = (raw === '' || raw === undefined || raw === null);
+                    // Sumar al total del trabajador si es un turno operativo
+                    if (LISTA_TURNOS.includes(tAbr)) {
+                        totalesTrabajador[t.id]++;
+                    }
                     if (conts[tAbr] !== undefined) conts[tAbr]++;
+
                     const color = typeof getColorTurno === 'function' ? getColorTurno(tAbr) : '#adb5bd';
                     // Celda sin resolver: borde punteado naranja para que el usuario la identifique
                     const estiloExtra = sinResolver ? 'border: 1.5px dashed #fd7e14 !important;' : '';
@@ -388,6 +397,18 @@
                 html += `<td class="text-center text-muted small">${conts.L}</td></tr>`;
             });
 
+            // Fila de TOTALES al final del cuadrante
+            let footer_html = `<tr class="fila-total bg-light fw-bold border-top border-2">
+                <td class="col-fecha text-uppercase small">Total Turnos</td>`;
+            footer_html += trabajadores.map(t => `<td class="text-center text-primary" id="total_w_${t.id}">${totalesTrabajador[t.id]}</td>`).join('');
+            
+            // Celdas vacías para cuadrar con las columnas de cobertura a la derecha
+            for(let i=0; i < LISTA_TURNOS.length + 1; i++) {
+                footer_html += `<td class="bg-light"></td>`;
+            }
+            footer_html += `</tr>`;
+            
+            html += footer_html;
             html += `</tbody></table>`;
 
             console.log("SGT: [6] Inyectando HTML...");
@@ -478,7 +499,20 @@
 
         cerrarPicker();
         actualizarContadoresFila(celdaActiva);
+        actualizarTotalesColumna(wid);
         guardarCambiosCelda(fecha, wid, abr);
+    }
+
+    function actualizarTotalesColumna(wid) {
+        let total = 0;
+        // Recorrer todas las fechas cargadas en celdas para este trabajador
+        for (let f in cuadranteData.celdas) {
+            const abr = cuadranteData.celdas[f][wid];
+            if (LISTA_TURNOS.includes(abr)) {
+                total++;
+            }
+        }
+        $(`#total_w_${wid}`).text(total);
     }
 
     function actualizarContadoresFila(celda) {

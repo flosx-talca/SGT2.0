@@ -157,7 +157,7 @@ def build_model(trabajadores, dias_del_mes, turnos, coberturas,
     if turnos_meta       is None: turnos_meta       = {}
 
     max_dias_semana  = reglas.get('working_days_limit_max', 6)
-    min_domingos_lib = reglas.get('min_free_sundays', 2)
+    min_domingos_lib = reglas.get('min_free_sundays', 1)   # default 1, configurable por empresa desde BD
     duracion_default = reglas.get('duracion_turno', 8)
     jornada_default  = reglas.get('jornada_semanal', 42)
 
@@ -334,13 +334,23 @@ def build_model(trabajadores, dias_del_mes, turnos, coberturas,
         duracion = meta_w.get('duracion_turno',  duracion_default) or duracion_default
 
         bloq_w      = sum(1 for (ww, d) in bloqueados if ww == w)
-        disponibles = N - bloq_w
         extra_ok    = meta_w.get('permite_horas_extra', False)
 
-        # extra_ok=False → floor: no exceder el contrato
-        #   30h/8h=3.75 → floor(16.61) = 16 ✅  round daría 17 ❌
-        # extra_ok=True  → ceil: empleador paga la fracción
-        #   30h/8h=3.75 → ceil(16.61)  = 17 ✅
+        # Días realmente disponibles = total - ausencias - domingos libres obligatorios
+        # El trabajador no puede trabajar esos domingos → no deben contar en la meta
+        dom_mes      = sum(1 for d in dias_del_mes
+                          if cal_module.weekday(int(d[:4]), int(d[5:7]), int(d[8:10])) == 6)
+        dom_bloq_w   = sum(1 for (ww, d) in bloqueados
+                          if ww == w and
+                          cal_module.weekday(int(d[:4]), int(d[5:7]), int(d[8:10])) == 6)
+        dom_libres   = max(0, min_domingos_lib - dom_bloq_w)
+        disponibles  = N - bloq_w - dom_libres
+        
+        dom_libres = max(0, min_domingos_lib - dom_bloq_w)
+        print(f"  Worker {w}: dom_mes={dom_mes} dom_libres={dom_libres} disponibles={disponibles}")
+
+        # extra_ok=False → floor: respetar estrictamente el contrato
+        # extra_ok=True  → ceil: empleador paga la fracción semanal
         raw_meta     = disponibles / 7 * (horas / duracion)
         meta_mensual = math.ceil(raw_meta) if extra_ok else math.floor(raw_meta)
 
@@ -348,11 +358,12 @@ def build_model(trabajadores, dias_del_mes, turnos, coberturas,
             continue
 
         total_w  = sum(x[w, d, t] for d in dias_del_mes for t in turnos)
-        # Techo siempre exacto (meta sin +1) para no exceder el contrato.
-        # Mínimo = meta-1 para absorber domingos libres y ausencias.
-        # extra_ok=False: meta=floor → máximo es floor
-        # extra_ok=True:  meta=ceil  → máximo es ceil
-        model.Add(total_w >= max(0, meta_mensual - 1))
+        # Techo y piso exactos según contrato.
+        # El solver DEBE cumplir la meta — ni más ni menos.
+        # La tolerancia viene del ±1 en las reglas SOFT semanales (W_MIN_SEM/W_MAX_SEM).
+        # Si hay demasiados domingos libres o ausencias que impidan la meta
+        # → es un problema de configuración del mantenedor, no del builder.
+        model.Add(total_w >= meta_mensual)
         model.Add(total_w <= min(disponibles, meta_mensual))
 
     # ════════════════════════════════════════════════════════════════════════════

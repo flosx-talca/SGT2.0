@@ -238,6 +238,24 @@ def generar():
             print(f"  Worker {w}: {meta}")
         print(f"{'='*50}\n")
 
+        # ── DEBUG TEMPORAL ────────────────────────────────────────────
+        from collections import Counter
+        import math
+        bloq_por_worker = Counter(w for (w, d) in bloqueados)
+        print(f"\n[BLOQUEADOS Y META REAL por worker]")
+        for w in t_ids:
+            b    = bloq_por_worker.get(w, 0)
+            meta = trabajadores_meta.get(w, {})
+            h    = meta.get('horas_semanales', 42)
+            dur  = meta.get('duracion_turno', 8)
+            ext  = meta.get('permite_horas_extra', False)
+            disp = 31 - b   # ← cambia 31 por el num_days real si quieres
+            raw  = disp / 7 * (h / dur)
+            m    = math.ceil(raw) if ext else math.floor(raw)
+            print(f"  Worker {w}: bloq={b} disp={disp} raw={raw:.2f} meta={m} extra={ext}")
+        print('='*50)
+        # ── FIN DEBUG ─────────────────────────────────────────────────
+
         # UNKNOWN = timeout → error bloqueante, no hay nada que mostrar
         if status == cp_model.UNKNOWN:
             conflict_report = get_conflict_report(status)
