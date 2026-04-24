@@ -156,7 +156,7 @@ Las client rules pueden incluir:
 
 ## Base legal chilena
 
-La base legal inicial considerada para el sistema incluye jornada ordinaria semanal de 44 horas, máximo de 10 horas diarias, jornada parcial de hasta 30 horas semanales y descanso semanal obligatorio. También debe contemplarse descanso compensatorio por trabajo dominical o festivo cuando corresponda en regímenes exceptuados.
+La base legal inicial considerada para el sistema incluye jornada ordinaria semanal de 42 horas (bajada por Ley 21.561 a partir del 26 de abril de 2026), máximo de 10 horas diarias, jornada parcial de hasta 30 horas semanales y descanso semanal obligatorio. También debe contemplarse descanso compensatorio por trabajo dominical o festivo cuando corresponda en regímenes exceptuados.
 
 La regla “6 días trabajados y luego 2 libres” no debe tratarse por ahora como regla legal general automática, sino como preferencia operativa o regla de cliente, salvo que exista un régimen específico que la imponga.
 
@@ -321,7 +321,7 @@ El sistema debe incorporar un conjunto inicial de reglas legales chilenas como b
 
 #### Jornada ordinaria general
 
-- No puede exceder de **44 horas semanales**.
+- No puede exceder de **42 horas semanales**.
 - Debe distribuirse en **no menos de 5 ni más de 6 días**.
 - No puede exceder de **10 horas diarias**.
 
@@ -579,7 +579,7 @@ flowchart TD
     M --> M4[Validar conflictos de reglas]
     M --> M5[Validar base legal chilena]
 
-    M5 --> M51[44 horas semanales]
+    M5 --> M51[42 horas semanales]
     M5 --> M52[10 horas diarias]
     M5 --> M53[Part-time hasta 30 horas]
     M5 --> M54[Descanso semanal]

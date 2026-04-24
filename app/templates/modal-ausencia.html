@@ -1,0 +1,152 @@
+<div class="modal-header bg-primary text-white py-2">
+    <h5 class="modal-title fw-bold" style="font-size: 1.1rem;">
+        <i class="fa {{ 'fa-edit' if ausencia else 'fa-calendar-plus' }} me-2"></i>{{ 'Editar' if ausencia else 'Nueva' }} Ausencia
+    </h5>
+    <button type="button" class="btn-close btn-close-white" onclick="CerrarModal()" aria-label="Close"></button>
+</div>
+
+<div class="modal-body p-4">
+    <form id="form_ausencia">
+        <input type="hidden" name="id" value="{{ ausencia.id if ausencia else 0 }}">
+        <div class="row g-3">
+            <div class="col-12">
+                <label class="form-label small fw-bold text-muted"><code>(*)</code> Trabajador</label>
+                <select name="trabajador_id" id="trabajador_id_modal" class="form-select form-select-sm shadow-sm" required onchange="calcularImpacto()">
+                    <option value="">-- Seleccione Trabajador --</option>
+                    {% for w in trabajadores %}
+                    <option value="{{ w.id }}" {{ 'selected' if ausencia and ausencia.trabajador_id == w.id }}>{{ w.nombre }} {{ w.apellido1 }} ({{ w.rut }})</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="col-12">
+                <label class="form-label small fw-bold text-muted"><code>(*)</code> Tipo de Ausencia</label>
+                <select name="tipo_ausencia_id" id="tipo_ausencia_id_modal" class="form-select form-select-sm shadow-sm" required>
+                    <option value="">-- Seleccione Tipo --</option>
+                    {% for t in tipos %}
+                    <option value="{{ t.id }}" {{ 'selected' if ausencia and ausencia.tipo_ausencia_id == t.id }}>{{ t.nombre }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="col-md-6">
+                <label class="form-label small fw-bold text-muted"><code>(*)</code> Fecha Inicio</label>
+                <input type="date" name="fecha_inicio" id="fecha_inicio_modal" class="form-control form-control-sm shadow-sm" required onchange="calcularImpacto()" 
+                       value="{{ ausencia.fecha_inicio.strftime('%Y-%m-%d') if ausencia else '' }}">
+            </div>
+
+            <div class="col-md-6">
+                <label class="form-label small fw-bold text-muted"><code>(*)</code> Fecha Fin</label>
+                <input type="date" name="fecha_fin" id="fecha_fin_modal" class="form-control form-control-sm shadow-sm" required onchange="calcularImpacto()"
+                       value="{{ ausencia.fecha_fin.strftime('%Y-%m-%d') if ausencia else '' }}">
+            </div>
+
+            <div class="col-12">
+                <label class="form-label small fw-bold text-muted">Motivo / Observación</label>
+                <textarea name="motivo" id="motivo_modal" class="form-control form-control-sm shadow-sm" rows="2" placeholder="Opcional...">{{ ausencia.motivo if ausencia else '' }}</textarea>
+            </div>
+
+            <!-- ALERTA DE IMPACTO -->
+            <div class="col-12 d-none" id="div-alerta-impacto">
+                <div class="alert mb-0 py-2 small border shadow-sm" id="alerta-impacto">
+                    <!-- Dinámico -->
+                </div>
+            </div>
+        </div>
+    </form>
+</div>
+
+<div class="modal-footer bg-light border-top-0 py-2">
+    <button type="button" class="btn btn-sm btn-outline-secondary px-3" onclick="CerrarModal()">Cancelar</button>
+    <button type="button" class="btn btn-sm btn-primary px-4 shadow-sm" id="btnGuardarAusencia" onclick="guardarAusencia()">
+        <i class="fa fa-save me-1"></i> {{ 'Actualizar' if ausencia else 'Registrar' }} Ausencia
+    </button>
+</div>
+
+<script>
+function calcularImpacto() {
+    const tid = $('#trabajador_id_modal').val();
+    const inicio = $('#fecha_inicio_modal').val();
+    const fin = $('#fecha_fin_modal').val();
+
+    if (!tid || !inicio || !fin) {
+        $('#div-alerta-impacto').addClass('d-none');
+        return;
+    }
+
+    // Feedback visual de carga
+    $('#div-alerta-impacto').removeClass('d-none');
+    $('#alerta-impacto').removeClass('alert-success alert-danger alert-warning').addClass('alert-light')
+        .html('<i class="fa fa-spinner fa-spin me-2"></i> Calculando impacto en cobertura...');
+
+    $.ajax({
+        url: "{{ url_for('ausencia.impacto') }}",
+        method: "POST",
+        contentType: "application/json",
+        data: JSON.stringify({
+            trabajador_id: tid,
+            fecha_inicio: inicio,
+            fecha_fin: fin,
+            exclude_id: $('input[name="id"]').val()
+        }),
+        success: function(res) {
+            const $alerta = $('#alerta-impacto');
+            
+            if (res.estado === 'critico') {
+                $alerta.removeClass('alert-light alert-success').addClass('alert-danger');
+                let html = `<div class="fw-bold"><i class="fa fa-exclamation-triangle me-2"></i>Impacto Detectado</div>`;
+                html += `<div class="mt-1">${res.mensaje}</div>`;
+                if (res.dias_con_problema.length > 0) {
+                    html += `<ul class="mb-0 mt-1 ps-3">`;
+                    res.dias_con_problema.slice(0, 3).forEach(p => {
+                        html += `<li>${p.dia_semana} ${p.fecha} - Turno ${p.turno}</li>`;
+                    });
+                    if (res.dias_con_problema.length > 3) html += `<li>... y ${res.dias_con_problema.length - 3} más</li>`;
+                    html += `</ul>`;
+                }
+                $alerta.html(html);
+            } else {
+                $alerta.removeClass('alert-light alert-danger').addClass('alert-success');
+                $alerta.html(`<i class="fa fa-check-circle me-2"></i><strong>Sin impacto crítico:</strong> ${res.mensaje}`);
+            }
+        },
+        error: function() {
+            $('#div-alerta-impacto').addClass('d-none');
+        }
+    });
+}
+
+function guardarAusencia() {
+    const tid = $('#trabajador_id_modal').val();
+    const tipo = $('#tipo_ausencia_id_modal').val();
+    const inicio = $('#fecha_inicio_modal').val();
+    const fin = $('#fecha_fin_modal').val();
+
+    if (!tid || !tipo || !inicio || !fin) {
+        toastr.warning('Complete todos los campos obligatorios (*)');
+        return;
+    }
+
+    const $btn = $('#btnGuardarAusencia');
+    $btn.prop('disabled', true).html('<i class="fa fa-spinner fa-spin me-1"></i> Guardando...');
+    
+    $.post("{{ url_for('ausencia.guardar') }}", $('#form_ausencia').serialize())
+    .done(function(res) {
+        if (res.ok) {
+            toastr.success(res.msg);
+            CerrarModal();
+            // Si estamos en la pantalla de ausencias, recargamos
+            if (window.location.pathname.includes('/ausencias')) {
+                location.reload();
+            }
+        } else {
+            toastr.error(res.msg);
+            $btn.prop('disabled', false).html('<i class="fa fa-save me-1"></i> Registrar Ausencia');
+        }
+    })
+    .fail(function() {
+        toastr.error('Error de comunicación con el servidor.');
+        $btn.prop('disabled', false).html('<i class="fa fa-save me-1"></i> Registrar Ausencia');
+    });
+}
+</script>

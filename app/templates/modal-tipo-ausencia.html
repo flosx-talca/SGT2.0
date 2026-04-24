@@ -1,0 +1,68 @@
+<div class="modal-header bg-light border-bottom">
+    <h5 class="modal-title fw-bold text-dark"><i class="fa fa-user-minus me-2 text-danger"></i>{{ modo }} Tipo de Ausencia</h5>
+    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+</div>
+<form id="frmTipoAusencia" onsubmit="guardarTipoAusencia(event)">
+    <div class="modal-body p-4">
+        <input type="hidden" name="id" value="{{ registro.id if registro else 0 }}">
+        
+        <div class="row g-3">
+            <div class="col-md-12">
+                <label class="form-label fw-bold small text-secondary">Sucursal/Empresa *</label>
+                <select name="empresa_id" class="form-select shadow-sm" required>
+                    <option value="">Seleccione Sucursal...</option>
+                    {% for e in empresas %}
+                    <option value="{{ e.id }}" {% if registro and registro.empresa_id == e.id %}selected{% endif %}>{{ e.razon_social }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <div class="col-md-8">
+                <label class="form-label fw-bold small text-secondary">Nombre de Ausencia *</label>
+                <input type="text" class="form-control shadow-sm" name="nombre" value="{{ registro.nombre if registro else '' }}" required placeholder="Ej: Vacaciones">
+            </div>
+
+            <div class="col-md-4">
+                <label class="form-label fw-bold small text-secondary">Sigla *</label>
+                <input type="text" class="form-control shadow-sm text-uppercase" name="abreviacion" value="{{ registro.abreviacion if registro else '' }}" required maxlength="5" placeholder="Ej: V">
+            </div>
+
+            <div class="col-md-6">
+                <label class="form-label fw-bold small text-secondary">Color *</label>
+                <input type="color" class="form-control form-control-color shadow-sm w-100" name="color" value="{{ registro.color if registro else '#e74c3c' }}" title="Elige tu color">
+            </div>
+
+            <div class="col-md-6 d-flex align-items-end">
+                <div class="form-check form-switch mb-2">
+                    <input class="form-check-input" type="checkbox" role="switch" id="check_activo" name="activo" value="true" {% if not registro or registro.activo %}checked{% endif %}>
+                    <label class="form-check-label ms-2" for="check_activo">Activo</label>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="modal-footer bg-light border-top">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <button type="submit" class="btn btn-primary shadow-sm"><i class="fa fa-save me-1"></i> Guardar</button>
+    </div>
+</form>
+
+<script>
+function guardarTipoAusencia(e) {
+    e.preventDefault();
+    const data = $(e.target).serialize();
+    $('#fondo').addClass('visible');
+    
+    $.post("{{ url_for('tipo_ausencia.guardar') }}", data)
+        .done(function(res) {
+            if (res.ok) {
+                toastr.success(res.msg);
+                $('#dinamic_modal').modal('hide');
+                if(typeof refreshTablaAusencias === 'function') refreshTablaAusencias();
+            } else {
+                toastr.error(res.msg);
+            }
+        })
+        .fail(function() { toastr.error("Error al guardar."); })
+        .always(function() { $('#fondo').removeClass('visible'); });
+}
+</script>

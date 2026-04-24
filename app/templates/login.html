@@ -68,11 +68,11 @@
     <script>
         $(document).ready(function() {
             // Ocultar spinner al cargar la página
-            $('#fondo').fadeOut(300);
+            $('#fondo').removeClass('visible');
 
             // Mostrar spinner al iniciar sesión
             $('form').on('submit', function() {
-                $('#fondo').fadeIn(200);
+                $('#fondo').addClass('visible');
             });
         });
 
@@ -91,7 +91,7 @@
                     if((user === 'admin' && pass === '1234') || (user === '11111111-7' && pass === '1234')) {
                         toastr.success('Bienvenido al sistema');
                         setTimeout(() => {
-                            window.location.href = "{{ url_for('index') }}";
+                            window.location.href = "{{ url_for('main.index') }}";
                         }, 500);
                     } else {
                         Swal.fire({

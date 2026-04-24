@@ -1,0 +1,43 @@
+{% for r in registros %}
+<tr>
+    <td class="small fw-bold text-muted">{{ r.rut }}</td>
+    <td class="fw-bold">{{ r.razon_social }}</td>
+    <td>
+        <div class="d-flex flex-column">
+            <span class="small fw-bold text-dark">{{ r.dueño.nombre }} {{ r.dueño.apellidos }}</span>
+            <span class="text-muted" style="font-size: 0.75rem;">{{ r.dueño.rut }}</span>
+        </div>
+    </td>
+    <td>
+        <div class="d-flex flex-column">
+            <span class="small text-dark">{{ r.direccion }}</span>
+            <span class="text-muted" style="font-size: 0.75rem;">{{ r.comuna.descripcion if r.comuna else 'Sin comuna' }}</span>
+        </div>
+    </td>
+    <td>
+        <span class="badge bg-{{ 'success' if r.activo else 'danger' }}-subtle 
+                         text-{{ 'success' if r.activo else 'danger' }} 
+                         border border-{{ 'success' if r.activo else 'danger' }}">
+            {{ 'Activo' if r.activo else 'Inactivo' }}
+        </span>
+    </td>
+    <td class="text-center">
+        <div class="btn-group btn-group-sm">
+            <button class="btn btn-outline-info" title="Ver"
+                onclick="Modal('Visualizar', {{ r.id }}, '{{ url_for('empresa.modal') }}')">
+                <i class="fa fa-eye"></i>
+            </button>
+            <button class="btn btn-outline-warning" title="Editar"
+                onclick="Modal('Editar', {{ r.id }}, '{{ url_for('empresa.modal') }}')">
+                <i class="fa fa-edit"></i>
+            </button>
+            <button class="btn btn-outline-danger" title="Desactivar"
+                onclick="eliminarEmpresa({{ r.id }}, '{{ r.razon_social }}')">
+                <i class="fa fa-ban"></i>
+            </button>
+        </div>
+    </td>
+</tr>
+{% else %}
+<tr><td colspan="6" class="text-center text-muted py-4">No hay empresas registradas.</td></tr>
+{% endfor %}

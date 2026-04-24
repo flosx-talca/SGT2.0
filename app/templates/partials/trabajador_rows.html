@@ -1,0 +1,53 @@
+{% for r in registros %}
+<tr>
+    <td class="small fw-bold text-muted">{{ r.rut }}</td>
+    <td>
+        <div class="d-flex align-items-center">
+            <div class="bg-secondary-subtle rounded-circle p-2 me-2 text-secondary d-flex align-items-center justify-content-center" style="width: 32px; height: 32px;">
+                <i class="fa fa-user-tie small"></i>
+            </div>
+            <div>
+                <div class="fw-bold text-primary">{{ r.nombre }} {{ r.apellido1 }}</div>
+                <div class="text-muted small" style="font-size: 0.75rem;">{{ r.cargo or 'Sin cargo' }}</div>
+            </div>
+        </div>
+    </td>
+    <td>
+        <div class="d-flex flex-column">
+            <span class="small fw-bold">{{ r.empresa.razon_social }}</span>
+            <span class="text-muted" style="font-size: 0.7rem;">{{ r.servicio.descripcion }}</span>
+        </div>
+    </td>
+    <td>
+        <div class="d-flex flex-column small">
+            <span><i class="fa fa-envelope me-1 text-muted"></i>{{ r.email or 'N/A' }}</span>
+            <span><i class="fa fa-phone me-1 text-muted"></i>{{ r.telefono or 'N/A' }}</span>
+        </div>
+    </td>
+    <td>
+        <span class="badge bg-{{ 'success' if r.activo else 'danger' }}-subtle 
+                         text-{{ 'success' if r.activo else 'danger' }} 
+                         border border-{{ 'success' if r.activo else 'danger' }}">
+            {{ 'Activo' if r.activo else 'Inactivo' }}
+        </span>
+    </td>
+    <td class="text-center">
+        <div class="btn-group btn-group-sm">
+            <button class="btn btn-outline-info" title="Ver"
+                onclick="Modal('Visualizar', {{ r.id }}, '{{ url_for('trabajador.modal') }}')">
+                <i class="fa fa-eye"></i>
+            </button>
+            <button class="btn btn-outline-warning" title="Editar"
+                onclick="Modal('Editar', {{ r.id }}, '{{ url_for('trabajador.modal') }}')">
+                <i class="fa fa-edit"></i>
+            </button>
+            <button class="btn btn-outline-danger" title="Desactivar"
+                onclick="eliminarTrabajador({{ r.id }}, '{{ r.nombre }}')">
+                <i class="fa fa-ban"></i>
+            </button>
+        </div>
+    </td>
+</tr>
+{% else %}
+<tr><td colspan="6" class="text-center text-muted py-4">No hay trabajadores registrados.</td></tr>
+{% endfor %}

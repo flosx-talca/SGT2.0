@@ -1,0 +1,53 @@
+{% for r in registros %}
+<tr>
+    <td class="small fw-bold text-muted">{{ r.rut }}</td>
+    <td>
+        <div class="d-flex align-items-center">
+            <div class="bg-primary-subtle rounded-circle p-2 me-2 text-primary d-flex align-items-center justify-content-center" style="width: 32px; height: 32px;">
+                <i class="fa fa-user small"></i>
+            </div>
+            <div>
+                <div class="fw-bold">{{ r.nombre }} {{ r.apellidos }}</div>
+                <div class="text-muted small" style="font-size: 0.75rem;">{{ r.email }}</div>
+            </div>
+        </div>
+    </td>
+    <td>
+        <span class="badge bg-info-subtle text-info border border-info">
+            {{ r.rol.descripcion }}
+        </span>
+    </td>
+    <td>
+        {% if r.cliente %}
+        <span class="small text-dark fw-bold"><i class="fa fa-handshake me-1 text-muted"></i>{{ r.cliente.nombre }}</span>
+        {% else %}
+        <span class="text-muted small italic">Sistema Global</span>
+        {% endif %}
+    </td>
+    <td>
+        <span class="badge bg-{{ 'success' if r.activo else 'danger' }}-subtle 
+                         text-{{ 'success' if r.activo else 'danger' }} 
+                         border border-{{ 'success' if r.activo else 'danger' }}">
+            {{ 'Activo' if r.activo else 'Inactivo' }}
+        </span>
+    </td>
+    <td class="text-center">
+        <div class="btn-group btn-group-sm">
+            <button class="btn btn-outline-info" title="Ver"
+                onclick="Modal('Visualizar', {{ r.id }}, '{{ url_for('usuario.modal') }}')">
+                <i class="fa fa-eye"></i>
+            </button>
+            <button class="btn btn-outline-warning" title="Editar"
+                onclick="Modal('Editar', {{ r.id }}, '{{ url_for('usuario.modal') }}')">
+                <i class="fa fa-edit"></i>
+            </button>
+            <button class="btn btn-outline-danger" title="Desactivar"
+                onclick="eliminarUsuario({{ r.id }}, '{{ r.nombre }}')">
+                <i class="fa fa-ban"></i>
+            </button>
+        </div>
+    </td>
+</tr>
+{% else %}
+<tr><td colspan="6" class="text-center text-muted py-4">No hay usuarios registrados.</td></tr>
+{% endfor %}

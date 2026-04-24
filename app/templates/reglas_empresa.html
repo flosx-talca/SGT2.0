@@ -1,0 +1,86 @@
+{% extends "_partial.html" if is_htmx else "layout.html" %}
+
+{% block title %}Reglas Empresa{% endblock %}
+{% block header %}Asignación de Reglas a Empresas{% endblock %}
+{% block page_title %}Reglas Empresa{% endblock %}
+
+{% block actions %}
+<button class="btn btn-primary shadow-sm" onclick="Modal('Agregar', 0, '{{ url_for('regla_empresa.modal') }}')">
+    <i class="fa fa-plus me-1"></i> Asignar Regla a Empresa
+</button>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="card shadow-sm border-0">
+            <div class="card-header bg-white py-3 border-bottom">
+                <h5 class="mb-0 fw-bold text-dark"><i class="fa fa-briefcase me-2 text-primary"></i>Listado de Asignaciones</h5>
+            </div>
+            <div class="card-body">
+                <table id="tabla_regla_empresa" class="table table-hover align-middle w-100">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Empresa</th>
+                            <th>Regla</th>
+                            <th>Tipo</th>
+                            <th>Estado</th>
+                            <th class="text-center">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tbody-regla-empresa">
+                        {% include 'partials/regla_empresa_rows.html' %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+var dtReglaEmpresa;
+
+$(document).ready(function() {
+    dtReglaEmpresa = $('#tabla_regla_empresa').DataTable({
+        responsive: true,
+        language: { url: '/static/i18n/es-ES.json' }
+    });
+});
+
+function refreshTablaReglaEmpresa() {
+    htmx.ajax('GET', "{{ url_for('regla_empresa.tabla') }}", {
+        target: '#tbody-regla-empresa',
+        swap: 'innerHTML'
+    }).then(() => {
+        dtReglaEmpresa.destroy();
+        dtReglaEmpresa = $('#tabla_regla_empresa').DataTable({
+            responsive: true,
+            language: { url: '/static/i18n/es-ES.json' }
+        });
+    });
+}
+
+function eliminarReglaEmpresa(id, nombre) {
+    Swal.fire({
+        title: '¿Desactivar Asignación?',
+        text: `La asignación "${nombre}" quedará inactiva.`,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonText: 'Sí, desactivar',
+        cancelButtonText: 'Cancelar',
+        confirmButtonColor: '#e74c3c'
+    }).then(result => {
+        if (!result.isConfirmed) return;
+        $('#fondo').fadeIn();
+        $.post("{{ url_for('regla_empresa.eliminar') }}", { id })
+            .done(res => {
+                if (res.ok) { toastr.success(res.msg); refreshTablaReglaEmpresa(); }
+                else toastr.error(res.msg);
+            })
+            .always(() => $('#fondo').fadeOut());
+    });
+}
+</script>
+{% endblock %}

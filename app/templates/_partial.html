@@ -1,0 +1,32 @@
+{# _partial.html
+   Layout mínimo para peticiones HTMX: solo devuelve el #body-content.
+   El servidor no renderiza sidebar ni navbar, ahorrando tiempo y ancho de banda.
+   Los scripts de página van dentro del div para que HTMX los ejecute al hacer swap.
+#}
+<div id="body-content">
+    <header class="d-flex justify-content-between align-items-center mb-3">
+        <div>
+            <h2 class="fw-bold mb-1">{% block header %}{% endblock %}</h2>
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb mb-0">
+                    <li class="breadcrumb-item">
+                        <a href="{{ url_for('main.index') }}" class="text-decoration-none">Inicio</a>
+                    </li>
+                    <li class="breadcrumb-item active" aria-current="page">
+                        {% block page_title %}{% endblock %}
+                    </li>
+                </ol>
+            </nav>
+        </div>
+        <div class="d-flex gap-2">
+            <button class="btn btn-outline-secondary btn-sm shadow-sm">
+                <i class="fa fa-bell"></i>
+            </button>
+            {% block actions %}{% endblock %}
+        </div>
+    </header>
+
+    {% block content %}{% endblock %}
+
+    {% block scripts %}{% endblock %}
+</div>

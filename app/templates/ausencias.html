@@ -1,0 +1,243 @@
+{% extends "_partial.html" if is_htmx else "layout.html" %}
+
+{% block title %}Gestión de Ausencias{% endblock %}
+{% block header %}Planificación Operativa{% endblock %}
+{% block page_title %}Ausencias y Permisos{% endblock %}
+
+{% block actions %}
+<button class="btn btn-primary shadow-sm" onclick="abrirModalAusencia()">
+    <i class="fa fa-calendar-plus me-1"></i> Nueva Ausencia
+</button>
+{% endblock %}
+
+{% block content %}
+<!-- SEMÁFORO DE CAPACIDAD -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card shadow-sm border-0 {% if capacidad.estado == 'critico' %}border-start border-danger border-4{% elif capacidad.estado == 'atencion' %}border-start border-warning border-4{% else %}border-start border-success border-4{% endif %}">
+            <div class="card-body py-3">
+                <div class="d-flex align-items-center">
+                    <div class="me-3">
+                        {% if capacidad.estado == 'critico' %}
+                            <i class="fa fa-exclamation-triangle text-danger fa-2x"></i>
+                        {% elif capacidad.estado == 'atencion' %}
+                            <i class="fa fa-exclamation-circle text-warning fa-2x"></i>
+                        {% else %}
+                            <i class="fa fa-check-circle text-success fa-2x"></i>
+                        {% endif %}
+                    </div>
+                    <div>
+                        <h6 class="mb-1 fw-bold">Capacidad de Personal: {{ mes_act }}/{{ anio_act }}</h6>
+                        <p class="mb-0 small text-muted">{{ capacidad.mensaje }}</p>
+                    </div>
+                    {% if capacidad.dias_con_problema %}
+                    <button class="btn btn-sm btn-outline-secondary ms-auto" type="button" data-bs-toggle="collapse" data-bs-target="#collapseDetalleCapacidad">
+                        Ver Detalle <i class="fa fa-chevron-down ms-1"></i>
+                    </button>
+                    {% endif %}
+                </div>
+                
+                {% if capacidad.dias_con_problema %}
+                <div class="collapse mt-3" id="collapseDetalleCapacidad">
+                    <div class="table-responsive">
+                        <table class="table table-sm table-bordered mb-0 small">
+                            <thead class="table-light text-muted">
+                                <tr>
+                                    <th>Día</th>
+                                    <th>Turno</th>
+                                    <th class="text-center">Requerido</th>
+                                    <th class="text-center">Disponible</th>
+                                    <th class="text-center">Déficit</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for p in capacidad.dias_con_problema %}
+                                <tr>
+                                    <td class="fw-bold">{{ p.dia_semana }} {{ p.fecha }}</td>
+                                    <td><span class="badge bg-secondary">{{ p.turno }}</span></td>
+                                    <td class="text-center">{{ p.requerido }}</td>
+                                    <td class="text-center">{{ p.disponible }}</td>
+                                    <td class="text-center fw-bold text-danger">{{ p.deficit }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="alert alert-light border mt-2 small mb-0 py-1">
+                        <i class="fa fa-info-circle text-primary me-1"></i>
+                        El déficit considera ausencias confirmadas y dotación requerida por contrato.
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- LISTADO DE AUSENCIAS -->
+<div class="row">
+    <div class="col-12">
+        <div class="card shadow-sm border-0">
+            <div class="card-header bg-white py-3 border-bottom d-flex align-items-center">
+                <h5 class="mb-0 fw-bold text-dark"><i class="fa fa-calendar-times me-2 text-primary"></i>Registro de Ausencias</h5>
+                
+                <div class="ms-auto d-flex gap-2">
+                    <select id="filtro_mes" class="form-select form-select-sm" style="width: 140px;" onchange="filtrar()">
+                        {% for i in range(1, 13) %}
+                        <option value="{{ i }}" {{ 'selected' if i == mes_act }}>
+                            {{ i }} - {{ ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'][i-1] }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                    <select id="filtro_anio" class="form-select form-select-sm" style="width: 100px;" onchange="filtrar()">
+                        {% for a in range(2025, 2028) %}
+                        <option value="{{ a }}" {{ 'selected' if a == anio_act }}>{{ a }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+            <div class="card-body">
+                <table id="tabla_ausencias" class="table table-hover align-middle w-100">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Trabajador</th>
+                            <th>Tipo / Motivo</th>
+                            <th>Desde</th>
+                            <th>Hasta</th>
+                            <th class="text-center">Duración</th>
+                            <th class="text-center">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tbody-ausencias">
+                        {% for a in ausencias %}
+                        <tr>
+                            <td>
+                                <div class="fw-bold text-primary">{{ a.trabajador.nombre }} {{ a.trabajador.apellido1 }}</div>
+                                <div class="small text-muted">{{ a.trabajador.rut }}</div>
+                            </td>
+                            <td>
+                                <span class="badge" style="background-color: {{ a.tipo_ausencia.color if a.tipo_ausencia else '#6c757d' }}">
+                                    {{ a.tipo_ausencia.nombre if a.tipo_ausencia else 'Ausencia' }}
+                                </span>
+                                <div class="small text-muted text-truncate" style="max-width: 200px;">{{ a.motivo or '-' }}</div>
+                            </td>
+                            <td class="text-nowrap">{{ a.fecha_inicio.strftime('%d/%m/%Y') }}</td>
+                            <td class="text-nowrap">{{ a.fecha_fin.strftime('%d/%m/%Y') }}</td>
+                            <td class="text-center">
+                                <span class="badge bg-light text-dark border">
+                                    {{ (a.fecha_fin - a.fecha_inicio).days + 1 }} días
+                                </span>
+                            </td>
+                            <td class="text-center">
+                                <div class="d-flex justify-content-center gap-1">
+                                    <button class="btn btn-sm btn-outline-primary shadow-sm" onclick="editarAusencia({{ a.id }})">
+                                        <i class="fa fa-edit"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-outline-danger shadow-sm" onclick="eliminarAusencia({{ a.id }}, '{{ a.trabajador.nombre }} {{ a.trabajador.apellido1 }}')">
+                                        <i class="fa fa-trash"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal contenedor para Nueva Ausencia -->
+<div class="modal fade" id="modalGeneral" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-md">
+        <div class="modal-content border-0 shadow" id="modal-body-content">
+            <!-- Cargado vía JS -->
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+var dtAusencias;
+
+function initDataTable() {
+    dtAusencias = $('#tabla_ausencias').DataTable({
+        responsive: true,
+        order: [[2, 'desc']],
+        language: { url: '/static/i18n/es-ES.json' },
+        columnDefs: [ { targets: [5], orderable: false, searchable: false } ]
+    });
+}
+
+$(document).ready(function() {
+    initDataTable();
+});
+
+function filtrar() {
+    const mes = $('#filtro_mes').val();
+    const anio = $('#filtro_anio').val();
+    window.location.href = `{{ url_for('ausencia.index') }}?mes=${mes}&anio=${anio}`;
+}
+
+function abrirModalAusencia() {
+    $('#fondo').addClass('visible');
+    $.get("{{ url_for('ausencia.modal_nueva') }}", function(html) {
+        $('#modal-body-content').html(html);
+        $('#modalGeneral').modal('show');
+    }).fail(function(){
+        toastr.error('Error al cargar el modal.');
+    }).always(function() {
+        $('#fondo').removeClass('visible');
+    });
+}
+
+function editarAusencia(id) {
+    $('#fondo').addClass('visible');
+    $.get(`/ausencias/modal/${id}`, function(html) {
+        $('#modal-body-content').html(html);
+        $('#modalGeneral').modal('show');
+    }).fail(function(){
+        toastr.error('Error al cargar el modal de edición.');
+    }).always(function() {
+        $('#fondo').removeClass('visible');
+    });
+}
+
+function CerrarModal() {
+    $('#modalGeneral').modal('hide');
+}
+
+function eliminarAusencia(id, nombre) {
+    Swal.fire({
+        title: '¿Eliminar Ausencia?',
+        text: `Se eliminará el registro de "${nombre}". Esto afectará inmediatamente la capacidad calculada.`,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonText: 'Sí, eliminar',
+        cancelButtonText: 'Cancelar',
+        confirmButtonColor: '#e74c3c'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            $('#fondo').addClass('visible');
+            $.post(`/ausencias/eliminar/${id}`)
+                .done(function(res) {
+                    if (res.ok) {
+                        toastr.success(res.msg);
+                        location.reload();
+                    } else {
+                        toastr.error(res.msg);
+                    }
+                })
+                .fail(function(){
+                    toastr.error('Error de comunicación.');
+                })
+                .always(function() {
+                    $('#fondo').removeClass('visible');
+                });
+        }
+    });
+}
+</script>
+{% endblock %}

@@ -1,75 +1,104 @@
 <div class="modal-header bg-primary text-white">
-    <h5 class="modal-title fw-bold">Usuario</h5>
-    <button type="button" class="btn-close btn-close-white" onclick="CerrarModal()" aria-label="Close"></button>
+    <h5 class="modal-title fw-bold">
+        {% if modo == 'Agregar' %}Nueva Cuenta de Usuario
+        {% elif modo == 'Editar' %}Editar Usuario
+        {% else %}Detalle de Usuario
+        {% endif %}
+    </h5>
+    <button type="button" class="btn-close btn-close-white" onclick="CerrarModal()"></button>
 </div>
 
 <div class="modal-body p-4">
     <form id="form_usuario">
+        <input type="hidden" id="id_usuario" value="{{ registro.id if registro else 0 }}">
+        
         <div class="row g-3">
-            <div class="col-md-6">
+            <div class="col-md-4">
                 <label class="form-label small fw-bold text-muted"><code>(*)</code> RUT</label>
-                <div class="input-group">
+                <div class="input-group shadow-sm">
                     <span class="input-group-text bg-light border-end-0"><i class="fa fa-id-card text-muted"></i></span>
-                    <input type="text" class="form-control border-start-0" id="rut_usuario" placeholder="12.345.678-9" required>
+                    <input type="text" class="form-control border-start-0 {% if modo == 'Visualizar' %}bg-light{% endif %}" 
+                           id="rut_usuario" value="{{ registro.rut if registro else '' }}"
+                           {% if modo == 'Visualizar' %}readonly{% endif %} placeholder="12.345.678-9">
                 </div>
             </div>
-            <div class="col-md-6">
-                <label class="form-label small fw-bold text-muted"><code>(*)</code> Correo Electrónico</label>
-                <div class="input-group">
-                    <span class="input-group-text bg-light border-end-0"><i class="fa fa-envelope text-muted"></i></span>
-                    <input type="email" class="form-control border-start-0" id="email_usuario" placeholder="ejemplo@correo.com" required>
-                </div>
+
+            <div class="col-md-4">
+                <label class="form-label small fw-bold text-muted"><code>(*)</code> Nombre</label>
+                <input type="text" class="form-control shadow-sm {% if modo == 'Visualizar' %}bg-light{% endif %}" 
+                       id="nombre_usuario" value="{{ registro.nombre if registro else '' }}"
+                       {% if modo == 'Visualizar' %}readonly{% endif %}>
             </div>
+
+            <div class="col-md-4">
+                <label class="form-label small fw-bold text-muted"><code>(*)</code> Apellidos</label>
+                <input type="text" class="form-control shadow-sm {% if modo == 'Visualizar' %}bg-light{% endif %}" 
+                       id="apellidos_usuario" value="{{ registro.apellidos if registro else '' }}"
+                       {% if modo == 'Visualizar' %}readonly{% endif %}>
+            </div>
+
             <div class="col-md-12">
-                <label class="form-label small fw-bold text-muted"><code>(*)</code> Nombres</label>
-                <input type="text" class="form-control" id="nombre" placeholder="Nombres" required>
-            </div>
-            <div class="col-md-6">
-                <label class="form-label small fw-bold text-muted"><code>(*)</code> Primer Apellido</label>
-                <input type="text" class="form-control" id="apellido1" placeholder="Apellido Paterno" required>
-            </div>
-            <div class="col-md-6">
-                <label class="form-label small fw-bold text-muted">Segundo Apellido</label>
-                <input type="text" class="form-control" id="apellido2" placeholder="Apellido Materno">
-            </div>
-            <div class="col-md-6">
-                <label class="form-label small fw-bold text-muted">Rol</label>
-                <select class="form-select" id="rol">
-                    <option value="Cliente">Cliente</option>
-                    <option value="Administrador">Administrador</option>
-                    <option value="Super Admin">Super Admin</option>
-                </select>
-            </div>
-            <div class="col-md-6">
-                <label class="form-label small fw-bold text-muted">Estado</label>
-                <select class="form-select" id="estado">
-                    <option value="1">Activo</option>
-                    <option value="0">Inactivo</option>
-                </select>
-            </div>
-            <div class="col-md-6">
-                <label class="form-label small fw-bold text-muted"><code>(*)</code> Contraseña</label>
-                <div class="input-group">
-                    <span class="input-group-text bg-light border-end-0"><i class="fa fa-lock text-muted"></i></span>
-                    <input type="password" class="form-control border-start-0" id="password" placeholder="••••••••" required>
+                <label class="form-label small fw-bold text-muted"><code>(*)</code> Email</label>
+                <div class="input-group shadow-sm">
+                    <span class="input-group-text bg-light border-end-0"><i class="fa fa-envelope text-muted"></i></span>
+                    <input type="email" class="form-control border-start-0 {% if modo == 'Visualizar' %}bg-light{% endif %}" 
+                           id="email_usuario" value="{{ registro.email if registro else '' }}"
+                           {% if modo == 'Visualizar' %}readonly{% endif %} placeholder="ejemplo@correo.com">
                 </div>
             </div>
+
             <div class="col-md-6">
-                <label class="form-label small fw-bold text-muted"><code>(*)</code> Confirmar Contraseña</label>
-                <div class="input-group">
-                    <span class="input-group-text bg-light border-end-0"><i class="fa fa-lock text-muted"></i></span>
-                    <input type="password" class="form-control border-start-0" id="password_confirm" placeholder="••••••••" required>
+                <label class="form-label small fw-bold text-muted"><code>(*)</code> Rol del Sistema</label>
+                <select id="rol_id_usuario" class="form-select shadow-sm {% if modo == 'Visualizar' %}bg-light{% endif %}"
+                        {% if modo == 'Visualizar' %}disabled{% endif %}>
+                    <option value="">-- Seleccione Rol --</option>
+                    {% for r in roles %}
+                    <option value="{{ r.id }}" {% if registro and registro.rol_id == r.id %}selected{% endif %}>
+                        {{ r.descripcion }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="col-md-6">
+                <label class="form-label small fw-bold text-muted">Asociar a Cliente (Opcional)</label>
+                <select id="cliente_id_usuario" class="form-select shadow-sm {% if modo == 'Visualizar' %}bg-light{% endif %}"
+                        {% if modo == 'Visualizar' %}disabled{% endif %}>
+                    <option value="">-- Ninguno (Administrador SGT) --</option>
+                    {% for c in clientes %}
+                    <option value="{{ c.id }}" {% if registro and registro.cliente_id == c.id %}selected{% endif %}>
+                        {{ c.nombre }} {{ c.apellidos }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="col-md-12 mt-3">
+                <div class="alert alert-info py-2 px-3 border-0 shadow-sm" style="font-size: 0.8rem;">
+                    <i class="fa fa-info-circle me-2"></i>
+                    {% if modo == 'Editar' %}
+                    Deje la contraseña en blanco si no desea cambiarla.
+                    {% else %}
+                    La contraseña es obligatoria para nuevos usuarios.
+                    {% endif %}
+                </div>
+                <label class="form-label small fw-bold text-muted">
+                    {% if modo == 'Agregar' %}<code>(*)</code>{% endif %} Contraseña
+                </label>
+                <div class="input-group shadow-sm">
+                    <span class="input-group-text bg-light border-end-0"><i class="fa fa-key text-muted"></i></span>
+                    <input type="password" class="form-control border-start-0 {% if modo == 'Visualizar' %}bg-light{% endif %}" 
+                           id="password_usuario" {% if modo == 'Visualizar' %}readonly{% endif %}>
                 </div>
             </div>
-            <div class="col-12">
-                <label class="form-label small fw-bold text-muted"><code>(*)</code> Empresas Asociadas (Multiselección)</label>
-                <select class="form-select select2-modal" multiple="multiple" style="width: 100%;">
-                    <option value="1">Copec S.A.</option>
-                    <option value="2">Abastible</option>
-                    <option value="3">Retail Express Ltda.</option>
-                    <option value="4">Distribuidora Norte</option>
-                    <option value="5">Inversiones ABC</option>
-                </select>
+
+            <div class="col-md-12 mt-3">
+                <div class="form-check form-switch p-0 ps-5 bg-light rounded py-2 border border-light shadow-sm">
+                    <input class="form-check-input" type="checkbox" id="activo_usuario" 
+                           {% if registro is none or registro.activo %}checked{% endif %}
+                           {% if modo == 'Visualizar' %}disabled{% endif %}>
+                    <label class="form-check-label fw-bold text-muted ms-2" for="activo_usuario">Usuario Habilitado</label>
+                </div>
             </div>
         </div>
     </form>
@@ -77,7 +106,66 @@
 
 <div class="modal-footer bg-light border-top-0">
     <button type="button" class="btn btn-secondary" onclick="CerrarModal()">Cancelar</button>
-    <button type="button" class="btn btn-primary px-4" onclick="guardarUsuario()">
-        <i class="fa fa-save me-1"></i> Guardar Usuario
+    {% if modo != 'Visualizar' %}
+    <button type="button" id="btnGuardarUsuario" class="btn btn-primary px-4 shadow-sm" onclick="guardarUsuario()">
+        <i class="fa fa-save me-1"></i> Guardar Cambios
     </button>
+    {% endif %}
 </div>
+
+<script>
+function guardarUsuario() {
+    const id = $('#id_usuario').val();
+    const rut = $('#rut_usuario').val().trim();
+    const nombre = $('#nombre_usuario').val().trim();
+    const apellidos = $('#apellidos_usuario').val().trim();
+    const email = $('#email_usuario').val().trim();
+    const password = $('#password_usuario').val();
+    const rol_id = $('#rol_id_usuario').val();
+    const cliente_id = $('#cliente_id_usuario').val();
+    const activo = $('#activo_usuario').is(':checked');
+
+    if (!rut || !nombre || !email || !rol_id) {
+        toastr.warning('Faltan campos obligatorios (*).');
+        return;
+    }
+
+    if (id == '0' && !password) {
+        toastr.warning('La contraseña es obligatoria para nuevos usuarios.');
+        return;
+    }
+
+    const $btn = $('#btnGuardarUsuario');
+    $btn.prop('disabled', true).html('<i class="fa fa-spinner fa-spin me-1"></i> Procesando...');
+    $('#fondo').addClass('visible');
+
+    $.post("{{ url_for('usuario.guardar') }}", {
+        id: id,
+        rut: rut,
+        nombre: nombre,
+        apellidos: apellidos,
+        email: email,
+        password: password,
+        rol_id: rol_id,
+        cliente_id: cliente_id,
+        activo: activo ? 'true' : 'false'
+    })
+    .done(function(res) {
+        if (res.ok) {
+            toastr.success(res.msg);
+            CerrarModal();
+            if (typeof refreshTablaUsuarios === 'function') refreshTablaUsuarios();
+        } else {
+            toastr.error(res.msg);
+            $btn.prop('disabled', false).html('<i class="fa fa-save me-1"></i> Guardar Cambios');
+        }
+    })
+    .fail(function() {
+        toastr.error('Error de comunicación con el servidor.');
+        $btn.prop('disabled', false).html('<i class="fa fa-save me-1"></i> Guardar Cambios');
+    })
+    .always(function() {
+        $('#fondo').removeClass('visible');
+    });
+}
+</script>

@@ -1,1 +1,5 @@
 Flask==3.0.0
+Flask-SQLAlchemy
+psycopg2-binary
+python-dotenv
+ortools>=9.8

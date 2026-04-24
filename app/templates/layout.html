@@ -33,38 +33,66 @@
     </script>
     
     <style>
+        /* ── Overlay #fondo: spinner completo para operaciones lentas (modales AJAX) ── */
         #fondo {
             position: fixed;
             top: 0; left: 0;
             width: 100vw; height: 100vh;
-            background: rgba(255, 255, 255, 0.7);
-            z-index: 99999; /* Por encima de TODO */
-            display: none;
+            background: rgba(255, 255, 255, 0.75);
+            z-index: 100000;
+            opacity: 0;
+            pointer-events: none;
+            /* Al ocultar: desaparecer rápido y sin delay */
+            transition: opacity 0.15s ease 0ms;
         }
-
+        #fondo.visible {
+            opacity: 1;
+            pointer-events: all;
+            /* Al mostrar: esperar 400ms antes de empezar a aparecer */
+            transition: opacity 0.2s ease 400ms;
+        }
         .spinner-wrapper {
             position: absolute;
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
-            display: flex;
-            justify-content: center;
-            align-items: center;
         }
 
-        #fondo.htmx-request, .htmx-request #fondo {
-            display: block !important;
-        }
-        
-        /* Ocultar el contenido viejo INMEDIATAMENTE al empezar la carga */
-        .htmx-request#body-content {
+        /* ── Barra de progreso en el tope para navegación HTMX ── */
+        #nav-progress {
+            position: fixed;
+            top: 0; left: 0;
+            height: 3px;
+            width: 0%;
+            background: linear-gradient(90deg, #3498db, #2ecc71);
+            z-index: 99999;
+            transition: width 0.3s ease, opacity 0.4s ease;
             opacity: 0;
         }
+        #nav-progress.active {
+            opacity: 1;
+            animation: nav-grow 1.5s ease forwards;
+        }
+        @keyframes nav-grow {
+            0%   { width: 0%; }
+            50%  { width: 70%; }
+            90%  { width: 90%; }
+            100% { width: 95%; }
+        }
+        #nav-progress.done {
+            width: 100% !important;
+            opacity: 0;
+            transition: width 0.1s ease, opacity 0.3s ease 0.1s;
+        }
 
-        /* Suavizar el swap */
+        /* Suavizar el swap del contenido al navegar con HTMX */
         .htmx-swapping #body-content {
             opacity: 0;
             transition: opacity 0.1s ease-out;
+        }
+        .htmx-settling #body-content {
+            opacity: 1;
+            transition: opacity 0.15s ease-in;
         }
     </style>
     
@@ -73,7 +101,12 @@
     
     {% block head %}{% endblock %}
 </head>
-<body hx-indicator="#fondo">
+{# Sin hx-indicator en body: la navegación HTMX no activa el overlay automáticamente #}
+<body>
+    <!-- Barra de progreso para navegación HTMX (no bloquea el UI) -->
+    <div id="nav-progress"></div>
+
+    <!-- Overlay completo: solo para operaciones lentas como carga de modales -->
     <div id="fondo">
         <div class="spinner-wrapper">
             <div class="spinner-border text-primary" style="width: 3rem; height: 3rem;" role="status"></div>
@@ -83,7 +116,7 @@
     <!-- Mobile Top Navbar -->
     <nav class="navbar navbar-expand-lg navbar-dark bg-primary d-lg-none sticky-top shadow-sm">
         <div class="container-fluid">
-            <a class="navbar-brand fw-bold" href="{{ url_for('index') }}">SGT 2.1</a>
+            <a class="navbar-brand fw-bold" href="{{ url_for('main.index') }}">SGT 2.1</a>
             <button class="navbar-toggler" type="button" data-bs-toggle="offcanvas" data-bs-target="#mobileSidebar">
                 <span class="navbar-toggler-icon"></span>
             </button>
@@ -103,97 +136,107 @@
             <div class="sidebar-content flex-grow-1">
                 <nav class="nav flex-column sidebar-nav">
                     <a class="nav-link {{ 'active' if request.endpoint == 'index' else '' }}" 
-                       href="{{ url_for('index') }}" 
-                       hx-get="{{ url_for('index') }}" hx-target="#body-content" hx-push-url="true" hx-select="#body-content" hx-swap="outerHTML">
+                       href="{{ url_for('main.index') }}" 
+                       hx-get="{{ url_for('main.index') }}" hx-target="#body-content" hx-push-url="true" hx-select="#body-content" hx-swap="outerHTML">
                         <i class="fa fa-th-large"></i> Dashboard
                     </a>
-                    <a class="nav-link {{ 'active' if request.endpoint == 'trabajadores' else '' }}" 
-                       href="{{ url_for('trabajadores') }}"
-                       hx-get="{{ url_for('trabajadores') }}" hx-target="#body-content" hx-push-url="true" hx-select="#body-content" hx-swap="outerHTML">
+                    <a class="nav-link {{ 'active' if request.endpoint == 'trabajador.index' else '' }}" 
+                       href="{{ url_for('trabajador.index') }}"
+                       hx-get="{{ url_for('trabajador.index') }}" hx-target="#body-content" hx-push-url="true" hx-select="#body-content" hx-swap="outerHTML">
                         <i class="fa fa-users"></i> Trabajadores
                     </a>
-                    <a class="nav-link {{ 'active' if request.endpoint == 'turnos' else '' }}" 
-                       href="{{ url_for('turnos') }}"
-                       hx-get="{{ url_for('turnos') }}" hx-target="#body-content" hx-push-url="true" hx-select="#body-content" hx-swap="outerHTML">
+                    <a class="nav-link {{ 'active' if request.endpoint == 'turno.index' else '' }}" 
+                       href="{{ url_for('turno.index') }}"
+                       hx-get="{{ url_for('turno.index') }}" hx-target="#body-content" hx-push-url="true" hx-select="#body-content" hx-swap="outerHTML">
                         <i class="fa fa-clock"></i> Turnos
                     </a>
+                    <a class="nav-link {{ 'active' if request.endpoint == 'ausencia.index' else '' }}" 
+                       href="{{ url_for('ausencia.index') }}"
+                       hx-get="{{ url_for('ausencia.index') }}" hx-target="#body-content" hx-push-url="true" hx-select="#body-content" hx-swap="outerHTML">
+                        <i class="fa fa-calendar-times"></i> Ausencias
+                    </a>
+                    <a class="nav-link {{ 'active' if request.endpoint == 'tipo_ausencia.index' else '' }}" 
+                       href="{{ url_for('tipo_ausencia.index') }}"
+                       hx-get="{{ url_for('tipo_ausencia.index') }}" hx-target="#body-content" hx-push-url="true" hx-select="#body-content" hx-swap="outerHTML">
+                        <i class="fa fa-user-minus"></i> Tipos de Ausencia
+                    </a>
                     <a class="nav-link {{ 'active' if request.endpoint == 'planificacion' else '' }}" 
-                       href="{{ url_for('planificacion') }}"
-                       hx-get="{{ url_for('planificacion') }}" hx-target="#body-content" hx-push-url="true" hx-select="#body-content" hx-swap="outerHTML">
+                       href="{{ url_for('main.planificacion') }}"
+                       hx-get="{{ url_for('main.planificacion') }}" hx-target="#body-content" hx-push-url="true" hx-select="#body-content" hx-swap="outerHTML">
                         <i class="fa fa-calendar-alt"></i> Planificación
                     </a>
 
                     <div class="sidebar-heading text-muted small fw-bold px-4 py-2 mt-2 text-uppercase" style="font-size: 0.65rem; letter-spacing: 1px;">Administración Local</div>
-                    <a class="nav-link {{ 'active' if request.endpoint == 'clientes' else '' }}" 
-                       href="{{ url_for('clientes') }}"
-                       hx-get="{{ url_for('clientes') }}" hx-target="#body-content" hx-push-url="true" hx-select="#body-content" hx-swap="outerHTML">
+                    <a class="nav-link {{ 'active' if request.endpoint == 'cliente.index' else '' }}" 
+                       href="{{ url_for('cliente.index') }}"
+                       hx-get="{{ url_for('cliente.index') }}" hx-target="#body-content" hx-push-url="true" hx-select="#body-content" hx-swap="outerHTML">
                         <i class="fa fa-handshake"></i> Clientes
                     </a>
-                    <a class="nav-link {{ 'active' if request.endpoint == 'usuarios' else '' }}" 
-                       href="{{ url_for('usuarios') }}"
-                       hx-get="{{ url_for('usuarios') }}" hx-target="#body-content" hx-push-url="true" hx-select="#body-content" hx-swap="outerHTML">
+                    <a class="nav-link {{ 'active' if request.endpoint == 'usuario.index' else '' }}" 
+                       href="{{ url_for('usuario.index') }}"
+                       hx-get="{{ url_for('usuario.index') }}" hx-target="#body-content" hx-push-url="true" hx-select="#body-content" hx-swap="outerHTML">
                         <i class="fa fa-users-cog"></i> Usuarios
                     </a>
-                    <a class="nav-link {{ 'active' if request.endpoint == 'empresas' else '' }}" 
-                       href="{{ url_for('empresas') }}"
-                       hx-get="{{ url_for('empresas') }}" hx-target="#body-content" hx-push-url="true" hx-select="#body-content" hx-swap="outerHTML">
+                    <a class="nav-link {{ 'active' if request.endpoint == 'empresa.index' else '' }}" 
+                       href="{{ url_for('empresa.index') }}"
+                       hx-get="{{ url_for('empresa.index') }}" hx-target="#body-content" hx-push-url="true" hx-select="#body-content" hx-swap="outerHTML">
                         <i class="fa fa-building"></i> Empresas
                     </a>
-                    <a class="nav-link {{ 'active' if request.endpoint == 'servicios' else '' }}" 
-                       href="{{ url_for('servicios') }}"
-                       hx-get="{{ url_for('servicios') }}" hx-target="#body-content" hx-push-url="true" hx-select="#body-content" hx-swap="outerHTML">
+                    <a class="nav-link {{ 'active' if request.endpoint == 'servicio.index' else '' }}" 
+                       href="{{ url_for('servicio.index') }}"
+                       hx-get="{{ url_for('servicio.index') }}" hx-target="#body-content" hx-push-url="true" hx-select="#body-content" hx-swap="outerHTML">
                         <i class="fa fa-concierge-bell"></i> Servicios
                     </a>
-                    <a class="nav-link {{ 'active' if request.endpoint == 'regiones' else '' }}" 
-                       href="{{ url_for('regiones') }}"
-                       hx-get="{{ url_for('regiones') }}" hx-target="#body-content" hx-push-url="true" hx-select="#body-content" hx-swap="outerHTML">
+                    <a class="nav-link {{ 'active' if request.endpoint == 'region.index' else '' }}" 
+                       href="{{ url_for('region.index') }}"
+                       hx-get="{{ url_for('region.index') }}" hx-target="#body-content" hx-push-url="true" hx-select="#body-content" hx-swap="outerHTML">
                         <i class="fa fa-map-marked-alt"></i> Regiones
                     </a>
-                    <a class="nav-link {{ 'active' if request.endpoint == 'comunas' else '' }}" 
-                       href="{{ url_for('comunas') }}"
-                       hx-get="{{ url_for('comunas') }}" hx-target="#body-content" hx-push-url="true" hx-select="#body-content" hx-swap="outerHTML">
+                    <a class="nav-link {{ 'active' if request.endpoint == 'comuna.index' else '' }}" 
+                       href="{{ url_for('comuna.index') }}"
+                       hx-get="{{ url_for('comuna.index') }}" hx-target="#body-content" hx-push-url="true" hx-select="#body-content" hx-swap="outerHTML">
                         <i class="fa fa-map-pin"></i> Comunas
                     </a>
-                    <a class="nav-link {{ 'active' if request.endpoint == 'feriados' else '' }}" 
-                       href="{{ url_for('feriados') }}"
-                       hx-get="{{ url_for('feriados') }}" hx-target="#body-content" hx-push-url="true" hx-select="#body-content" hx-swap="outerHTML">
+                    <a class="nav-link {{ 'active' if request.endpoint == 'feriado.index' else '' }}" 
+                       href="{{ url_for('feriado.index') }}"
+                       hx-get="{{ url_for('feriado.index') }}" hx-target="#body-content" hx-push-url="true" hx-select="#body-content" hx-swap="outerHTML">
                         <i class="fa fa-umbrella-beach"></i> Feriados
                     </a>
-                    <a class="nav-link {{ 'active' if request.endpoint == 'roles' else '' }}" 
-                       href="{{ url_for('roles') }}"
-                       hx-get="{{ url_for('roles') }}" hx-target="#body-content" hx-push-url="true" hx-select="#body-content" hx-swap="outerHTML">
+                    <a class="nav-link {{ 'active' if request.endpoint == 'rol.index' else '' }}" 
+                       href="{{ url_for('rol.index') }}"
+                       hx-get="{{ url_for('rol.index') }}" hx-target="#body-content" hx-push-url="true" hx-select="#body-content" hx-swap="outerHTML">
                         <i class="fa fa-id-badge"></i> Roles
                     </a>
-                    <a class="nav-link {{ 'active' if request.endpoint == 'menus' else '' }}" 
-                       href="{{ url_for('menus') }}"
-                       hx-get="{{ url_for('menus') }}" hx-target="#body-content" hx-push-url="true" hx-select="#body-content" hx-swap="outerHTML">
+                    <a class="nav-link {{ 'active' if request.endpoint == 'menu.index' else '' }}" 
+                       href="{{ url_for('menu.index') }}"
+                       hx-get="{{ url_for('menu.index') }}" hx-target="#body-content" hx-push-url="true" hx-select="#body-content" hx-swap="outerHTML">
                         <i class="fa fa-list"></i> Menús
                     </a>
 
                     <div class="sidebar-heading text-muted small fw-bold px-4 py-2 mt-2 text-uppercase" style="font-size: 0.65rem; letter-spacing: 1px;">Soporte y Configuración</div>
                     <a class="nav-link {{ 'active' if request.endpoint == 'simulacion' else '' }}" 
-                       href="{{ url_for('simulacion') }}"
-                       hx-get="{{ url_for('simulacion') }}" hx-target="#body-content" hx-push-url="true" hx-select="#body-content" hx-swap="outerHTML">
+                       href="{{ url_for('main.simulacion') }}"
+                       hx-get="{{ url_for('main.simulacion') }}" hx-target="#body-content" hx-push-url="true" hx-select="#body-content" hx-swap="outerHTML">
                         <i class="fa fa-robot"></i> Simulación
                     </a>
-                    <a class="nav-link {{ 'active' if request.endpoint == 'reglas_empresa' else '' }}" 
-                       href="{{ url_for('reglas_empresa') }}"
-                       hx-get="{{ url_for('reglas_empresa') }}" hx-target="#body-content" hx-push-url="true" hx-select="#body-content" hx-swap="outerHTML">
+                    <a class="nav-link {{ 'active' if request.endpoint == 'regla_empresa.index' else '' }}" 
+                       href="{{ url_for('regla_empresa.index') }}"
+                       hx-get="{{ url_for('regla_empresa.index') }}" hx-target="#body-content" hx-push-url="true" hx-select="#body-content" hx-swap="outerHTML">
                         <i class="fa fa-briefcase"></i> Reglas Empresa
                     </a>
                     <a class="nav-link {{ 'active' if request.endpoint == 'reglas_familias' else '' }}" 
-                       href="{{ url_for('reglas_familias') }}"
-                       hx-get="{{ url_for('reglas_familias') }}" hx-target="#body-content" hx-push-url="true" hx-select="#body-content" hx-swap="outerHTML">
+                       href="{{ url_for('main.reglas_familias') }}"
+                       hx-get="{{ url_for('main.reglas_familias') }}" hx-target="#body-content" hx-push-url="true" hx-select="#body-content" hx-swap="outerHTML">
                         <i class="fa fa-layer-group"></i> Reglas Familia
                     </a>
-                    <a class="nav-link {{ 'active' if request.endpoint == 'reglas' else '' }}" 
-                       href="{{ url_for('reglas') }}"
-                       hx-get="{{ url_for('reglas') }}" hx-target="#body-content" hx-push-url="true" hx-select="#body-content" hx-swap="outerHTML">
+                    <a class="nav-link {{ 'active' if request.endpoint == 'regla.index' else '' }}" 
+                       href="{{ url_for('regla.index') }}"
+                       hx-get="{{ url_for('regla.index') }}" hx-target="#body-content" hx-push-url="true" hx-select="#body-content" hx-swap="outerHTML">
                         <i class="fa fa-cogs"></i> Reglas Generales
                     </a>
                     <a class="nav-link {{ 'active' if request.endpoint == 'reglas_config' else '' }}" 
-                       href="{{ url_for('reglas_config') }}"
-                       hx-get="{{ url_for('reglas_config') }}" hx-target="#body-content" hx-push-url="true" hx-select="#body-content" hx-swap="outerHTML">
+                       href="{{ url_for('main.reglas_config') }}"
+                       hx-get="{{ url_for('main.reglas_config') }}" hx-target="#body-content" hx-push-url="true" hx-select="#body-content" hx-swap="outerHTML">
                         <i class="fa fa-sliders-h"></i> Configuración Reglas
                     </a>
                 </nav>
@@ -214,7 +257,7 @@
                     <ul class="dropdown-menu shadow border-0" aria-labelledby="userMenu">
                         <li><a class="dropdown-item small py-2" href="#" onclick="toastr.info('Cargando perfil...')"><i class="fa fa-key me-2 text-warning"></i> Cambiar Clave</a></li>
                         <li><hr class="dropdown-divider"></li>
-                        <li><a class="dropdown-item small py-2 text-danger" href="{{ url_for('login') }}"><i class="fa fa-sign-out-alt me-2"></i> Cerrar Sesión</a></li>
+                        <li><a class="dropdown-item small py-2 text-danger" href="{{ url_for('main.login') }}"><i class="fa fa-sign-out-alt me-2"></i> Cerrar Sesión</a></li>
                     </ul>
                 </div>
 
@@ -264,7 +307,7 @@
                         <h2 class="fw-bold mb-1">{% block header %}{% endblock %}</h2>
                         <nav aria-label="breadcrumb">
                             <ol class="breadcrumb mb-0">
-                                <li class="breadcrumb-item"><a href="{{ url_for('index') }}" class="text-decoration-none">Inicio</a></li>
+                                <li class="breadcrumb-item"><a href="{{ url_for('main.index') }}" class="text-decoration-none">Inicio</a></li>
                                 <li class="breadcrumb-item active" aria-current="page">{% block page_title %}{% endblock %}</li>
                             </ol>
                         </nav>
@@ -303,52 +346,42 @@
     
     <script>
         $(document).ready(function() {
-            // Ocultar spinner al cargar la página
-            setTimeout(() => {
-                $('#fondo').fadeOut(400);
-            }, 50);
-
-            // Limpieza y preparación antes de traer nuevo contenido
+            // ── Barra de progreso en navegación HTMX ────────────────────────
             document.body.addEventListener('htmx:beforeRequest', function(evt) {
-                // 1. Destruir SOLO las DataTables activas (evita inicializar tablas normales por error)
+                // Destruir DataTables para que no choquen con el nuevo contenido
                 if ($.fn.DataTable) {
-                    $('.dataTable, table').each(function() {
-                        if ($.fn.DataTable.isDataTable(this)) {
-                            $(this).DataTable().destroy();
-                        }
+                    $('table').each(function() {
+                        if ($.fn.DataTable.isDataTable(this)) $(this).DataTable().destroy();
                     });
                 }
-                
-                // 2. Mostrar el spinner (HTMX lo hará vía CSS, pero aseguramos con JS)
-                $('#fondo').fadeIn(100);
+                // Activar barra de progreso en la parte superior
+                const bar = document.getElementById('nav-progress');
+                bar.classList.remove('done');
+                bar.classList.add('active');
             });
 
-            // Actualizar clase active en sidebar al navegar con HTMX
             document.body.addEventListener('htmx:afterOnLoad', function(evt) {
+                // Completar barra de progreso
+                const bar = document.getElementById('nav-progress');
+                bar.classList.remove('active');
+                bar.classList.add('done');
+                setTimeout(() => bar.classList.remove('done'), 500);
+
+                // Actualizar active en sidebar
                 $('.sidebar-nav .nav-link').removeClass('active');
                 $(`.sidebar-nav .nav-link[href="${evt.detail.pathInfo.requestPath}"]`).addClass('active');
-                
-                // Reset scroll to top
                 window.scrollTo(0, 0);
-                
-                // Cerrar cualquier modal que haya quedado abierto
                 $('.modal-backdrop').remove();
                 $('body').removeClass('modal-open').css('padding-right', '');
-
-                // OCULTAR EL SPINNER que mostramos en htmx:beforeRequest
-                setTimeout(() => {
-                    $('#fondo').fadeOut(400);
-                }, 100);
             });
 
-            // Fallback para links no-HTMX
+            // Fallback para links no-HTMX (navegación completa)
             $(document).on('click', 'a:not([hx-get])', function(e) {
                 let href = $(this).attr('href');
                 if (href && href !== '#' && !href.startsWith('javascript:') && !$(this).attr('target')) {
                     e.preventDefault();
-                    $('#fondo').fadeIn(150, function() {
-                        window.location.href = href;
-                    });
+                    $('#fondo').addClass('visible');
+                    window.location.href = href;
                 }
             });
 
@@ -381,20 +414,19 @@
 
         function Modal(modo, id, url_base) {
             $('#modal_contenido .modal-content').html('');
-            $('#fondo').fadeIn(150);
+            $('#fondo').addClass('visible');
             $.ajax({
                 url: url_base,
                 type: 'POST',
                 data: { 'modo': modo, 'id': id },
                 success: function(response) {
                     $('#modal_contenido .modal-content').html(response);
+                    // Ocultar el fondo apenas el modal comience a mostrarse para mejorar la velocidad percibida
+                    $('#fondo').removeClass('visible');
                     $('#modal_contenido').modal('show');
-                    setTimeout(() => {
-                        $('#fondo').fadeOut(200);
-                    }, 100);
                 },
                 error: function() {
-                    $('#fondo').fadeOut(150);
+                    $('#fondo').removeClass('visible');
                     toastr.error('Error al cargar el modal');
                 }
             });
@@ -405,9 +437,9 @@
         }
 
         function cambiarSucursal(nombre) {
-            $('#fondo').fadeIn();
+            $('#fondo').addClass('visible');
             setTimeout(() => {
-                $('#fondo').fadeOut();
+                $('#fondo').removeClass('visible');
                 $('#currentBranchName').text(nombre);
                 $('#mobileSidebar #currentBranchName').text(nombre);
                 toastr.success('Sucursal cambiada a: ' + nombre);

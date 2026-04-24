@@ -1,572 +1,366 @@
 <div class="modal-header bg-primary text-white">
-    <h5 class="modal-title fw-bold"> Trabajador</h5>
-    <button type="button" class="btn-close btn-close-white" onclick="CerrarModal()" aria-label="Close"></button>
+    <h5 class="modal-title fw-bold">
+        {% if modo == 'Agregar' %}Nueva Ficha de Trabajador
+        {% elif modo == 'Editar' %}Editar Trabajador
+        {% else %}Detalle de Trabajador
+        {% endif %}
+    </h5>
+    <button type="button" class="btn-close btn-close-white" onclick="CerrarModal()"></button>
 </div>
 
 <div class="modal-body p-4">
     <form id="form_trabajador">
-        <input type="hidden" name="id_trabajador" id="id_trabajador" value="0">
+        <input type="hidden" name="id" id="id_trabajador" value="{{ registro.id if registro else 0 }}">
         
         <div class="row g-3">
-            <div class="col-md-6">
+            <!-- Datos Personales -->
+            <div class="col-md-4">
                 <label class="form-label small fw-bold text-muted"><code>(*)</code> RUT</label>
-                <div class="input-group">
+                <div class="input-group input-group-sm shadow-sm">
                     <span class="input-group-text bg-light border-end-0"><i class="fa fa-id-card text-muted"></i></span>
-                    <input type="text" class="form-control border-start-0" name="rut" id="rut" 
-                           placeholder="12.345.678-9" value="" 
-                            required>
+                    <input type="text" class="form-control border-start-0 {% if modo == 'Visualizar' %}bg-light{% endif %}" 
+                           name="rut" id="rut_trabajador" value="{{ registro.rut if registro else '' }}"
+                           {% if modo == 'Visualizar' %}readonly{% endif %} placeholder="12.345.678-9">
                 </div>
             </div>
-            <div class="col-md-6">
-                <label class="form-label small fw-bold text-muted"><code>(*)</code> Nombre Completo</label>
-                <input type="text" class="form-control" name="nombre" id="nombre" 
-                       placeholder="Ej: Juan Pérez" value="" 
-                        required>
+
+            <div class="col-md-8">
+                <label class="form-label small fw-bold text-muted"><code>(*)</code> Nombres</label>
+                <input type="text" class="form-control form-control-sm shadow-sm {% if modo == 'Visualizar' %}bg-light{% endif %}" 
+                       name="nombre" id="nombre_trabajador" value="{{ registro.nombre if registro else '' }}"
+                       {% if modo == 'Visualizar' %}readonly{% endif %}>
             </div>
-            
+
+            <div class="col-md-6">
+                <label class="form-label small fw-bold text-muted"><code>(*)</code> Apellido Paterno</label>
+                <input type="text" class="form-control form-control-sm shadow-sm {% if modo == 'Visualizar' %}bg-light{% endif %}" 
+                       name="apellido1" id="apellido1_trabajador" value="{{ registro.apellido1 if registro else '' }}"
+                       {% if modo == 'Visualizar' %}readonly{% endif %}>
+            </div>
+
+            <div class="col-md-6">
+                <label class="form-label small fw-bold text-muted">Apellido Materno</label>
+                <input type="text" class="form-control form-control-sm shadow-sm {% if modo == 'Visualizar' %}bg-light{% endif %}" 
+                       name="apellido2" id="apellido2_trabajador" value="{{ registro.apellido2 if registro else '' }}"
+                       {% if modo == 'Visualizar' %}readonly{% endif %}>
+            </div>
+
+            <!-- Datos Laborales -->
             <div class="col-md-6">
                 <label class="form-label small fw-bold text-muted"><code>(*)</code> Empresa</label>
-                <select class="form-select" id="m_empresa" name="empresa"  required>
-                    <option value="1" >Copec S.A.</option>
-                    <option value="2" >Abastible</option>
-                </select>
-            </div>
-            <div class="col-md-6">
-                <label class="form-label small fw-bold text-muted"><code>(*)</code> Sucursal</label>
-                <select class="form-select" id="m_sucursal" name="sucursal"  required>
-                    <option value="1" >Estación Central Copec</option>
-                    <option value="2" >Pronto Vitacura</option>
-                </select>
-            </div>
-            <div class="col-md-6">
-                <label class="form-label small fw-bold text-muted"><code>(*)</code> Tipo de Servicio</label>
-                <select class="form-select" id="m_servicio_trabajador" name="tipo_servicio"  required>
-                    <option value="pista">Gasolinera (Pista)</option>
-                    <option value="pronto">Tienda Pronto</option>
-                    <option value="lavado">Servicio de Lavado</option>
+                <select name="empresa_id" id="empresa_id_trabajador" class="form-select form-select-sm shadow-sm {% if modo == 'Visualizar' %}bg-light{% endif %}"
+                        {% if modo == 'Visualizar' %}disabled{% endif %}>
+                    <option value="">-- Seleccione Empresa --</option>
+                    {% for e in empresas %}
+                    <option value="{{ e.id }}" {% if registro and registro.empresa_id == e.id %}selected{% endif %}>
+                        {{ e.razon_social }}
+                    </option>
+                    {% endfor %}
                 </select>
             </div>
 
             <div class="col-md-6">
-                <label class="form-label small fw-bold text-muted">Cargo / Función</label>
-                <input type="text" class="form-control" name="cargo" id="cargo" 
-                       placeholder="Ej: Vendedor" value="" 
-                       >
+                <label class="form-label small fw-bold text-muted"><code>(*)</code> Servicio / Área</label>
+                <select name="servicio_id" id="servicio_id_trabajador" class="form-select form-select-sm shadow-sm {% if modo == 'Visualizar' %}bg-light{% endif %}"
+                        {% if modo == 'Visualizar' %}disabled{% endif %}>
+                    <option value="">-- Seleccione Servicio --</option>
+                    {% for s in servicios %}
+                    <option value="{{ s.id }}" {% if registro and registro.servicio_id == s.id %}selected{% endif %}>
+                        {{ s.descripcion }}
+                    </option>
+                    {% endfor %}
+                </select>
             </div>
+
+            <div class="col-md-12">
+                <label class="form-label small fw-bold text-muted">Cargo / Función</label>
+                <input type="text" class="form-control form-control-sm shadow-sm {% if modo == 'Visualizar' %}bg-light{% endif %}" 
+                       name="cargo" id="cargo_trabajador" value="{{ registro.cargo if registro else '' }}"
+                       {% if modo == 'Visualizar' %}readonly{% endif %} placeholder="Ej: Operario, Supervisor, etc.">
+            </div>
+
             <div class="col-md-6">
-                <label class="form-label small fw-bold text-muted">Correo Electrónico</label>
-                <div class="input-group">
+                <label class="form-label small fw-bold text-muted">Email</label>
+                <div class="input-group input-group-sm shadow-sm">
                     <span class="input-group-text bg-light border-end-0"><i class="fa fa-envelope text-muted"></i></span>
-                    <input type="email" class="form-control border-start-0" name="email" id="email" 
-                           placeholder="juan@ejemplo.com" value="" 
-                           >
+                    <input type="email" class="form-control border-start-0 {% if modo == 'Visualizar' %}bg-light{% endif %}" 
+                           name="email" id="email_trabajador" value="{{ registro.email if registro else '' }}"
+                           {% if modo == 'Visualizar' %}readonly{% endif %}>
                 </div>
             </div>
 
             <div class="col-md-6">
-                <label class="form-label small fw-bold text-muted">Estado</label>
-                <select class="form-select" name="estado" id="estado" >
-                    <option value="1" >Activo</option>
-                    <option value="0" >Inactivo</option>
-                </select>
-            </div>
-            <div class="col-md-6">
                 <label class="form-label small fw-bold text-muted">Teléfono</label>
-                <input type="text" class="form-control" name="telefono" id="telefono" 
-                       placeholder="+56 9 ..." value="" 
-                       >
+                <input type="text" class="form-control form-control-sm shadow-sm {% if modo == 'Visualizar' %}bg-light{% endif %}" 
+                       name="telefono" id="telefono_trabajador" value="{{ registro.telefono if registro else '' }}"
+                       {% if modo == 'Visualizar' %}readonly{% endif %}>
             </div>
+
             <div class="col-md-6">
                 <label class="form-label small fw-bold text-muted"><code>(*)</code> Tipo de Contrato</label>
-                <select class="form-select" name="tipo_contrato" id="tipo_contrato_modal" required>
-                    <option value="full-time" selected>Full-time (44 hrs)</option>
-                    <option value="part-time">Part-time (Variable)</option>
+                <select name="tipo_contrato" id="tipo_contrato_modal" class="form-select form-select-sm shadow-sm {% if modo == 'Visualizar' %}bg-light{% endif %}"
+                        {% if modo == 'Visualizar' %}disabled{% endif %}>
+                    <option value="full-time" {% if registro is none or registro.tipo_contrato == 'full-time' %}selected{% endif %}>Full-time (44 hrs)</option>
+                    <option value="part-time" {% if registro and registro.tipo_contrato == 'part-time' %}selected{% endif %}>Part-time (Variable)</option>
+                    <option value="honorarios" {% if registro and registro.tipo_contrato == 'honorarios' %}selected{% endif %}>Honorarios</option>
                 </select>
             </div>
-            <div class="col-md-6" id="div_horas_part_time" style="display:none;">
+
+            <div class="col-md-6" id="div_horas_part_time" style="{{ 'display:none;' if registro is none or registro.tipo_contrato != 'part-time' else '' }}">
                 <label class="form-label small fw-bold text-muted"><code>(*)</code> Horas Semanales</label>
-                <select class="form-select" name="horas_semanales" id="horas_semanales">
+                <select name="horas_semanales" id="horas_semanales" class="form-select form-select-sm shadow-sm" {% if modo == 'Visualizar' %}disabled{% endif %}>
                     <!-- JS populated -->
                 </select>
             </div>
-        </div>
-        
-        <script>
-            $(document).ready(function() {
-                // Poblado de 1 a 44
-                let options = "";
-                for(let i=1; i<=44; i++) {
-                    options += `<option value="${i}">${i} horas</option>`;
-                }
-                $('#horas_semanales').html(options).val(30);
 
-                $('#tipo_contrato_modal').on('change', function() {
-                    if($(this).val() === 'part-time') {
-                        $('#div_horas_part_time').fadeIn();
-                    } else {
-                        $('#div_horas_part_time').fadeOut();
-                    }
-                }).trigger('change');
-            });
-        </script>
-        
+            <div class="col-md-12 text-end">
+                <div class="form-check form-switch d-inline-block me-4">
+                    <input class="form-check-input" type="checkbox" id="permite_horas_extra" 
+                           {% if registro and registro.permite_horas_extra %}checked{% endif %}
+                           {% if modo == 'Visualizar' %}disabled{% endif %}>
+                    <label class="form-check-label fw-bold text-muted ms-2" for="permite_horas_extra">Permite Horas Extras</label>
+                </div>
+                <div class="form-check form-switch d-inline-block">
+                    <input class="form-check-input" type="checkbox" id="activo_trabajador" 
+                           {% if registro is none or registro.activo %}checked{% endif %}
+                           {% if modo == 'Visualizar' %}disabled{% endif %}>
+                    <label class="form-check-label fw-bold text-muted ms-2" for="activo_trabajador">Trabajador Activo</label>
+                </div>
+            </div>
+        </div>
+
         <hr class="my-4 text-muted">
         
-        <!-- SECCIÓN 1 COLLAPSE -->
+        <!-- SECCIÓN 1 COLLAPSE - PREFERENCIAS -->
         <h6 class="fw-bold text-primary mb-3" data-bs-toggle="collapse" data-bs-target="#collapsePreferencias" style="cursor: pointer;">
             <i class="fa fa-calendar-check me-2"></i>Preferencias de Turno (Restricciones Duras)
             <i class="fas fa-chevron-down float-end text-muted" style="font-size: 0.8rem; margin-top: 5px;"></i>
         </h6>
         
         <div class="collapse" id="collapsePreferencias">
-            <p class="small text-muted mb-3">Si para un día <strong>no marcas ninguna</strong> casilla, el sistema asume que el trabajador no tiene restricciones y puede tomar cualquier turno. Si marcas alguna casilla (ej. Solo Mañana), el sistema <strong>jamás</strong> le asignará otro turno ese día.</p>
+            <p class="small text-muted mb-3">Si para un día <strong>no marcas ninguna</strong> casilla, el sistema asume que el trabajador no tiene restricciones. Si marcas alguna, el sistema <strong>jamás</strong> le asignará otro turno ese día.</p>
             
             <div class="table-responsive border rounded mb-3">
                 <table class="table table-sm table-hover align-middle text-center mb-0" style="font-size: 0.85rem;">
                     <thead class="table-light">
                         <tr>
                             <th class="text-start ps-3 text-muted">Día de la Semana</th>
-                            
-                            <th class="text-center" style="width: 1%; white-space: nowrap;"><span class="badge px-2" style="background-color: #18bc9c;">M</span></th>
-                            
-                            <th class="text-center" style="width: 1%; white-space: nowrap;"><span class="badge px-2" style="background-color: #f39c12;">I</span></th>
-                            
-                            <th class="text-center" style="width: 1%; white-space: nowrap;"><span class="badge px-2" style="background-color: #3498db;">T</span></th>
-                            
-                            <th class="text-center" style="width: 1%; white-space: nowrap;"><span class="badge px-2" style="background-color: #2c3e50;">N</span></th>
-                            
+                            {% for tipo in tipos_turno %}
+                            <th class="text-center" style="width: 1%; white-space: nowrap;">
+                                <span class="badge px-2" style="background-color: {{ tipo.color }};">{{ tipo.abreviacion }}</span>
+                            </th>
+                            {% endfor %}
+                            <th class="text-center text-muted" style="width: 20%;">Tipo</th>
                         </tr>
                     </thead>
                     <tbody>
-                        
+                        {% set dias = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'] %}
+                        {% for i in range(7) %}
                         <tr>
-                            <td class="text-start ps-3 fw-bold text-secondary">Lunes</td>
-                            
+                            <td class="text-start ps-3 fw-bold text-secondary">{{ dias[i] }}</td>
+                            {% for tipo in tipos_turno %}
                             <td class="text-center align-middle">
+                                {% set ns = namespace(found=false) %}
+                                {% if registro %}
+                                    {% for p in registro.preferencias %}
+                                        {% if p.dia_semana == i and p.turno == tipo.abreviacion %}
+                                            {% set ns.found = true %}
+                                        {% endif %}
+                                    {% endfor %}
+                                {% endif %}
                                 <input class="form-check-input border-secondary-subtle" type="checkbox" 
-                                       name="pref_0[]" value="M"
-                                       
-                                       
+                                       name="pref_{{ i }}[]" value="{{ tipo.abreviacion }}"
+                                       {{ 'checked' if ns.found else '' }}
+                                       {% if modo == 'Visualizar' %}disabled{% endif %}
                                        style="cursor: pointer; width: 1.2rem; height: 1.2rem; margin-top: 0;">
                             </td>
-                            
+                            {% endfor %}
                             <td class="text-center align-middle">
-                                <input class="form-check-input border-secondary-subtle" type="checkbox" 
-                                       name="pref_0[]" value="I"
-                                       
-                                       
-                                       style="cursor: pointer; width: 1.2rem; height: 1.2rem; margin-top: 0;">
+                                {% set ns_tipo = namespace(val='preferencia') %}
+                                {% if registro %}
+                                    {% for p in registro.preferencias %}
+                                        {% if p.dia_semana == i %}
+                                            {% set ns_tipo.val = p.tipo %}
+                                        {% endif %}
+                                    {% endfor %}
+                                {% endif %}
+                                <select name="pref_tipo_{{ i }}" class="form-select form-select-sm border-secondary-subtle py-0" 
+                                        id="tipo_dia_{{ i }}" onchange="actualizarTipoDia({{ i }})"
+                                        {% if modo == 'Visualizar' %}disabled{% endif %} style="font-size: 0.75rem;">
+                                    <option value="preferencia" {{ 'selected' if ns_tipo.val == 'preferencia' else '' }}>Preferencia</option>
+                                    <option value="fijo" {{ 'selected' if ns_tipo.val == 'fijo' else '' }}>Fijo Oblig.</option>
+                                    <option value="solo_turno" {{ 'selected' if ns_tipo.val == 'solo_turno' else '' }}>Solo Turno</option>
+                                </select>
                             </td>
-                            
-                            <td class="text-center align-middle">
-                                <input class="form-check-input border-secondary-subtle" type="checkbox" 
-                                       name="pref_0[]" value="T"
-                                       
-                                       
-                                       style="cursor: pointer; width: 1.2rem; height: 1.2rem; margin-top: 0;">
-                            </td>
-                            
-                            <td class="text-center align-middle">
-                                <input class="form-check-input border-secondary-subtle" type="checkbox" 
-                                       name="pref_0[]" value="N"
-                                       
-                                       
-                                       style="cursor: pointer; width: 1.2rem; height: 1.2rem; margin-top: 0;">
-                            </td>
-                            
                         </tr>
-                        
-                        <tr>
-                            <td class="text-start ps-3 fw-bold text-secondary">Martes</td>
-                            
-                            <td class="text-center align-middle">
-                                <input class="form-check-input border-secondary-subtle" type="checkbox" 
-                                       name="pref_1[]" value="M"
-                                       
-                                       
-                                       style="cursor: pointer; width: 1.2rem; height: 1.2rem; margin-top: 0;">
-                            </td>
-                            
-                            <td class="text-center align-middle">
-                                <input class="form-check-input border-secondary-subtle" type="checkbox" 
-                                       name="pref_1[]" value="I"
-                                       
-                                       
-                                       style="cursor: pointer; width: 1.2rem; height: 1.2rem; margin-top: 0;">
-                            </td>
-                            
-                            <td class="text-center align-middle">
-                                <input class="form-check-input border-secondary-subtle" type="checkbox" 
-                                       name="pref_1[]" value="T"
-                                       
-                                       
-                                       style="cursor: pointer; width: 1.2rem; height: 1.2rem; margin-top: 0;">
-                            </td>
-                            
-                            <td class="text-center align-middle">
-                                <input class="form-check-input border-secondary-subtle" type="checkbox" 
-                                       name="pref_1[]" value="N"
-                                       
-                                       
-                                       style="cursor: pointer; width: 1.2rem; height: 1.2rem; margin-top: 0;">
-                            </td>
-                            
-                        </tr>
-                        
-                        <tr>
-                            <td class="text-start ps-3 fw-bold text-secondary">Miércoles</td>
-                            
-                            <td class="text-center align-middle">
-                                <input class="form-check-input border-secondary-subtle" type="checkbox" 
-                                       name="pref_2[]" value="M"
-                                       
-                                       
-                                       style="cursor: pointer; width: 1.2rem; height: 1.2rem; margin-top: 0;">
-                            </td>
-                            
-                            <td class="text-center align-middle">
-                                <input class="form-check-input border-secondary-subtle" type="checkbox" 
-                                       name="pref_2[]" value="I"
-                                       
-                                       
-                                       style="cursor: pointer; width: 1.2rem; height: 1.2rem; margin-top: 0;">
-                            </td>
-                            
-                            <td class="text-center align-middle">
-                                <input class="form-check-input border-secondary-subtle" type="checkbox" 
-                                       name="pref_2[]" value="T"
-                                       
-                                       
-                                       style="cursor: pointer; width: 1.2rem; height: 1.2rem; margin-top: 0;">
-                            </td>
-                            
-                            <td class="text-center align-middle">
-                                <input class="form-check-input border-secondary-subtle" type="checkbox" 
-                                       name="pref_2[]" value="N"
-                                       
-                                       
-                                       style="cursor: pointer; width: 1.2rem; height: 1.2rem; margin-top: 0;">
-                            </td>
-                            
-                        </tr>
-                        
-                        <tr>
-                            <td class="text-start ps-3 fw-bold text-secondary">Jueves</td>
-                            
-                            <td class="text-center align-middle">
-                                <input class="form-check-input border-secondary-subtle" type="checkbox" 
-                                       name="pref_3[]" value="M"
-                                       
-                                       
-                                       style="cursor: pointer; width: 1.2rem; height: 1.2rem; margin-top: 0;">
-                            </td>
-                            
-                            <td class="text-center align-middle">
-                                <input class="form-check-input border-secondary-subtle" type="checkbox" 
-                                       name="pref_3[]" value="I"
-                                       
-                                       
-                                       style="cursor: pointer; width: 1.2rem; height: 1.2rem; margin-top: 0;">
-                            </td>
-                            
-                            <td class="text-center align-middle">
-                                <input class="form-check-input border-secondary-subtle" type="checkbox" 
-                                       name="pref_3[]" value="T"
-                                       
-                                       
-                                       style="cursor: pointer; width: 1.2rem; height: 1.2rem; margin-top: 0;">
-                            </td>
-                            
-                            <td class="text-center align-middle">
-                                <input class="form-check-input border-secondary-subtle" type="checkbox" 
-                                       name="pref_3[]" value="N"
-                                       
-                                       
-                                       style="cursor: pointer; width: 1.2rem; height: 1.2rem; margin-top: 0;">
-                            </td>
-                            
-                        </tr>
-                        
-                        <tr>
-                            <td class="text-start ps-3 fw-bold text-secondary">Viernes</td>
-                            
-                            <td class="text-center align-middle">
-                                <input class="form-check-input border-secondary-subtle" type="checkbox" 
-                                       name="pref_4[]" value="M"
-                                       
-                                       
-                                       style="cursor: pointer; width: 1.2rem; height: 1.2rem; margin-top: 0;">
-                            </td>
-                            
-                            <td class="text-center align-middle">
-                                <input class="form-check-input border-secondary-subtle" type="checkbox" 
-                                       name="pref_4[]" value="I"
-                                       
-                                       
-                                       style="cursor: pointer; width: 1.2rem; height: 1.2rem; margin-top: 0;">
-                            </td>
-                            
-                            <td class="text-center align-middle">
-                                <input class="form-check-input border-secondary-subtle" type="checkbox" 
-                                       name="pref_4[]" value="T"
-                                       
-                                       
-                                       style="cursor: pointer; width: 1.2rem; height: 1.2rem; margin-top: 0;">
-                            </td>
-                            
-                            <td class="text-center align-middle">
-                                <input class="form-check-input border-secondary-subtle" type="checkbox" 
-                                       name="pref_4[]" value="N"
-                                       
-                                       
-                                       style="cursor: pointer; width: 1.2rem; height: 1.2rem; margin-top: 0;">
-                            </td>
-                            
-                        </tr>
-                        
-                        <tr>
-                            <td class="text-start ps-3 fw-bold text-secondary">Sábado</td>
-                            
-                            <td class="text-center align-middle">
-                                <input class="form-check-input border-secondary-subtle" type="checkbox" 
-                                       name="pref_5[]" value="M"
-                                       
-                                       
-                                       style="cursor: pointer; width: 1.2rem; height: 1.2rem; margin-top: 0;">
-                            </td>
-                            
-                            <td class="text-center align-middle">
-                                <input class="form-check-input border-secondary-subtle" type="checkbox" 
-                                       name="pref_5[]" value="I"
-                                       
-                                       
-                                       style="cursor: pointer; width: 1.2rem; height: 1.2rem; margin-top: 0;">
-                            </td>
-                            
-                            <td class="text-center align-middle">
-                                <input class="form-check-input border-secondary-subtle" type="checkbox" 
-                                       name="pref_5[]" value="T"
-                                       
-                                       
-                                       style="cursor: pointer; width: 1.2rem; height: 1.2rem; margin-top: 0;">
-                            </td>
-                            
-                            <td class="text-center align-middle">
-                                <input class="form-check-input border-secondary-subtle" type="checkbox" 
-                                       name="pref_5[]" value="N"
-                                       
-                                       
-                                       style="cursor: pointer; width: 1.2rem; height: 1.2rem; margin-top: 0;">
-                            </td>
-                            
-                        </tr>
-                        
-                        <tr>
-                            <td class="text-start ps-3 fw-bold text-secondary">Domingo</td>
-                            
-                            <td class="text-center align-middle">
-                                <input class="form-check-input border-secondary-subtle" type="checkbox" 
-                                       name="pref_6[]" value="M"
-                                       
-                                       
-                                       style="cursor: pointer; width: 1.2rem; height: 1.2rem; margin-top: 0;">
-                            </td>
-                            
-                            <td class="text-center align-middle">
-                                <input class="form-check-input border-secondary-subtle" type="checkbox" 
-                                       name="pref_6[]" value="I"
-                                       
-                                       
-                                       style="cursor: pointer; width: 1.2rem; height: 1.2rem; margin-top: 0;">
-                            </td>
-                            
-                            <td class="text-center align-middle">
-                                <input class="form-check-input border-secondary-subtle" type="checkbox" 
-                                       name="pref_6[]" value="T"
-                                       
-                                       
-                                       style="cursor: pointer; width: 1.2rem; height: 1.2rem; margin-top: 0;">
-                            </td>
-                            
-                            <td class="text-center align-middle">
-                                <input class="form-check-input border-secondary-subtle" type="checkbox" 
-                                       name="pref_6[]" value="N"
-                                       
-                                       
-                                       style="cursor: pointer; width: 1.2rem; height: 1.2rem; margin-top: 0;">
-                            </td>
-                            
-                        </tr>
-                        
+                        {% endfor %}
                     </tbody>
                 </table>
+            </div>
+            <div class="alert alert-light border small mt-2 py-2 mb-0">
+                <i class="fa fa-info-circle me-1 text-primary"></i>
+                <strong>Fijo:</strong> Debe trabajar ese día en ese turno. 
+                <strong>Preferencia:</strong> Si trabaja ese día, solo estos turnos. 
+                <strong>Solo Turno:</strong> Restricción global para todos los días.
             </div>
         </div>
 
         <hr class="my-3 text-muted border-top border-secondary-subtle">
         
-        <!-- SECCIÓN 2 COLLAPSE -->
+        <!-- SECCIÓN 2 COLLAPSE - AUSENCIAS -->
         <h6 class="fw-bold text-primary mb-3" data-bs-toggle="collapse" data-bs-target="#collapseAusencias" style="cursor: pointer;">
             <i class="fa fa-calendar-times me-2"></i>Ausencias y Permisos Registrados
             <i class="fas fa-chevron-down float-end text-muted" style="font-size: 0.8rem; margin-top: 5px;"></i>
         </h6>
         
         <div class="collapse" id="collapseAusencias">
-            <p class="small text-muted mb-3">Fechas en las que el trabajador no estará prestando servicios. Añada el rango como si fuera un carrito de compra.</p>
-    
-            <div class="row g-2 mb-3">
-                <div class="col-md-5">
-                    <label class="form-label small text-muted mb-1">Rango de Fechas</label>
-                    <div class="input-group input-group-sm">
-                        <input type="date" class="form-control border-secondary-subtle" id="fecha_inicio" title="Fecha de inicio" >
-                        <span class="input-group-text bg-light border-secondary-subtle px-2">a</span>
-                        <input type="date" class="form-control border-secondary-subtle" id="fecha_fin" title="Fecha de fin" >
-                    </div>
-                </div>
-                <div class="col-md-4">
-                    <label class="form-label small text-muted mb-1">Motivo</label>
-                    <select class="form-select form-select-sm border-secondary-subtle" id="motivo_ausencia" >
-                        <option value="" selected disabled>Seleccione...</option>
-                        <option value="VAC">Vacaciones</option>
-                        <option value="LM">Licencia Médica</option>
-                        <option value="PER">Permiso</option>
-                        <option value="OTR">Otro</option>
-                    </select>
-                </div>
-                <div class="col-md-3 d-flex align-items-end">
-                    <button type="button" class="btn btn-sm btn-primary w-100 shadow-sm" id="btn_add_ausencia" >
-                        <i class="fa fa-plus me-1"></i> Añadir
-                    </button>
-                </div>
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <p class="small text-muted mb-0">Listado histórico de ausencias registradas.</p>
+                <a href="{{ url_for('ausencia.index') }}" class="btn btn-xs btn-outline-primary py-1 px-2 shadow-sm" style="font-size: 0.75rem;">
+                    <i class="fa fa-external-link-alt me-1"></i> Gestionar Ausencias
+                </a>
             </div>
     
             <div class="table-responsive border rounded">
                 <table class="table table-sm table-hover align-middle text-center mb-0" style="font-size: 0.85rem;" id="tabla_ausencias">
                     <thead class="table-light">
                         <tr>
-                            <th class="text-start ps-3 text-muted">Fechas</th>
-                            <th class="text-center text-muted" style="width: 25%;">Motivo</th>
-                            <th class="text-end pe-3 text-muted" style="width: 1%;">Acción</th>
+                            <th class="text-start ps-3 text-muted">Rango de Fechas</th>
+                            <th class="text-center text-muted">Tipo / Motivo</th>
                         </tr>
                     </thead>
                     <tbody>
-                        <tr id="row_no_data">
-                            <td colspan="3" class="text-muted fst-italic py-3 small">Sin ausencias registradas...</td>
+                        {% if registro and registro.ausencias %}
+                            {% for a in registro.ausencias %}
+                            <tr>
+                                <td class="text-start ps-3 fw-bold text-secondary">
+                                    <i class="fa fa-calendar-day me-2 text-muted"></i> {{ a.fecha_inicio.strftime('%d/%m/%Y') }} - {{ a.fecha_fin.strftime('%d/%m/%Y') }}
+                                </td>
+                                <td class="text-center">
+                                    <span class="badge" style="background-color: {{ a.tipo_ausencia.color if a.tipo_ausencia else '#6c757d' }}">
+                                        {{ a.tipo_ausencia.nombre if a.tipo_ausencia else 'Ausencia' }}
+                                    </span>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        {% endif %}
+                        <tr id="row_no_data" style="{{ 'display:none;' if registro and registro.ausencias else '' }}">
+                            <td colspan="2" class="text-muted fst-italic py-3 small">Sin ausencias registradas...</td>
                         </tr>
                     </tbody>
                 </table>
             </div>
         </div>
-
     </form>
 </div>
 
 <div class="modal-footer bg-light border-top-0">
-    <button type="button" class="btn btn-secondary px-4 shadow-sm" onclick="CerrarModal()">Cancelar</button>
-    
-    <button type="button" class="btn btn-primary px-4 shadow-sm" id="btn_guardar_trabajador">
-        <i class="fa fa-save me-1"></i> Guardar Cambios
+    <button type="button" class="btn btn-secondary" onclick="CerrarModal()">Cancelar</button>
+    {% if modo != 'Visualizar' %}
+    <button type="button" id="btnGuardarTrabajador" class="btn btn-primary px-4 shadow-sm" onclick="guardarTrabajador()">
+        <i class="fa fa-save me-1"></i> Guardar Ficha
     </button>
-    
+    {% endif %}
 </div>
 
 <script>
-    $(document).ready(function() {
-        $('#btn_guardar_trabajador').click(function() {
-            if(!$('#rut').val() || !$('#nombre').val()) {
-                toastr.error('Por favor complete los campos obligatorios');
-                return;
-            }
+$(document).ready(function() {
+    // Poblado de horas
+    let options = "";
+    for(let i=1; i<=44; i++) {
+        options += `<option value="${i}">${i} horas</option>`;
+    }
+    $('#horas_semanales').html(options).val({{ registro.horas_semanales if (registro and registro.horas_semanales) else 30 }});
 
-            const formData = $('#form_trabajador').serialize();
-            
-            $('#fondo').fadeIn();
-            
-            $.ajax({
-                url: '/trabajador/guardar',
-                type: 'POST',
-                data: formData,
-                success: function(res) {
-                    $('#fondo').fadeOut();
-                    if(res.status === 'success') {
-                        toastr.success(res.message);
-                        CerrarModal();
-                        setTimeout(() => {
-                            location.reload(); 
-                        }, 500);
-                    } else {
-                        toastr.error(res.message);
-                    }
-                },
-                error: function(xhr) {
-                    $('#fondo').fadeOut();
-                    const msg = xhr.responseJSON ? xhr.responseJSON.message : 'Error al guardar';
-                    toastr.error(msg);
-                }
-            });
-        });
+    $('#tipo_contrato_modal').on('change', function() {
+        if($(this).val() === 'part-time') {
+            $('#div_horas_part_time').fadeIn();
+        } else {
+            $('#div_horas_part_time').fadeOut();
+        }
+    }).trigger('change');
 
-        // Lógica de Ausencias
-        $('#btn_add_ausencia').click(function() {
-            const f_ini = $('#fecha_inicio').val();
-            const f_fin = $('#fecha_fin').val();
-            const motivo = $('#motivo_ausencia').val();
-
-            if(!f_ini || !f_fin || !motivo) {
-                toastr.warning('Por favor complete rango de fechas y motivo');
-                return;
-            }
-            if(f_ini > f_fin) {
-                toastr.warning('La fecha de inicio no puede ser posterior a la de fin');
-                return;
-            }
-
-            $('#row_no_data').hide();
-
-            let badgeClass = 'bg-secondary';
-            if(motivo === 'VAC') badgeClass = 'bg-success';
-            if(motivo === 'LM') badgeClass = 'bg-danger';
-            if(motivo === 'PER') badgeClass = 'bg-info text-dark';
-            if(motivo === 'OTR') badgeClass = 'bg-warning text-dark';
-
-            const formatF = (d) => d.split('-').reverse().join('/');
-            
-            const tr = `
-                <tr>
-                    <td class="text-start ps-3 fw-bold text-secondary">
-                        <i class="fa fa-calendar-day me-2 text-muted"></i> ${formatF(f_ini)} - ${formatF(f_fin)}
-                        <input type="hidden" name="ausencia_ini[]" value="${f_ini}">
-                        <input type="hidden" name="ausencia_fin[]" value="${f_fin}">
-                        <input type="hidden" name="ausencia_motivo[]" value="${motivo}">
-                    </td>
-                    <td class="text-center align-middle">
-                        <span class="badge ${badgeClass} px-2">${motivo}</span>
-                    </td>
-                    <td class="text-end pe-3 align-middle">
-                        <button type="button" class="btn btn-sm btn-outline-danger btn-remove-ausencia" style="padding: 0.1rem 0.3rem;"><i class="fa fa-times"></i></button>
-                    </td>
-                </tr>
-            `;
-
-            $('#tabla_ausencias tbody').append(tr);
-
-            $('#fecha_inicio').val('');
-            $('#fecha_fin').val('');
-            $('#motivo_ausencia').val('');
-        });
-
-        $(document).on('click', '.btn-remove-ausencia', function() {
-            $(this).closest('tr').remove();
-            if($('#tabla_ausencias tbody tr').length === 1) {
-                $('#row_no_data').show();
-            }
-        });
-
-        // Rotar icono de collapse
-        $('#collapsePreferencias, #collapseAusencias').on('show.bs.collapse', function () {
-            $(this).prev('h6').find('i.fa-chevron-down').removeClass('fa-chevron-down').addClass('fa-chevron-up');
-        }).on('hide.bs.collapse', function () {
-            $(this).prev('h6').find('i.fa-chevron-up').removeClass('fa-chevron-up').addClass('fa-chevron-down');
-        });
+    // Rotar icono de collapse
+    $('#collapsePreferencias, #collapseAusencias').on('show.bs.collapse', function () {
+        $(this).prev('h6').find('i.fa-chevron-down').removeClass('fa-chevron-down').addClass('fa-chevron-up');
+    }).on('hide.bs.collapse', function () {
+        $(this).prev('h6').find('i.fa-chevron-up').removeClass('fa-chevron-up').addClass('fa-chevron-down');
     });
+
+    // Validaciones iniciales para tipos de preferencia
+    for(let i=0; i<7; i++) {
+        actualizarTipoDia(i, true);
+    }
+});
+
+function actualizarTipoDia(dia, inicial = false) {
+    const tipo = $(`#tipo_dia_${dia}`).val();
+    const checkboxes = $(`input[name="pref_${dia}[]"]`);
+
+    if (tipo === 'fijo') {
+        // En modo fijo, si marca uno, desmarca el resto
+        checkboxes.off('change').on('change', function() {
+            if ($(this).is(':checked')) {
+                checkboxes.not(this).prop('checked', false);
+            }
+        });
+        
+        // Si ya hay varios marcados al cambiar el tipo, dejar solo el primero
+        const marcados = checkboxes.filter(':checked');
+        if (marcados.length > 1) {
+            marcados.not(':first').prop('checked', false);
+            if (!inicial) toastr.info('Fijo obligatorio: solo se permite un turno por día.');
+        }
+    } else {
+        // En otros modos no hay restricción de cantidad en UI
+        checkboxes.off('change');
+    }
+
+    if (tipo === 'solo_turno' && !inicial) {
+        toastr.info('Solo este turno: Se aplicará como restricción global para todos los días.');
+    }
+}
+
+function guardarTrabajador() {
+    const id = $('#id_trabajador').val();
+    const rut = $('#rut_trabajador').val().trim();
+    const nombre = $('#nombre_trabajador').val().trim();
+    const apellido1 = $('#apellido1_trabajador').val().trim();
+    const empresa_id = $('#empresa_id_trabajador').val();
+    const servicio_id = $('#servicio_id_trabajador').val();
+
+    if (!rut || !nombre || !apellido1 || !empresa_id || !servicio_id) {
+        toastr.warning('Faltan campos obligatorios (*).');
+        return;
+    }
+
+    const $btn = $('#btnGuardarTrabajador');
+    $btn.prop('disabled', true).html('<i class="fa fa-spinner fa-spin me-1"></i> Guardando...');
+    $('#fondo').addClass('visible');
+
+    const formData = $('#form_trabajador').serialize();
+    // Añadir el checkbox de activo manualmente ya que serialize no lo manda si es false
+    const activo = $('#activo_trabajador').is(':checked') ? 'true' : 'false';
+    const permite_extra = $('#permite_horas_extra').is(':checked') ? 'true' : 'false';
+    const finalData = formData + '&activo=' + activo + '&permite_horas_extra=' + permite_extra;
+
+    $.post("{{ url_for('trabajador.guardar') }}", finalData)
+    .done(function(res) {
+        if (res.ok) {
+            toastr.success(res.msg);
+            CerrarModal();
+            if (typeof refreshTablaTrabajadores === 'function') refreshTablaTrabajadores();
+        } else {
+            toastr.error(res.msg);
+            $btn.prop('disabled', false).html('<i class="fa fa-save me-1"></i> Guardar Ficha');
+        }
+    })
+    .fail(function() {
+        toastr.error('Error de comunicación con el servidor.');
+        $btn.prop('disabled', false).html('<i class="fa fa-save me-1"></i> Guardar Ficha');
+    })
+    .always(function() {
+        $('#fondo').removeClass('visible');
+    });
+}
 </script>

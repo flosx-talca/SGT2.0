@@ -1,0 +1,30 @@
+{% for r in registros %}
+<tr>
+    <td class="fw-bold">{{ r.codigo }}</td>
+    <td>{{ r.nombre }}</td>
+    <td><span class="badge bg-secondary">{{ r.familia }}</span></td>
+    <td>{{ r.tipo_regla }}</td>
+    <td>
+        <span class="badge bg-{{ 'success' if r.activo else 'danger' }}-subtle
+                         text-{{ 'success' if r.activo else 'danger' }}">
+            {{ 'Activo' if r.activo else 'Inactivo' }}
+        </span>
+    </td>
+    <td class="text-center">
+        <div class="btn-group btn-group-sm">
+            <button class="btn btn-outline-info" title="Visualizar"
+                onclick="Modal('Visualizar', {{ r.id }}, '{{ url_for('regla.modal') }}')">
+                <i class="fa fa-eye"></i>
+            </button>
+            <button class="btn btn-outline-warning" title="Editar"
+                onclick="Modal('Editar', {{ r.id }}, '{{ url_for('regla.modal') }}')">
+                <i class="fa fa-edit"></i>
+            </button>
+            <button class="btn btn-outline-danger" title="Desactivar"
+                onclick="eliminarRegla({{ r.id }}, '{{ r.nombre }}')">
+                <i class="fa fa-ban"></i>
+            </button>
+        </div>
+    </td>
+</tr>
+{% endfor %}

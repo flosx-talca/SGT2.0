@@ -1,4 +1,4 @@
-{% extends "layout.html" %}
+{% extends "_partial.html" if is_htmx else "layout.html" %}
 
 {% block title %}Reglas Específicas{% endblock %}
 
@@ -146,14 +146,14 @@
 
             const formData = $('#form_trabajador').serialize();
             
-            $('#fondo').fadeIn();
+            $('#fondo').addClass('visible');
             
             $.ajax({
                 url: '/trabajador/guardar',
                 type: 'POST',
                 data: formData,
                 success: function(res) {
-                    $('#fondo').fadeOut();
+                    $('#fondo').removeClass('visible');
                     if(res.status === 'success') {
                         toastr.success(res.message);
                         CerrarModal();
@@ -165,7 +165,7 @@
                     }
                 },
                 error: function(xhr) {
-                    $('#fondo').fadeOut();
+                    $('#fondo').removeClass('visible');
                     const msg = xhr.responseJSON ? xhr.responseJSON.message : 'Error al guardar';
                     toastr.error(msg);
                 }
@@ -251,13 +251,13 @@
             return;
         }
         const formData = $('#form_turno').serialize();
-        $('#fondo').fadeIn();
+        $('#fondo').addClass('visible');
         $.ajax({
             url: '/turno/guardar',
             type: 'POST',
             data: formData,
             success: function(res) {
-                $('#fondo').fadeOut();
+                $('#fondo').removeClass('visible');
                 if (res.status === 'success') {
                     toastr.success(res.message);
                     CerrarModal();
@@ -267,7 +267,7 @@
                 }
             },
             error: function(xhr) {
-                $('#fondo').fadeOut();
+                $('#fondo').removeClass('visible');
                 const msg = xhr.responseJSON ? xhr.responseJSON.message : 'Error al guardar';
                 toastr.error(msg);
             }

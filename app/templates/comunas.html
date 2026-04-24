@@ -1,94 +1,32 @@
-{% extends "layout.html" %}
+{% extends "_partial.html" if is_htmx else "layout.html" %}
 
-{% block title %}Comunas{% endblock %}
-
-{% block head %}
-
-{% endblock %}
-
-{% block header %}Gestión de Comunas{% endblock %}
-{% block page_title %}Comunas{% endblock %}
+{% block header %}Comunas{% endblock %}
+{% block page_title %}Mantenedor de Comunas{% endblock %}
 
 {% block actions %}
-<button class="btn btn-primary shadow-sm" onclick="Modal('Agregar', 0, '/modal-comuna')">
-    <i class="fa fa-plus me-1"></i> Agregar Comuna
+<button class="btn btn-primary shadow-sm" onclick="Modal('Agregar', 0, '{{ url_for('comuna.modal') }}')">
+    <i class="fa fa-plus me-1"></i> Nueva Comuna
 </button>
 {% endblock %}
 
 {% block content %}
-<div class="row">
-    <div class="col-12">
-        <div class="card shadow-sm border-0">
-            <div class="card-header bg-white py-3 border-bottom">
-                <h5 class="mb-0 fw-bold text-dark"><i class="fa fa-map-pin me-2 text-primary"></i>Directorio de Comunas</h5>
-            </div>
-            <div class="card-body">
-                <table id="tabla_comunas" class="table table-hover dt-responsive nowrap w-100 align-middle">
-                    <thead class="table-light">
-                        <tr>
-                            <th>Código</th>
-                            <th>Descripción</th>
-                            <th>Región</th>
-                            <th>Estado</th>
-                            <th class="text-center">Acciones</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <!-- Mock Static Data -->
-                        <tr>
-                            <td class="fw-bold">13101</td>
-                            <td>Santiago</td>
-                            <td><span class="badge bg-secondary">RM</span></td>
-                            <td><span class="badge bg-success-subtle text-success">Activo</span></td>
-                            <td class="text-center">
-                                <div class="btn-group btn-group-sm">
-                                    <button class="btn btn-outline-info" title="Visualizar"
-                                        onclick="Modal('Visualizar', 1, '/modal-comuna')"><i
-                                            class="fa fa-eye"></i></button>
-                                    <button class="btn btn-outline-warning" title="Editar"
-                                        onclick="Modal('Editar', 1, '/modal-comuna')"><i
-                                            class="fa fa-edit"></i></button>
-                                    <button class="btn btn-outline-danger" title="Eliminar"><i class="fa fa-trash"></i></button>
-                                </div>
-                            </td>
-                        </tr>
-                        <tr>
-                            <td class="fw-bold">13114</td>
-                            <td>Las Condes</td>
-                            <td><span class="badge bg-secondary">RM</span></td>
-                            <td><span class="badge bg-success-subtle text-success">Activo</span></td>
-                            <td class="text-center">
-                                <div class="btn-group btn-group-sm">
-                                    <button class="btn btn-outline-info" title="Visualizar"
-                                        onclick="Modal('Visualizar', 2, '/modal-comuna')"><i
-                                            class="fa fa-eye"></i></button>
-                                    <button class="btn btn-outline-warning" title="Editar"
-                                        onclick="Modal('Editar', 2, '/modal-comuna')"><i
-                                            class="fa fa-edit"></i></button>
-                                    <button class="btn btn-outline-danger" title="Eliminar"><i class="fa fa-trash"></i></button>
-                                </div>
-                            </td>
-                        </tr>
-                        <tr>
-                            <td class="fw-bold">05101</td>
-                            <td>Valparaíso</td>
-                            <td><span class="badge bg-secondary">V</span></td>
-                            <td><span class="badge bg-danger-subtle text-danger">Inactivo</span></td>
-                            <td class="text-center">
-                                <div class="btn-group btn-group-sm">
-                                    <button class="btn btn-outline-info" title="Visualizar"
-                                        onclick="Modal('Visualizar', 3, '/modal-comuna')"><i
-                                            class="fa fa-eye"></i></button>
-                                    <button class="btn btn-outline-warning" title="Editar"
-                                        onclick="Modal('Editar', 3, '/modal-comuna')"><i
-                                            class="fa fa-edit"></i></button>
-                                    <button class="btn btn-outline-danger" title="Eliminar"><i class="fa fa-trash"></i></button>
-                                </div>
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
+<div class="card border-0 shadow-sm">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table id="tabla_comunas" class="table table-hover align-middle mb-0 w-100">
+                <thead class="bg-light text-muted small fw-bold text-uppercase">
+                    <tr>
+                        <th style="width: 15%">Código</th>
+                        <th style="width: 35%">Descripción</th>
+                        <th style="width: 25%">Región</th>
+                        <th style="width: 10%">Estado</th>
+                        <th style="width: 15%" class="text-center">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody id="tbody-comunas">
+                    {% include 'partials/comuna_rows.html' %}
+                </tbody>
+            </table>
         </div>
     </div>
 </div>
@@ -96,13 +34,68 @@
 
 {% block scripts %}
 <script>
-    $(document).ready(function () {
-        $('#tabla_comunas').DataTable({
-            responsive: true,
-            language: {
-                url: '/static/i18n/es-ES.json'
-            }
-        });
+var dtComunas;
+
+function initDataTable() {
+    dtComunas = $('#tabla_comunas').DataTable({
+        responsive: true,
+        pageLength: 10,
+        order: [[1, 'asc']], // Ordenar por descripción por defecto
+        language: {
+            url: '/static/i18n/es-ES.json'
+        },
+        columnDefs: [
+            { targets: [4], orderable: false }
+        ]
     });
+}
+
+$(document).ready(function() {
+    initDataTable();
+});
+
+function refreshTablaComunas() {
+    $('#fondo').addClass('visible');
+    // Usar $.get para traer el HTML partial del tbody
+    $.get("{{ url_for('comuna.tabla') }}", function(html) {
+        if (dtComunas) dtComunas.destroy();
+        $('#tbody-comunas').html(html);
+        initDataTable();
+    }).always(function() {
+        $('#fondo').removeClass('visible');
+    });
+}
+
+function eliminarComuna(id, nombre) {
+    Swal.fire({
+        title: '¿Desactivar Comuna?',
+        text: `La comuna "${nombre}" quedará marcada como inactiva.`,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonText: 'Sí, desactivar',
+        cancelButtonText: 'Cancelar',
+        confirmButtonColor: '#e74c3c',
+        reverseButtons: true
+    }).then((result) => {
+        if (result.isConfirmed) {
+            $('#fondo').addClass('visible');
+            $.post("{{ url_for('comuna.eliminar') }}", { id: id })
+                .done(function(res) {
+                    if (res.ok) {
+                        toastr.success(res.msg);
+                        refreshTablaComunas();
+                    } else {
+                        toastr.error(res.msg);
+                    }
+                })
+                .fail(function() {
+                    toastr.error('Error de comunicación con el servidor.');
+                })
+                .always(function() {
+                    $('#fondo').removeClass('visible');
+                });
+        }
+    });
+}
 </script>
 {% endblock %}

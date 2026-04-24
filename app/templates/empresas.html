@@ -1,17 +1,12 @@
-{% extends "layout.html" %}
+{% extends "_partial.html" if is_htmx else "layout.html" %}
 
 {% block title %}Empresas{% endblock %}
-
-{% block head %}
-
-{% endblock %}
-
-{% block header %}Gestión de Empresas / Sucursales{% endblock %}
+{% block header %}Gestión de Empresas{% endblock %}
 {% block page_title %}Empresas{% endblock %}
 
 {% block actions %}
-<button class="btn btn-primary shadow-sm" onclick="Modal('Agregar', 0, '/modal-empresa')">
-    <i class="fa fa-plus me-1"></i> Agregar Empresa
+<button class="btn btn-primary shadow-sm" onclick="Modal('Agregar', 0, '{{ url_for('empresa.modal') }}')">
+    <i class="fa fa-building-user me-1"></i> Nueva Empresa
 </button>
 {% endblock %}
 
@@ -19,56 +14,23 @@
 <div class="row">
     <div class="col-12">
         <div class="card shadow-sm border-0">
-            <div class="card-header bg-white py-3 border-bottom">
-                <h5 class="mb-0 fw-bold text-dark"><i class="fa fa-building me-2 text-primary"></i>Directorio de Empresas y Estaciones</h5>
+            <div class="card-header bg-white py-3">
+                <h5 class="mb-0 fw-bold text-dark"><i class="fa fa-industry me-2 text-primary"></i>Listado de Empresas y Sucursales</h5>
             </div>
             <div class="card-body">
-                <table id="tabla_empresas" class="table table-hover dt-responsive nowrap w-100 align-middle">
+                <table id="tabla_empresas" class="table table-hover align-middle w-100">
                     <thead class="table-light">
                         <tr>
                             <th>RUT</th>
                             <th>Razón Social</th>
-                            <th>Dirección</th>
+                            <th>Dueño / Cliente</th>
+                            <th>Ubicación</th>
                             <th>Estado</th>
                             <th class="text-center">Acciones</th>
                         </tr>
                     </thead>
-                    <tbody>
-                        <!-- Mock Static Data -->
-                        <tr>
-                            <td class="fw-bold">76.543.210-K</td>
-                            <td>Estación Copec Central SpA</td>
-                            <td>Av. San Martín 1500, Santiago</td>
-                            <td><span class="badge bg-success-subtle text-success">Activo</span></td>
-                            <td class="text-center">
-                                <div class="btn-group btn-group-sm">
-                                    <button class="btn btn-outline-info" title="Visualizar"
-                                        onclick="Modal('Visualizar', 1, '/modal-empresa')"><i
-                                            class="fa fa-eye"></i></button>
-                                    <button class="btn btn-outline-warning" title="Editar"
-                                        onclick="Modal('Editar', 1, '/modal-empresa')"><i
-                                            class="fa fa-edit"></i></button>
-                                    <button class="btn btn-outline-danger" title="Eliminar"><i class="fa fa-trash"></i></button>
-                                </div>
-                            </td>
-                        </tr>
-                        <tr>
-                            <td class="fw-bold">77.123.456-9</td>
-                            <td>Pronto Vitacura Norte</td>
-                            <td>Av. Vitacura 5000, Santiago</td>
-                            <td><span class="badge bg-success-subtle text-success">Activo</span></td>
-                            <td class="text-center">
-                                <div class="btn-group btn-group-sm">
-                                    <button class="btn btn-outline-info" title="Visualizar"
-                                        onclick="Modal('Visualizar', 2, '/modal-empresa')"><i
-                                            class="fa fa-eye"></i></button>
-                                    <button class="btn btn-outline-warning" title="Editar"
-                                        onclick="Modal('Editar', 2, '/modal-empresa')"><i
-                                            class="fa fa-edit"></i></button>
-                                    <button class="btn btn-outline-danger" title="Eliminar"><i class="fa fa-trash"></i></button>
-                                </div>
-                            </td>
-                        </tr>
+                    <tbody id="tbody-empresas">
+                        {% include 'partials/empresa_rows.html' %}
                     </tbody>
                 </table>
             </div>
@@ -79,217 +41,56 @@
 
 {% block scripts %}
 <script>
-    $(document).ready(function () {
-        $('#tabla_empresas').DataTable({
-            responsive: true,
-            language: {
-                url: '/static/i18n/es-ES.json'
-            }
-        });
-    });
-</script>
+var dtEmpresas;
 
-<script>
-    $(document).ready(function() {
-        $('#btn_guardar_trabajador').click(function() {
-            if(!$('#rut').val() || !$('#nombre').val()) {
-                toastr.error('Por favor complete los campos obligatorios');
-                return;
-            }
-
-            const formData = $('#form_trabajador').serialize();
-            
-            $('#fondo').fadeIn();
-            
-            $.ajax({
-                url: '/trabajador/guardar',
-                type: 'POST',
-                data: formData,
-                success: function(res) {
-                    $('#fondo').fadeOut();
-                    if(res.status === 'success') {
-                        toastr.success(res.message);
-                        CerrarModal();
-                        setTimeout(() => {
-                            location.reload(); 
-                        }, 500);
-                    } else {
-                        toastr.error(res.message);
-                    }
-                },
-                error: function(xhr) {
-                    $('#fondo').fadeOut();
-                    const msg = xhr.responseJSON ? xhr.responseJSON.message : 'Error al guardar';
-                    toastr.error(msg);
-                }
-            });
-        });
-
-        // Lógica de Ausencias
-        $('#btn_add_ausencia').click(function() {
-            const f_ini = $('#fecha_inicio').val();
-            const f_fin = $('#fecha_fin').val();
-            const motivo = $('#motivo_ausencia').val();
-
-            if(!f_ini || !f_fin || !motivo) {
-                toastr.warning('Por favor complete rango de fechas y motivo');
-                return;
-            }
-            if(f_ini > f_fin) {
-                toastr.warning('La fecha de inicio no puede ser posterior a la de fin');
-                return;
-            }
-
-            $('#row_no_data').hide();
-
-            let badgeClass = 'bg-secondary';
-            if(motivo === 'VAC') badgeClass = 'bg-success';
-            if(motivo === 'LM') badgeClass = 'bg-danger';
-            if(motivo === 'PER') badgeClass = 'bg-info text-dark';
-            if(motivo === 'OTR') badgeClass = 'bg-warning text-dark';
-
-            const formatF = (d) => d.split('-').reverse().join('/');
-            
-            const tr = `
-                <tr>
-                    <td class="text-start ps-3 fw-bold text-secondary">
-                        <i class="fa fa-calendar-day me-2 text-muted"></i> ${formatF(f_ini)} - ${formatF(f_fin)}
-                        <input type="hidden" name="ausencia_ini[]" value="${f_ini}">
-                        <input type="hidden" name="ausencia_fin[]" value="${f_fin}">
-                        <input type="hidden" name="ausencia_motivo[]" value="${motivo}">
-                    </td>
-                    <td class="text-center align-middle">
-                        <span class="badge ${badgeClass} px-2">${motivo}</span>
-                    </td>
-                    <td class="text-end pe-3 align-middle">
-                        <button type="button" class="btn btn-sm btn-outline-danger btn-remove-ausencia" style="padding: 0.1rem 0.3rem;"><i class="fa fa-times"></i></button>
-                    </td>
-                </tr>
-            `;
-
-            $('#tabla_ausencias tbody').append(tr);
-
-            $('#fecha_inicio').val('');
-            $('#fecha_fin').val('');
-            $('#motivo_ausencia').val('');
-        });
-
-        $(document).on('click', '.btn-remove-ausencia', function() {
-            $(this).closest('tr').remove();
-            if($('#tabla_ausencias tbody tr').length === 1) {
-                $('#row_no_data').show();
-            }
-        });
-
-        // Rotar icono de collapse
-        $('#collapsePreferencias, #collapseAusencias').on('show.bs.collapse', function () {
-            $(this).prev('h6').find('i.fa-chevron-down').removeClass('fa-chevron-down').addClass('fa-chevron-up');
-        }).on('hide.bs.collapse', function () {
-            $(this).prev('h6').find('i.fa-chevron-up').removeClass('fa-chevron-up').addClass('fa-chevron-down');
-        });
-    });
-</script>
-<script>
-    // Preview del color en tiempo real
-    document.getElementById('t_color').addEventListener('input', function() {
-        document.getElementById('color_label').style.backgroundColor = this.value;
-    });
-    document.getElementById('t_abreviacion').addEventListener('input', function() {
-        document.getElementById('color_label').textContent = this.value || 'T';
-    });
-
-    $('#btn_guardar_turno').click(function() {
-        if (!$('#t_nombre').val() || !$('#t_hora_inicio').val() || !$('#t_hora_fin').val()) {
-            toastr.error('Por favor complete todos los campos obligatorios');
-            return;
-        }
-        const formData = $('#form_turno').serialize();
-        $('#fondo').fadeIn();
-        $.ajax({
-            url: '/turno/guardar',
-            type: 'POST',
-            data: formData,
-            success: function(res) {
-                $('#fondo').fadeOut();
-                if (res.status === 'success') {
-                    toastr.success(res.message);
-                    CerrarModal();
-                    setTimeout(() => location.reload(), 500);
-                } else {
-                    toastr.error(res.message);
-                }
-            },
-            error: function(xhr) {
-                $('#fondo').fadeOut();
-                const msg = xhr.responseJSON ? xhr.responseJSON.message : 'Error al guardar';
-                toastr.error(msg);
-            }
-        });
-    });
-</script>
-<script>
-    $(document).ready(function() {
-        $('#empresa').change(function() {
-            if($(this).val()) {
-                $('#sucursal').prop('disabled', false).html('<option value="1">Bencinera Norte</option><option value="2">Bencinera Centro</option>');
-            } else {
-                $('#sucursal').prop('disabled', true).html('<option value="">Seleccione empresa primero...</option>');
-            }
-        });
-
-        $('#btn_generar').click(function() {
-            Swal.fire({
-                title: '¿Desea generar la simulación?',
-                text: "Esto procesará las reglas configuradas para la sucursal.",
-                icon: 'question',
-                showCancelButton: true,
-                confirmButtonText: 'Sí, generar',
-                cancelButtonText: 'No, revisar'
-            }).then((result) => {
-                if (result.isConfirmed) {
-                    toastr.info('Procesando simulación...');
-                    setTimeout(() => {
-                        toastr.success('Simulación generada con éxito');
-                        CerrarModal();
-                        location.reload();
-                    }, 2000);
-                }
-            });
-        });
-    });
-</script>
-<script>
-function guardarEmpresa() {
-    Swal.fire({
-        title: '¿Guardar Empresa?',
-        text: "Modo Prototipo Estático: Los datos no se guardarán en BD.",
-        icon: 'info',
-        showCancelButton: true,
-        confirmButtonColor: '#18bc9c',
-        cancelButtonColor: '#d33',
-        confirmButtonText: 'Simular Guardado'
-    }).then((result) => {
-        if (result.isConfirmed) {
-            toastr.success('Empresa guardada exitosamente (Simulación).');
-            CerrarModal();
-        }
+function initDataTable() {
+    dtEmpresas = $('#tabla_empresas').DataTable({
+        responsive: true,
+        order: [[1, 'asc']],
+        language: { url: '/static/i18n/es-ES.json' },
+        columnDefs: [ { targets: [5], orderable: false, searchable: false } ]
     });
 }
-</script>
-<script>
-function guardarServicio() {
+
+$(document).ready(function() {
+    initDataTable();
+});
+
+function refreshTablaEmpresas() {
+    $('#fondo').addClass('visible');
+    $.get("{{ url_for('empresa.tabla') }}", function(html) {
+        if (dtEmpresas) dtEmpresas.destroy();
+        $('#tbody-empresas').html(html);
+        initDataTable();
+    }).always(function() {
+        $('#fondo').removeClass('visible');
+    });
+}
+
+function eliminarEmpresa(id, nombre) {
     Swal.fire({
-        title: '¿Guardar Tipo de Servicio?',
-        text: "Modo Prototipo Estático: Los datos no se guardarán en BD.",
-        icon: 'info',
+        title: '¿Desactivar Empresa?',
+        text: `"${nombre}" dejará de estar operativa en el sistema.`,
+        icon: 'warning',
         showCancelButton: true,
-        confirmButtonColor: '#18bc9c',
-        cancelButtonColor: '#d33',
-        confirmButtonText: 'Simular Guardado'
+        confirmButtonText: 'Sí, desactivar',
+        cancelButtonText: 'Cancelar',
+        confirmButtonColor: '#e74c3c'
     }).then((result) => {
         if (result.isConfirmed) {
-            toastr.success('Servicio guardado exitosamente (Simulación).');
-            CerrarModal();
+            $('#fondo').addClass('visible');
+            $.post("{{ url_for('empresa.eliminar') }}", { id: id })
+                .done(function(res) {
+                    if (res.ok) {
+                        toastr.success(res.msg);
+                        refreshTablaEmpresas();
+                    } else {
+                        toastr.error(res.msg);
+                    }
+                })
+                .always(function() {
+                    $('#fondo').removeClass('visible');
+                });
         }
     });
 }

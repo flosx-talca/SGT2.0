@@ -1,87 +1,34 @@
-{% extends "layout.html" %}
+{% extends "_partial.html" if is_htmx else "layout.html" %}
 
-{% block title %}Menús{% endblock %}
-
-{% block head %}
-
-{% endblock %}
-
+{% block title %}Menús del Sistema{% endblock %}
 {% block header %}Gestión de Menús{% endblock %}
 {% block page_title %}Menús{% endblock %}
 
 {% block actions %}
-<button class="btn btn-primary shadow-sm" onclick="Modal('Agregar', 0, '/modal-menu')">
-    <i class="fa fa-plus me-1"></i> Agregar Menú
+<button class="btn btn-primary shadow-sm" onclick="Modal('Agregar', 0, '{{ url_for('menu.modal') }}')">
+    <i class="fa fa-list me-1"></i> Nuevo Menú
 </button>
 {% endblock %}
 
 {% block content %}
 <div class="row">
-    <div class="col-12">
+    <div class="col-12 col-xl-10">
         <div class="card shadow-sm border-0">
-            <div class="card-header bg-white py-3 border-bottom">
-                <h5 class="mb-0 fw-bold text-dark"><i class="fa fa-list me-2 text-primary"></i>Directorio de Menús</h5>
+            <div class="card-header bg-white py-3">
+                <h5 class="mb-0 fw-bold text-dark"><i class="fa fa-th-list me-2 text-primary"></i>Estructura de Menús</h5>
             </div>
             <div class="card-body">
-                <table id="tabla_menus" class="table table-hover dt-responsive nowrap w-100 align-middle">
+                <table id="tabla_menus" class="table table-hover align-middle w-100">
                     <thead class="table-light">
                         <tr>
-                            <th>Nombre del Menú</th>
+                            <th>Nombre</th>
                             <th>Descripción</th>
                             <th>Estado</th>
                             <th class="text-center">Acciones</th>
                         </tr>
                     </thead>
-                    <tbody>
-                        <!-- Mock Static Data -->
-                        <tr>
-                            <td class="fw-bold">Dashboard</td>
-                            <td>Vista principal de indicadores y métricas</td>
-                            <td><span class="badge bg-success-subtle text-success">Activo</span></td>
-                            <td class="text-center">
-                                <div class="btn-group btn-group-sm">
-                                    <button class="btn btn-outline-info" title="Visualizar"
-                                        onclick="Modal('Visualizar', 1, '/modal-menu')"><i
-                                            class="fa fa-eye"></i></button>
-                                    <button class="btn btn-outline-warning" title="Editar"
-                                        onclick="Modal('Editar', 1, '/modal-menu')"><i
-                                            class="fa fa-edit"></i></button>
-                                    <button class="btn btn-outline-danger" title="Eliminar"><i class="fa fa-trash"></i></button>
-                                </div>
-                            </td>
-                        </tr>
-                        <tr>
-                            <td class="fw-bold">Trabajadores</td>
-                            <td>Gestión de personal y nómina</td>
-                            <td><span class="badge bg-success-subtle text-success">Activo</span></td>
-                            <td class="text-center">
-                                <div class="btn-group btn-group-sm">
-                                    <button class="btn btn-outline-info" title="Visualizar"
-                                        onclick="Modal('Visualizar', 2, '/modal-menu')"><i
-                                            class="fa fa-eye"></i></button>
-                                    <button class="btn btn-outline-warning" title="Editar"
-                                        onclick="Modal('Editar', 2, '/modal-menu')"><i
-                                            class="fa fa-edit"></i></button>
-                                    <button class="btn btn-outline-danger" title="Eliminar"><i class="fa fa-trash"></i></button>
-                                </div>
-                            </td>
-                        </tr>
-                        <tr>
-                            <td class="fw-bold">Reportes Avanzados</td>
-                            <td>Exportación y análisis profundo de datos</td>
-                            <td><span class="badge bg-danger-subtle text-danger">Inactivo</span></td>
-                            <td class="text-center">
-                                <div class="btn-group btn-group-sm">
-                                    <button class="btn btn-outline-info" title="Visualizar"
-                                        onclick="Modal('Visualizar', 3, '/modal-menu')"><i
-                                            class="fa fa-eye"></i></button>
-                                    <button class="btn btn-outline-warning" title="Editar"
-                                        onclick="Modal('Editar', 3, '/modal-menu')"><i
-                                            class="fa fa-edit"></i></button>
-                                    <button class="btn btn-outline-danger" title="Eliminar"><i class="fa fa-trash"></i></button>
-                                </div>
-                            </td>
-                        </tr>
+                    <tbody id="tbody-menus">
+                        {% include 'partials/menu_rows.html' %}
                     </tbody>
                 </table>
             </div>
@@ -92,13 +39,58 @@
 
 {% block scripts %}
 <script>
-    $(document).ready(function () {
-        $('#tabla_menus').DataTable({
-            responsive: true,
-            language: {
-                url: '/static/i18n/es-ES.json'
-            }
-        });
+var dtMenus;
+
+function initDataTable() {
+    dtMenus = $('#tabla_menus').DataTable({
+        responsive: true,
+        order: [[0, 'asc']],
+        language: { url: '/static/i18n/es-ES.json' },
+        columnDefs: [ { targets: [3], orderable: false, searchable: false } ]
     });
+}
+
+$(document).ready(function() {
+    initDataTable();
+});
+
+function refreshTablaMenus() {
+    $('#fondo').addClass('visible');
+    $.get("{{ url_for('menu.tabla') }}", function(html) {
+        if (dtMenus) dtMenus.destroy();
+        $('#tbody-menus').html(html);
+        initDataTable();
+    }).always(function() {
+        $('#fondo').removeClass('visible');
+    });
+}
+
+function eliminarMenu(id, nombre) {
+    Swal.fire({
+        title: '¿Desactivar Menú?',
+        text: `El menú "${nombre}" dejará de estar disponible para asignar a roles.`,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonText: 'Sí, desactivar',
+        cancelButtonText: 'Cancelar',
+        confirmButtonColor: '#e74c3c'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            $('#fondo').addClass('visible');
+            $.post("{{ url_for('menu.eliminar') }}", { id: id })
+                .done(function(res) {
+                    if (res.ok) {
+                        toastr.success(res.msg);
+                        refreshTablaMenus();
+                    } else {
+                        toastr.error(res.msg);
+                    }
+                })
+                .always(function() {
+                    $('#fondo').removeClass('visible');
+                });
+        }
+    });
+}
 </script>
 {% endblock %}
