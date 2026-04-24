@@ -114,6 +114,12 @@
             </div>
 
             <div class="col-md-12 text-end">
+                <div class="form-check form-switch d-inline-block me-4">
+                    <input class="form-check-input" type="checkbox" id="permite_horas_extra" 
+                           {% if registro and registro.permite_horas_extra %}checked{% endif %}
+                           {% if modo == 'Visualizar' %}disabled{% endif %}>
+                    <label class="form-check-label fw-bold text-muted ms-2" for="permite_horas_extra">Permite Horas Extras</label>
+                </div>
                 <div class="form-check form-switch d-inline-block">
                     <input class="form-check-input" type="checkbox" id="activo_trabajador" 
                            {% if registro is none or registro.activo %}checked{% endif %}
@@ -416,7 +422,8 @@ function guardarTrabajador() {
     const formData = $('#form_trabajador').serialize();
     // Añadir el checkbox de activo manualmente ya que serialize no lo manda si es false
     const activo = $('#activo_trabajador').is(':checked') ? 'true' : 'false';
-    const finalData = formData + '&activo=' + activo;
+    const permite_extra = $('#permite_horas_extra').is(':checked') ? 'true' : 'false';
+    const finalData = formData + '&activo=' + activo + '&permite_horas_extra=' + permite_extra;
 
     $.post("{{ url_for('trabajador.guardar') }}", finalData)
     .done(function(res) {

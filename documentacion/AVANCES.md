@@ -55,3 +55,4 @@ Se basa directamente en `especificacion-funcional-sistema-turnos.md`.
     - **UX/UI**: El modal del Trabajador ahora incluye un selector de tipo por cada día de la semana, con validaciones en JavaScript para asegurar que en modo "Fijo" solo se seleccione un turno.
     - **Estabilidad**: Se corrigió un bug donde el solver ignoraba las restricciones de exclusividad de turno al no estar correctamente mapeadas en el constructor del modelo.
     - **Infraestructura**: Se actualizó el archivo `proyecto.sql` y se generaron scripts de migración manual y vía Alembic para asegurar la consistencia del entorno.
+    - **Horas Extras**: Se implementó el atributo `permite_horas_extra` en el Trabajador, con su respectivo switch en la UI y lógica en el motor CP-SAT para permitir un turno adicional por semana cuando está activo.

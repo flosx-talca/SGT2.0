@@ -80,6 +80,7 @@ def guardar():
     # horas_semanales: obligatorio para el builder.
     # Si el usuario no ingresó nada se usa la jornada estándar.
     horas = int(horas_str) if horas_str else JORNADA_DEFAULT
+    permite_extra = request.form.get('permite_horas_extra') == 'true'
 
     try:
         if tid and tid != '0':
@@ -99,6 +100,7 @@ def guardar():
             trabajador.telefono        = telefono
             trabajador.tipo_contrato   = tipo_contrato
             trabajador.horas_semanales = horas
+            trabajador.permite_horas_extra = permite_extra
             trabajador.activo          = activo
             msg = f'Trabajador "{nombre} {apellido1}" actualizado.'
         else:
@@ -117,6 +119,7 @@ def guardar():
                 telefono        = telefono,
                 tipo_contrato   = tipo_contrato,
                 horas_semanales = horas,
+                permite_horas_extra = permite_extra,
                 activo          = activo
             )
             db.session.add(trabajador)

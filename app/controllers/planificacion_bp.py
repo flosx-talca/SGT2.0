@@ -170,6 +170,7 @@ def generar():
         t.id: {
             'horas_semanales':   t.horas_semanales or None,
             'turnos_permitidos': getattr(t, '_turnos_solo', None),
+            'permite_horas_extra': getattr(t, 'permite_horas_extra', False),
         }
         for t in trabajadores_db
     }

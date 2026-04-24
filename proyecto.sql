@@ -161,6 +161,7 @@ CREATE TABLE IF NOT EXISTS trabajador (
     telefono VARCHAR(20),
     tipo_contrato VARCHAR(50) NOT NULL DEFAULT 'full-time',
     horas_semanales INTEGER NOT NULL DEFAULT 42,
+    permite_horas_extra BOOLEAN DEFAULT FALSE,
     activo BOOLEAN DEFAULT TRUE,
     creado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     actualizado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP

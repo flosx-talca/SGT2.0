@@ -106,6 +106,7 @@ class Trabajador(db.Model):
     # Ejemplos: 42 (jornada estándar Chile), 32 (part-time), 24 (part-time menor).
     # NOT NULL con default 42. Migración: ver b2c3d4e5f6a7_trabajador_horas_turno_hora.py
     horas_semanales = db.Column(db.Integer, nullable=False, default=42)
+    permite_horas_extra = db.Column(db.Boolean, default=False)
     activo = db.Column(db.Boolean, default=True)
     creado_en = db.Column(db.DateTime, default=datetime.utcnow)
     actualizado_en = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
