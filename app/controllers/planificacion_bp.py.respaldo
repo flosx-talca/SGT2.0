@@ -4,7 +4,7 @@ from datetime import timedelta, datetime
 from flask import Blueprint, render_template, request, jsonify
 from app.database import db
 from app.models.business import Trabajador, Turno, ReglaEmpresa
-from app.scheduler.builder import build_model
+from app.scheduler.builder.py.py import build_model
 from app.scheduler.solver import solve_model
 from app.scheduler.explain import extract_solution
 from app.scheduler.conflict import get_conflict_report
@@ -139,6 +139,29 @@ def generar():
         py_date = datetime.strptime(d_str, '%Y-%m-%d').date()
         coberturas_por_dia[d_str] = cob_domingo if py_date.weekday() == 6 else cob_global
 
+    # ── trabajadores_meta ─────────────────────────────────────────────────────
+    # duracion_turno: calculada desde los turnos reales del trabajador
+    #   solo_turno → duración de esos turnos específicos
+    #   sin restricción → promedio de todos los turnos de la empresa
+    # permite_horas_extra: desde campo BD del trabajador (default False)
+    trabajadores_meta = {}
+    for t in trabajadores_db:
+        if getattr(t, '_turnos_solo', None):
+            horas_w = [turnos_meta[abr]['horas']
+                       for abr in t._turnos_solo
+                       if abr in turnos_meta]
+        else:
+            horas_w = [v['horas'] for v in turnos_meta.values()]
+
+        duracion_w = round(sum(horas_w) / len(horas_w)) if horas_w else 8
+
+        trabajadores_meta[t.id] = {
+            'horas_semanales':     t.horas_semanales or None,
+            'turnos_permitidos':   getattr(t, '_turnos_solo', None),
+            'duracion_turno':      duracion_w,
+            'permite_horas_extra': getattr(t, 'permite_horas_extra', False) or False,
+        }
+
     # ── Reglas de la empresa desde BD ────────────────────────────────────────
     reglas_bd = {}
     reglas_empresa = ReglaEmpresa.query.filter_by(
@@ -180,36 +203,11 @@ def generar():
                     ausencias[(t.id, f_str)] = abr
                 curr += timedelta(days=1)
 
-    # ── Pre-procesamiento: bloqueados, fijos y preferencias ─────────────────
-    # IMPORTANTE: debe ir ANTES de trabajadores_meta porque asigna
-    # t._turnos_solo en cada objeto trabajador
+    # ── Pre-procesamiento: bloqueados, fijos y preferencias diarias ──────────
     from app.scheduler.builder import preparar_restricciones
     bloqueados, fijos, turnos_bloqueados_por_dia = preparar_restricciones(
         trabajadores_db, dias_del_mes, ausencias
     )
-
-    # ── trabajadores_meta ─────────────────────────────────────────────────────
-    # duracion_turno: calculada desde los turnos reales del trabajador
-    #   solo_turno → duración de esos turnos específicos (t._turnos_solo)
-    #   sin restricción → promedio de todos los turnos de la empresa
-    # permite_horas_extra: desde campo BD del trabajador (default False)
-    trabajadores_meta = {}
-    for t in trabajadores_db:
-        if getattr(t, '_turnos_solo', None):
-            horas_w = [turnos_meta[abr]['horas']
-                       for abr in t._turnos_solo
-                       if abr in turnos_meta]
-        else:
-            horas_w = [v['horas'] for v in turnos_meta.values()]
-
-        duracion_w = round(sum(horas_w) / len(horas_w)) if horas_w else 8
-
-        trabajadores_meta[t.id] = {
-            'horas_semanales':     t.horas_semanales or None,
-            'turnos_permitidos':   getattr(t, '_turnos_solo', None),
-            'duracion_turno':      duracion_w,
-            'permite_horas_extra': getattr(t, 'permite_horas_extra', False) or False,
-        }
 
     # ── Construir y resolver el modelo ────────────────────────────────────────
     try:
@@ -239,6 +237,32 @@ def generar():
         for w, meta in trabajadores_meta.items():
             print(f"  Worker {w}: {meta}")
         print(f"{'='*50}\n")
+
+        # ── DEBUG TEMPORAL ────────────────────────────────────────────
+        from collections import Counter
+        import math
+        bloq_por_worker = Counter(w for (w, d) in bloqueados)
+        # Reemplazar el bloque [BLOQUEADOS Y META REAL]:
+        print(f"\n[BLOQUEADOS Y META REAL por worker]")
+        for w in t_ids:
+            import math
+            b    = bloq_por_worker.get(w, 0)
+            meta = trabajadores_meta.get(w, {})
+            h    = meta.get('horas_semanales', 42)
+            dur  = meta.get('duracion_turno', 8)
+            ext  = meta.get('permite_horas_extra', False)
+            # Descontar domingos libres igual que el builder
+            dom_mes    = sum(1 for d in dias_del_mes
+                            if calendar.weekday(int(d[:4]),int(d[5:7]),int(d[8:10])) == 6)
+            dom_bloq   = sum(1 for (ww, d) in bloqueados
+                            if ww == w and
+                            calendar.weekday(int(d[:4]),int(d[5:7]),int(d[8:10])) == 6)
+            dom_libres = max(0, 1 - dom_bloq)   # min_free_sundays=1
+            disp       = (31 if not b else num_days) - b - dom_libres
+            raw        = disp / 7 * (h / dur)
+            m          = math.ceil(raw) if ext else math.floor(raw)
+            print(f"  Worker {w}: bloq={b} dom_libres={dom_libres} disp={disp} raw={raw:.2f} meta={m} extra={ext}")
+        # ── FIN DEBUG ─────────────────────────────────────────────────
 
         # UNKNOWN = timeout → error bloqueante, no hay nada que mostrar
         if status == cp_model.UNKNOWN:
