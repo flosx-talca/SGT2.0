@@ -17,6 +17,8 @@ W_NOCHE    =         10   # balancear turnos noche equitativamente
 W_CONSEC   =         50   # reward días consecutivos (agrupa días libres)
 W_REWARD   =          1   # utilización del personal disponible
 W_ASIG     =  1_000_000   # fijos: muy alto, cede solo ante HR4/HR5/HR7/HR10
+W_META     =     50_000   # penalización por desviarse de la meta mensual
+W_BALANCE  =      3_000   # balance de turnos por tipo entre trabajadores
 
 
 def preparar_restricciones(trabajadores_db, dias_del_mes, ausencias):
@@ -157,7 +159,7 @@ def build_model(trabajadores, dias_del_mes, turnos, coberturas,
     if turnos_meta       is None: turnos_meta       = {}
 
     max_dias_semana  = reglas.get('working_days_limit_max', 6)
-    min_domingos_lib = reglas.get('min_free_sundays', 2)
+    min_domingos_lib = reglas.get('min_free_sundays', 1)   # default 1, configurable desde BD
     duracion_default = reglas.get('duracion_turno', 8)
     jornada_default  = reglas.get('jornada_semanal', 42)
 
@@ -199,6 +201,19 @@ def build_model(trabajadores, dias_del_mes, turnos, coberturas,
         if w in trabajadores and d in dias_del_mes:
             for t in turnos:
                 model.Add(x[w, d, t] == 0)
+
+    # ════════════════════════════════════════════════════════════════════════════
+    # HR1b: Turnos con dotación 0 → bloqueados para todos los trabajadores
+    # Si el operador configura INT=0 significa que ese turno no existe ese día.
+    # Sin esta regla el solver asigna turnos con dotación 0 libremente.
+    # ════════════════════════════════════════════════════════════════════════════
+    for d in dias_del_mes:
+        cob_hoy = coberturas_norm[d]
+        for t in turnos:
+            if cob_hoy.get(t, 0) == 0:
+                for w in trabajadores:
+                    if (w, d) not in bloqueados:
+                        model.Add(x[w, d, t] == 0)
 
     # ════════════════════════════════════════════════════════════════════════════
     # HR2-FIJO: Patrones fijos → HARD obligatorio
@@ -265,7 +280,10 @@ def build_model(trabajadores, dias_del_mes, turnos, coberturas,
             # ceil en vez de int: 42h/8h=5.25 → 6 (empleador paga el turno extra)
             # int truncaría a 5 → conflicto con fijos de 6 días/sem → INFEASIBLE
             tope_turnos = math.ceil(tope_horas / duracion)
-            if extra_ok:
+            # Extra solo en semanas completas (7 días) y contratos exactos
+            # 30h/8h=3.75 (no exacto) → ceil ya incluye el extra implícito
+            # 40h/8h=5.0  (exacto)    → puede sumar 1 turno adicional
+            if extra_ok and n_dias == 7 and horas % duracion == 0:
                 tope_turnos += 1
             tope_turnos = min(tope_turnos, max_dias_semana)
             model.Add(
@@ -321,21 +339,36 @@ def build_model(trabajadores, dias_del_mes, turnos, coberturas,
     # ceil → empleador asume turno fraccionario
     # ±1 → absorbe conflictos con HR7/HR6/HR2
     # ════════════════════════════════════════════════════════════════════════════
+    desviaciones_meta = []
     for w in trabajadores:
         meta_w   = trabajadores_meta.get(w, {})
         horas    = meta_w.get('horas_semanales', jornada_default) or jornada_default
         duracion = meta_w.get('duracion_turno',  duracion_default) or duracion_default
+        extra_ok = meta_w.get('permite_horas_extra', False)
 
-        bloq_w       = sum(1 for (ww, d) in bloqueados if ww == w)
-        disponibles  = N - bloq_w
-        meta_mensual = math.ceil(disponibles / 7 * (horas / duracion))
+        bloq_w     = sum(1 for (ww, d) in bloqueados if ww == w)
+        dom_bloq_w = sum(1 for (ww, d) in bloqueados
+                        if ww == w and
+                        cal_module.weekday(int(d[:4]), int(d[5:7]), int(d[8:10])) == 6)
+        dom_libres = max(0, min_domingos_lib - dom_bloq_w)
+        disponibles = N - bloq_w - dom_libres
+
+        # floor sin extra: respetar contrato estrictamente
+        # ceil con extra:  empleador paga la fracción semanal
+        raw_meta     = disponibles / 7 * (horas / duracion)
+        meta_mensual = math.ceil(raw_meta) if extra_ok else math.floor(raw_meta)
 
         if meta_mensual <= 0:
             continue
 
-        total_w  = sum(x[w, d, t] for d in dias_del_mes for t in turnos)
+        total_w = sum(x[w, d, t] for d in dias_del_mes for t in turnos)
         model.Add(total_w >= max(0, meta_mensual - 1))
         model.Add(total_w <= min(disponibles, meta_mensual + 1))
+
+        # Penalizar desviación de la meta (empuja al solver hacia meta exacta)
+        desv = model.NewIntVar(0, disponibles, f'dev_meta_{w}')
+        model.AddAbsEquality(desv, total_w - meta_mensual)
+        desviaciones_meta.append(desv)
 
     # ════════════════════════════════════════════════════════════════════════════
     # SOFT rules
@@ -442,6 +475,30 @@ def build_model(trabajadores, dias_del_mes, turnos, coberturas,
             model.AddBoolOr([th.Not(), tm.Not()]).OnlyEnforceIf(par.Not())
             reward_consec.append(par)
 
+    # SR-BALANCE: Equidad de distribución de turnos por tipo entre trabajadores
+    # Para cada turno de la empresa, minimiza la diferencia entre el worker
+    # que más veces lo hace y el que menos.
+    # Excluye workers con solo_turno (ya tienen restricción de tipo).
+    balance_por_turno = []
+    workers_libres = [
+        w for w in trabajadores
+        if not trabajadores_meta.get(w, {}).get('turnos_permitidos', None)
+    ]
+    if len(workers_libres) >= 2:
+        for t in turnos:
+            totales_t = [
+                sum(x[w, d, t] for d in dias_del_mes)
+                for w in workers_libres
+            ]
+            max_t = model.NewIntVar(0, N, f'max_bal_{t}')
+            min_t = model.NewIntVar(0, N, f'min_bal_{t}')
+            for tw in totales_t:
+                model.Add(tw <= max_t)
+                model.Add(tw >= min_t)
+            rango_t = model.NewIntVar(0, N, f'rng_bal_{t}')
+            model.Add(rango_t == max_t - min_t)
+            balance_por_turno.append(rango_t)
+
     # SR10: Reward utilización
     reward_list = [
         x[w, d, t]
@@ -453,16 +510,18 @@ def build_model(trabajadores, dias_del_mes, turnos, coberturas,
 
     # ── Función objetivo ─────────────────────────────────────────────────────
     model.Minimize(
-        (sum(deficits)         * W_DEFICIT if deficits         else 0) +
-        (sum(excesses)         * W_EXCESO  if excesses         else 0) +
-        (sum(rango_cargas)     * W_EQUIDAD if rango_cargas     else 0) +
-        (sum(rango_cargas_sem) * W_EQ_SEM  if rango_cargas_sem else 0) +
-        (sum(dias_bajo_min)    * W_MIN_SEM if dias_bajo_min    else 0) +
-        (sum(dias_extra_max)   * W_MAX_SEM if dias_extra_max   else 0) +
-        (sum(penalizaciones)   * W_FRAG    if penalizaciones   else 0) +
-        (sum(pen_noche)        * W_NOCHE   if pen_noche        else 0) -
-        (sum(reward_list)      * W_REWARD  if reward_list      else 0) -
-        (sum(reward_consec)    * W_CONSEC  if reward_consec    else 0)
+        (sum(deficits)          * W_DEFICIT  if deficits          else 0) +
+        (sum(excesses)          * W_EXCESO   if excesses          else 0) +
+        (sum(rango_cargas)      * W_EQUIDAD  if rango_cargas      else 0) +
+        (sum(rango_cargas_sem)  * W_EQ_SEM   if rango_cargas_sem  else 0) +
+        (sum(desviaciones_meta) * W_META     if desviaciones_meta else 0) +
+        (sum(balance_por_turno) * W_BALANCE  if balance_por_turno else 0) +
+        (sum(dias_bajo_min)     * W_MIN_SEM  if dias_bajo_min     else 0) +
+        (sum(dias_extra_max)    * W_MAX_SEM  if dias_extra_max    else 0) +
+        (sum(penalizaciones)    * W_FRAG     if penalizaciones    else 0) +
+        (sum(pen_noche)         * W_NOCHE    if pen_noche         else 0) -
+        (sum(reward_list)       * W_REWARD   if reward_list       else 0) -
+        (sum(reward_consec)     * W_CONSEC   if reward_consec     else 0)
     )
 
     return model, x

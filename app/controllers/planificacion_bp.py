@@ -228,17 +228,51 @@ def generar():
         solver, status = solve_model(model)
 
         from ortools.sat.python import cp_model as _cp
-        print(f"\n{'='*50}")
-        print(f"STATUS: {['UNKNOWN','MODEL_INVALID','FEASIBLE','INFEASIBLE','OPTIMAL'][status]}")
-        print(f"Trabajadores: {len(t_ids)}")
-        print(f"Turnos: {turnos}")
-        print(f"Bloqueados: {len(bloqueados)}")
-        print(f"Fijos: {len(fijos)}")
-        print(f"reglas_bd: {reglas_bd}")
-        print(f"turnos_meta: {turnos_meta}")
+        import math as _math
+        _STATUS = ['UNKNOWN','MODEL_INVALID','FEASIBLE','INFEASIBLE','OPTIMAL']
+        print(f"\n{'='*60}")
+        print(f"[SGT] STATUS: {_STATUS[status]}")
+        print(f"[SGT] Trabajadores: {len(t_ids)} | Turnos: {turnos}")
+        print(f"[SGT] Bloqueados: {len(bloqueados)} | Fijos: {len(fijos)}")
+        print(f"[SGT] reglas_bd: {reglas_bd}")
+        print(f"[SGT] turnos_meta: {turnos_meta}")
+        print(f"\n[SGT] META POR TRABAJADOR:")
+        _min_dom = reglas_bd.get('min_free_sundays', 1)
         for w, meta in trabajadores_meta.items():
-            print(f"  Worker {w}: {meta}")
-        print(f"{'='*50}\n")
+            h    = meta.get('horas_semanales', 42) or 42
+            dur  = meta.get('duracion_turno', 8) or 8
+            ext  = meta.get('permite_horas_extra', False)
+            bloq = sum(1 for (ww, d) in bloqueados if ww == w)
+            dom_bloq = sum(1 for (ww, d) in bloqueados
+                          if ww == w and
+                          calendar.weekday(int(d[:4]),int(d[5:7]),int(d[8:10])) == 6)
+            dom_lib  = max(0, _min_dom - dom_bloq)
+            disp     = num_days - bloq - dom_lib
+            raw      = disp / 7 * (h / dur)
+            meta_cal = _math.ceil(raw) if ext else _math.floor(raw)
+            tope_sem = _math.ceil(h / dur)
+            if ext and h % dur == 0:
+                tope_sem += 1
+            print(f"  Worker {w}: {h}h dur={dur} extra={ext} "
+                  f"bloq={bloq} dom_lib={dom_lib} disp={disp} "
+                  f"raw={raw:.2f} meta={meta_cal} tope_sem={tope_sem}")
+        print(f"\n[SGT] FIJOS:")
+        _dias_sem = ['Lun','Mar','Mié','Jue','Vie','Sáb','Dom']
+        _fijos_por_w = {}
+        for (w, d), t in fijos.items():
+            wd = _dias_sem[calendar.weekday(int(d[:4]),int(d[5:7]),int(d[8:10]))]
+            es_dom = calendar.weekday(int(d[:4]),int(d[5:7]),int(d[8:10])) == 6
+            marca = " ← DOMINGO ⚠️" if es_dom else ""
+            print(f"  Worker {w}: {d} ({wd}) → {t}{marca}")
+            _fijos_por_w[w] = _fijos_por_w.get(w, 0) + 1
+        if fijos:
+            print(f"  Fijos por worker: {_fijos_por_w}")
+        print(f"\n[SGT] DOTACIÓN (primeros 7 días):")
+        for d in dias_del_mes[:7]:
+            cob = coberturas_por_dia[d]
+            zeros = [t for t,v in cob.items() if v == 0]
+            print(f"  {d}: {cob}" + (f" ← turnos bloqueados: {zeros}" if zeros else ""))
+        print(f"{'='*60}\n")
 
         # UNKNOWN = timeout → error bloqueante, no hay nada que mostrar
         if status == cp_model.UNKNOWN:
@@ -261,6 +295,42 @@ def generar():
         celdas = extract_solution(
             solver, status, x, t_ids, dias_del_mes, turnos, ausencias
         )
+
+        # ── Debug post-solución ───────────────────────────────────────────────
+        if status in (cp_model.FEASIBLE, cp_model.OPTIMAL):
+            print(f"\n[SGT] TOTALES POR WORKER Y TURNO:")
+            total_general = 0
+            for w in t_ids:
+                nombre = next((t['nombre'] for t in t_dicts if t['id'] == w), str(w))
+                total_w = sum(
+                    1 for d in dias_del_mes for t in turnos
+                    if solver.Value(x[w, d, t]) == 1
+                )
+                por_turno = {
+                    t: sum(1 for d in dias_del_mes if solver.Value(x[w, d, t]) == 1)
+                    for t in turnos
+                }
+                meta_w = trabajadores_meta.get(w, {})
+                h      = meta_w.get('horas_semanales', 42) or 42
+                dur    = meta_w.get('duracion_turno', 8) or 8
+                ext    = meta_w.get('permite_horas_extra', False)
+                alerta = " ⚠️ SOBRE META" if total_w > _math.ceil(h/dur * num_days/7) else ""
+                print(f"  {nombre[:20]:<20} total={total_w:>3} {por_turno}{alerta}")
+                total_general += total_w
+            print(f"  {'TOTAL GENERAL':<20} {total_general}")
+
+            print(f"\n[SGT] COBERTURA POR TURNO:")
+            for t in turnos:
+                req_total  = sum(coberturas_por_dia[d].get(t, 0) for d in dias_del_mes)
+                real_total = sum(
+                    1 for d in dias_del_mes
+                    for w in t_ids
+                    if solver.Value(x[w, d, t]) == 1
+                )
+                diff = real_total - req_total
+                estado = "✅" if diff == 0 else ("⚠️ SUPERÁVIT" if diff > 0 else "❌ DÉFICIT")
+                print(f"  Turno {t}: req={req_total} real={real_total} diff={diff:+} {estado}")
+            print(f"{'='*60}\n")
 
         # Métricas de cobertura (solo cuenta turnos reales, no L ni vacíos)
         turnos_necesarios = sum(

@@ -524,4 +524,18 @@ def build_model(trabajadores, dias_del_mes, turnos, coberturas,
         (sum(reward_consec)     * W_CONSEC   if reward_consec     else 0)
     )
 
+    # ── Debug hook: se activa desde solve_model si debug=True ───────────────
+    model._debug_meta = {
+        w: {
+            'horas':    (trabajadores_meta.get(w, {}).get('horas_semanales', jornada_default) or jornada_default),
+            'duracion': (trabajadores_meta.get(w, {}).get('duracion_turno', duracion_default) or duracion_default),
+            'extra':    trabajadores_meta.get(w, {}).get('permite_horas_extra', False),
+        }
+        for w in trabajadores
+    }
+    model._debug_workers   = trabajadores
+    model._debug_dias      = dias_del_mes
+    model._debug_turnos    = turnos
+    model._debug_coberturas = coberturas_norm
+
     return model, x
