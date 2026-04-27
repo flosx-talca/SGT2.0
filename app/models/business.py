@@ -160,6 +160,11 @@ class TrabajadorAusencia(db.Model):
     motivo = db.Column(db.String(255), nullable=False, default='')
     tipo_ausencia_id = db.Column(db.Integer, db.ForeignKey('tipo_ausencia.id', ondelete='CASCADE'), nullable=True)
     tipo_ausencia = db.relationship('TipoAusencia', lazy=True)
+    
+    # Vincular con la tabla técnica si es una RESTRICCION
+    restriccion_id = db.Column(db.Integer, db.ForeignKey('trabajador_restriccion_turno.id'), nullable=True)
+    restriccion = db.relationship('TrabajadorRestriccionTurno', foreign_keys=[restriccion_id])
+
     creado_en = db.Column(db.DateTime, default=datetime.utcnow)
 
     @property

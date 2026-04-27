@@ -66,9 +66,13 @@ def modal_restriccion():
     # Obtener turnos de la empresa
     shifts = Turno.query.filter_by(empresa_id=trabajador.empresa_id, activo=True).order_by(Turno.id).all()
     
+    # Obtener todos los tipos de ausencia/restricción maestros
+    tipos_maestros = TipoAusencia.query.filter_by(activo=True).order_by(TipoAusencia.nombre).all()
+    
     return render_template('modal-restriccion.html',
                            trabajador=trabajador,
-                           shifts=shifts)
+                           shifts=shifts,
+                           tipos_maestros=tipos_maestros)
 
 
 @trabajador_bp.route('/guardar', methods=['POST'])

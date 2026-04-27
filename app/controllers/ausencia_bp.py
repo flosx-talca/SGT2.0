@@ -102,7 +102,7 @@ def guardar():
     
     # Campos adicionales para restricciones
     turno_id = request.form.get('turno_id')
-    dias_semana_raw = request.form.getlist('dias_semana[]') # [0,1,2,3,4,5,6]
+    dias_semana_raw = request.form.getlist('dias_semana[]') 
     
     if not all([tid, tipo_id, desde_str, hasta_str]):
         return jsonify({'ok': False, 'msg': 'Faltan campos obligatorios.'}), 400
@@ -115,8 +115,10 @@ def guardar():
 
         if aid and aid != '0':
             ausencia = TrabajadorAusencia.query.get_or_404(int(aid))
-            # Antes de actualizar, si era restricción, buscamos la antigua para actualizarla/eliminarla
-            old_tipo = ausencia.tipo_ausencia
+            # Si ya tenía una restricción técnica, la borramos para recrearla limpia
+            if ausencia.restriccion:
+                db.session.delete(ausencia.restriccion)
+                ausencia.restriccion_id = None
             
             ausencia.trabajador_id = trabajador.id
             ausencia.tipo_ausencia_id = tipo.id
@@ -124,15 +126,6 @@ def guardar():
             ausencia.fecha_fin = fecha_fin
             ausencia.motivo = motivo
             msg = 'Registro actualizado correctamente.'
-            
-            # Limpiar restricción antigua si existía
-            if old_tipo and old_tipo.categoria == CategoriaAusencia.RESTRICCION:
-                TrabajadorRestriccionTurno.query.filter_by(
-                    trabajador_id=trabajador.id,
-                    fecha_inicio=ausencia.fecha_inicio,
-                    fecha_fin=ausencia.fecha_fin,
-                    tipo=old_tipo.tipo_restriccion
-                ).delete()
         else:
             ausencia = TrabajadorAusencia(
                 trabajador_id = trabajador.id,
@@ -144,11 +137,13 @@ def guardar():
             db.session.add(ausencia)
             msg = 'Registro guardado exitosamente.'
         
+        db.session.flush() # Para tener ID de ausencia si es nueva
+
         # Sincronización con TrabajadorRestriccionTurno si es RESTRICCION
         if tipo.categoria == CategoriaAusencia.RESTRICCION:
             dias_json = [int(d) for d in dias_semana_raw] if dias_semana_raw else None
             
-            # Mapeo de naturaleza según tipo (Hard por defecto para tf, et, st)
+            # Mapeo de naturaleza según tipo (Hard por defecto)
             naturaleza = "hard"
             if tipo.tipo_restriccion == "turno_preferente":
                 naturaleza = "soft"
@@ -166,6 +161,8 @@ def guardar():
                 activo        = True
             )
             db.session.add(restriccion)
+            db.session.flush()
+            ausencia.restriccion_id = restriccion.id
             
         db.session.commit()
         return jsonify({'ok': True, 'msg': msg})
@@ -176,16 +173,10 @@ def guardar():
 @ausencia_bp.route('/ausencias/eliminar/<int:id>', methods=['POST'])
 def eliminar(id):
     ausencia = TrabajadorAusencia.query.get_or_404(id)
-    tipo = ausencia.tipo_ausencia
     try:
-        # Si era restricción, eliminar también de la tabla técnica
-        if tipo and tipo.categoria == CategoriaAusencia.RESTRICCION:
-             TrabajadorRestriccionTurno.query.filter_by(
-                trabajador_id=ausencia.trabajador_id,
-                fecha_inicio=ausencia.fecha_inicio,
-                fecha_fin=ausencia.fecha_fin,
-                tipo=tipo.tipo_restriccion
-            ).delete()
+        # Si tiene una restricción técnica vinculada, la borramos
+        if ausencia.restriccion:
+            db.session.delete(ausencia.restriccion)
             
         db.session.delete(ausencia)
         db.session.commit()

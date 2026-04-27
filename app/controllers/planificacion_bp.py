@@ -166,12 +166,18 @@ def generar():
         horas_lista = [v['horas'] for v in turnos_meta.values()]
         reglas_bd['duracion_turno'] = round(sum(horas_lista) / len(horas_lista))
 
-    # ── Ausencias ─────────────────────────────────────────────────────────────
+    # ── Ausencias (Bloqueos de día completo) ──────────────────────────────────
     ausencias = {}
     for t in trabajadores_db:
         for a in t.ausencias:
             if not a.fecha_inicio or not a.fecha_fin:
                 continue
+            
+            # SGT 2.1: Solo considerar ausencias que bloquean el día completo (Vacaciones, Licencias, etc.)
+            # Las restricciones de turno se procesan por separado a través de restricciones_especiales
+            if not a.es_bloqueo_dia:
+                continue
+
             curr = a.fecha_inicio
             while curr <= a.fecha_fin:
                 f_str = curr.strftime('%Y-%m-%d')

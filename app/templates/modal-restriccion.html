@@ -1,8 +1,8 @@
-<div class="modal-header bg-warning text-dark">
+<div class="modal-header bg-dark text-white">
     <h5 class="modal-title fw-bold">
-        <i class="fa fa-user-lock me-2"></i>Restricciones Especiales: {{ trabajador.nombre }} {{ trabajador.apellido1 }}
+        <i class="fa fa-user-shield me-2 text-warning"></i>Gestión de Disponibilidad: {{ trabajador.nombre }} {{ trabajador.apellido1 }}
     </h5>
-    <button type="button" class="btn-close" onclick="CerrarModal()"></button>
+    <button type="button" class="btn-close btn-close-white" onclick="CerrarModal()"></button>
 </div>
 
 <div class="modal-body p-4">
@@ -12,31 +12,45 @@
 
         <div class="row g-3 mb-4">
             <div class="col-md-6">
-                <label class="form-label small fw-bold text-muted">Tipo de Restricción</label>
-                <select name="tipo" id="res_tipo" class="form-select form-select-sm shadow-sm" onchange="actualizarMatrixUI()">
-                    <option value="turno_fijo">Turno Fijo (Hard)</option>
-                    <option value="solo_turno">Solo este Turno (Hard)</option>
-                    <option value="excluir_turno">Excluir Turno (Hard)</option>
-                    <option value="turno_preferente">Turno Preferente (Soft)</option>
+                <label class="form-label small fw-bold text-muted">Tipo de Ausencia o Restricción</label>
+                <select name="tipo_ausencia_id" id="res_tipo_maestro" class="form-select form-select-sm shadow-sm" onchange="actualizarUIUnificada()">
+                    <option value="">-- Seleccione Tipo --</option>
+                    
+                    <optgroup label="📅 Restricciones de Días (Bloqueos)">
+                        {% for t in tipos_maestros if t.categoria.value == 'ausencia' %}
+                        <option value="{{ t.id }}" data-categoria="{{ t.categoria.value }}" data-tipo-tecnico="{{ t.tipo_restriccion.value if t.tipo_restriccion else '' }}">
+                             🏖️ {{ t.nombre }}
+                        </option>
+                        {% endfor %}
+                    </optgroup>
+
+                    <optgroup label="⚙️ Restricciones de Turnos">
+                        {% for t in tipos_maestros if t.categoria.value == 'restriccion' %}
+                        <option value="{{ t.id }}" data-categoria="{{ t.categoria.value }}" data-tipo-tecnico="{{ t.tipo_restriccion.value if t.tipo_restriccion else '' }}">
+                             🔒 {{ t.nombre }}
+                        </option>
+                        {% endfor %}
+                    </optgroup>
                 </select>
             </div>
             <div class="col-md-3">
-                <label class="form-label small fw-bold text-muted">Fecha Inicio</label>
+                <label class="form-label small fw-bold text-muted">Desde</label>
                 <input type="date" name="fecha_inicio" id="res_fecha_inicio" class="form-control form-control-sm" required>
             </div>
             <div class="col-md-3">
-                <label class="form-label small fw-bold text-muted">Fecha Fin</label>
+                <label class="form-label small fw-bold text-muted">Hasta</label>
                 <input type="date" name="fecha_fin" id="res_fecha_fin" class="form-control form-control-sm" required>
             </div>
         </div>
 
-        <div class="border rounded p-3 bg-light mb-4">
-            <h6 class="small fw-bold text-muted mb-3">Selección de Turnos por Día de la Semana</h6>
+        <!-- Contenedor de Matriz (Solo para Restricciones Técnicas) -->
+        <div id="contenedor-matriz" class="border rounded p-3 bg-light mb-4" style="display: none;">
+            <h6 class="small fw-bold text-muted mb-3"><i class="fa fa-th me-2"></i>Configuración de Turnos por Día</h6>
             <div class="table-responsive">
                 <table class="table table-sm table-bordered bg-white align-middle text-center mb-0" style="font-size: 0.85rem;">
                     <thead class="table-dark">
                         <tr>
-                            <th class="text-start ps-3">Día de la Semana</th>
+                            <th class="text-start ps-3">Día</th>
                             {% for shift in shifts %}
                             <th title="{{ shift.nombre }}">
                                 <span class="badge" style="background-color: {{ shift.color }};">{{ shift.abreviacion }}</span>
@@ -62,41 +76,42 @@
                 </table>
             </div>
             <div id="matrix-hint" class="small text-muted mt-2 fst-italic">
-                * En "Turno Fijo", solo puedes seleccionar un turno por día.
+                * Marque los turnos que aplican a esta restricción.
             </div>
         </div>
 
         <div class="mb-3">
-            <label class="form-label small fw-bold text-muted">Motivo / Observación</label>
-            <input type="text" name="motivo" class="form-control form-control-sm" placeholder="Ej: Acuerdo mutuo, restricción médica...">
+            <label class="form-label small fw-bold text-muted">Observación / Motivo</label>
+            <input type="text" name="motivo" id="res_motivo" class="form-control form-control-sm" placeholder="Ej: Vacaciones legales, Licencia #123, etc.">
         </div>
 
-        <div id="alert-conflict" class="alert alert-danger d-none small py-2">
-            <i class="fa fa-exclamation-triangle me-2"></i> <span id="conflict-msg"></span>
+        <div id="alert-conflict" class="alert alert-warning d-none small py-2">
+            <i class="fa fa-info-circle me-2"></i> <span id="conflict-msg"></span>
         </div>
 
         <div class="text-end">
-            <button type="button" class="btn btn-sm btn-outline-primary me-2" onclick="previewRestriccion()">
-                <i class="fa fa-search me-1"></i> Previsualizar Conflictos
-            </button>
-            <button type="button" id="btnGuardarRestriccion" class="btn btn-sm btn-warning fw-bold px-4" onclick="saveRestriccion()">
-                <i class="fa fa-save me-1"></i> Guardar Restricción
+            <button type="button" id="btnGuardarRestriccion" class="btn btn-primary fw-bold px-4 shadow-sm" onclick="saveRestriccion()">
+                <i class="fa fa-save me-1"></i> Guardar Registro
             </button>
         </div>
     </form>
 
     <hr class="my-4">
 
-    <h6 class="fw-bold text-muted mb-3"><i class="fa fa-history me-2"></i>Restricciones Activas</h6>
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h6 class="fw-bold text-muted mb-0"><i class="fa fa-history me-2"></i>Historial de Disponibilidad</h6>
+        <span class="badge bg-light text-muted border small">Últimos registros</span>
+    </div>
+
     <div id="lista-restricciones" class="table-responsive small">
-        <table class="table table-sm table-hover border rounded">
+        <table class="table table-sm table-hover border rounded align-middle">
             <thead class="table-light">
                 <tr>
-                    <th>Tipo</th>
+                    <th>Categoría / Tipo</th>
                     <th>Período</th>
                     <th>Días</th>
                     <th>Turno</th>
-                    <th>Acción</th>
+                    <th class="text-center">Acción</th>
                 </tr>
             </thead>
             <tbody id="res-table-body">
@@ -109,7 +124,14 @@
 <script>
 $(document).ready(function() {
     loadExistingRestrictions();
-    actualizarMatrixUI();
+    actualizarUIUnificada();
+    
+    // Al cambiar fechas, chequear solapamientos para avisar
+    $('#res_fecha_inicio, #res_fecha_fin').on('change', function() {
+        if ($('#res_fecha_inicio').val() && $('#res_fecha_fin').val()) {
+            previewRestriccion();
+        }
+    });
 });
 
 function loadExistingRestrictions() {
@@ -117,19 +139,29 @@ function loadExistingRestrictions() {
     $.get(`/api/restricciones/worker/${workerId}`, function(data) {
         let html = '';
         if (data.length === 0) {
-            html = '<tr><td colspan="5" class="text-center text-muted italic py-3">No hay restricciones registradas.</td></tr>';
+            html = '<tr><td colspan="5" class="text-center text-muted italic py-3">No hay registros de disponibilidad.</td></tr>';
         } else {
             data.forEach(r => {
-                const diasStr = r.dias_semana ? r.dias_semana.map(d => ['L', 'M', 'X', 'J', 'V', 'S', 'D'][d]).join(',') : 'Todos';
+                const badgeCat = r.categoria === 'ausencia' ? 'bg-info-subtle text-info' : 'bg-warning-subtle text-warning';
+                const iconCat = r.categoria === 'ausencia' ? '🏖️' : '🔒';
+                
                 html += `
                     <tr>
-                        <td><span class="badge bg-secondary">${r.tipo}</span></td>
-                        <td>${r.fecha_inicio} al ${r.fecha_fin}</td>
-                        <td>${diasStr}</td>
-                        <td>${r.turno || '-'}</td>
                         <td>
-                            <button class="btn btn-link btn-sm text-danger p-0" onclick="deleteRestriction(${r.id})">
-                                <i class="fa fa-trash"></i>
+                            <div class="d-flex align-items-center">
+                                <span class="me-2">${iconCat}</span>
+                                <div>
+                                    <div class="fw-bold">${r.tipo}</div>
+                                    <div class="text-muted" style="font-size: 0.7rem;">${r.motivo || ''}</div>
+                                </div>
+                            </div>
+                        </td>
+                        <td class="small">${formatISODate(r.fecha_inicio)} al ${formatISODate(r.fecha_fin)}</td>
+                        <td class="small text-muted">${r.dias_semana}</td>
+                        <td class="small fw-bold">${r.turno}</td>
+                        <td class="text-center">
+                            <button class="btn btn-outline-danger btn-xs border-0" onclick="deleteRestriction(${r.id})" title="Eliminar y liberar rango">
+                                <i class="fa fa-trash-alt"></i>
                             </button>
                         </td>
                     </tr>
@@ -140,53 +172,81 @@ function loadExistingRestrictions() {
     });
 }
 
+function formatISODate(iso) {
+    if(!iso) return '-';
+    const parts = iso.split('-');
+    return `${parts[2]}/${parts[1]}/${parts[0]}`;
+}
+
+function actualizarUIUnificada() {
+    const $option = $('#res_tipo_maestro option:selected');
+    const categoria = $option.data('categoria');
+    const tipoTecnico = $option.data('tipo-tecnico');
+    
+    if (categoria === 'restriccion') {
+        $('#contenedor-matriz').slideDown();
+        if (tipoTecnico === 'turno_fijo' || tipoTecnico === 'solo_turno') {
+            $('#matrix-hint').text('* Restricción estricta: seleccione solo un turno por día.');
+        } else {
+            $('#matrix-hint').text('* Seleccione los turnos permitidos o excluidos para los días marcados.');
+        }
+    } else {
+        $('#contenedor-matriz').slideUp();
+        $('.res-check').prop('checked', false);
+    }
+}
+
 function handleMatrixClick(cb, dia, shiftId) {
-    const tipo = $('#res_tipo').val();
-    if (tipo === 'turno_fijo' || tipo === 'solo_turno') {
-        // En estos tipos, solo se permite UN turno por día (o globalmente si es solo_turno)
+    const $option = $('#res_tipo_maestro option:selected');
+    const tipoTecnico = $option.data('tipo-tecnico');
+    
+    if (tipoTecnico === 'turno_fijo' || tipoTecnico === 'solo_turno') {
         if ($(cb).is(':checked')) {
             $(`.res-check[data-dia="${dia}"]`).not(cb).prop('checked', false);
         }
     }
 }
 
-function actualizarMatrixUI() {
-    const tipo = $('#res_tipo').val();
-    $('.res-check').prop('checked', false);
-    
-    if (tipo === 'solo_turno') {
-        $('#matrix-hint').text('* En "Solo Turno", selecciona el único turno permitido (se aplica a todos los días del rango).');
-    } else {
-        $('#matrix-hint').text('* Selecciona los turnos para cada día de la semana que aplica la restricción.');
-    }
-}
-
 function previewRestriccion() {
-    const data = getFormData();
-    if (!validateData(data)) return;
+    const data = {
+        trabajador_id: $('#res_trabajador_id').val(),
+        fecha_inicio: $('#res_fecha_inicio').val(),
+        fecha_fin: $('#res_fecha_fin').val()
+    };
+    
+    if (!data.fecha_inicio || !data.fecha_fin) return;
 
     $.ajax({
         url: '/api/restricciones/preview',
         type: 'POST',
-        data: JSON.stringify(data),
+        data: JSON.stringify({
+            ...data,
+            tipo_ausencia_id: $('#res_tipo_maestro').val(),
+            categoria: $('#res_tipo_maestro option:selected').data('categoria')
+        }),
         contentType: 'application/json',
         success: function(res) {
             if (res.status === 'conflict') {
-                $('#conflict-msg').text(res.conflictos.join(' '));
+                $('#conflict-msg').text(res.msg);
                 $('#alert-conflict').removeClass('d-none');
             } else {
                 $('#alert-conflict').addClass('d-none');
-                toastr.success('No se detectaron conflictos.');
             }
         }
     });
 }
 
 function saveRestriccion() {
+    const $option = $('#res_tipo_maestro option:selected');
+    const categoria = $option.data('categoria');
+    const tipoId = $('#res_tipo_maestro').val();
+    
+    if (!tipoId) { toastr.warning('Seleccione el tipo.'); return; }
+    
     const data = getFormData();
-    if (!validateData(data)) return;
+    if (!validateData(data, categoria)) return;
 
-    $('#btnGuardarRestriccion').prop('disabled', true).html('<i class="fa fa-spinner fa-spin"></i>');
+    $('#btnGuardarRestriccion').prop('disabled', true).html('<i class="fa fa-spinner fa-spin me-1"></i> Guardando...');
 
     $.ajax({
         url: '/api/restricciones/save',
@@ -194,14 +254,16 @@ function saveRestriccion() {
         data: JSON.stringify(data),
         contentType: 'application/json',
         success: function(res) {
-            toastr.success('Restricción guardada con éxito.');
+            toastr.success('Registro guardado exitosamente.');
             loadExistingRestrictions();
-            $('.res-check').prop('checked', false);
-            $('#btnGuardarRestriccion').prop('disabled', false).html('<i class="fa fa-save me-1"></i> Guardar Restricción');
+            resetForm();
+            $('#btnGuardarRestriccion').prop('disabled', false).html('<i class="fa fa-save me-1"></i> Guardar Registro');
+            $('#alert-conflict').addClass('d-none');
         },
-        error: function() {
-            toastr.error('Error al guardar.');
-            $('#btnGuardarRestriccion').prop('disabled', false).html('<i class="fa fa-save me-1"></i> Guardar Restricción');
+        error: function(xhr) {
+            const msg = xhr.responseJSON ? xhr.responseJSON.msg : 'Error al guardar';
+            toastr.error(msg);
+            $('#btnGuardarRestriccion').prop('disabled', false).html('<i class="fa fa-save me-1"></i> Guardar Registro');
         }
     });
 }
@@ -221,32 +283,55 @@ function getFormData() {
     return {
         trabajador_id: parseInt($('#res_trabajador_id').val()),
         empresa_id: parseInt($('input[name="empresa_id"]').val()),
-        tipo: $('#res_tipo').val(),
+        tipo_ausencia_id: parseInt($('#res_tipo_maestro').val()),
         fecha_inicio: $('#res_fecha_inicio').val(),
         fecha_fin: $('#res_fecha_fin').val(),
         dias_semana: dias,
         turno_id: shiftId,
-        motivo: $('input[name="motivo"]').val()
+        motivo: $('#res_motivo').val()
     };
 }
 
-function validateData(data) {
+function validateData(data, categoria) {
     if (!data.fecha_inicio || !data.fecha_fin) {
-        toastr.warning('Selecciona las fechas.');
+        toastr.warning('Defina el rango de fechas.');
         return false;
     }
-    if (data.dias_semana.length === 0) {
-        toastr.warning('Selecciona al menos un turno en la matriz.');
+    if (data.fecha_inicio > data.fecha_fin) {
+        toastr.warning('La fecha inicial no puede ser posterior a la final.');
+        return false;
+    }
+    if (categoria === 'restriccion' && data.dias_semana.length === 0) {
+        toastr.warning('Seleccione al menos un turno en la matriz para la restricción.');
         return false;
     }
     return true;
 }
 
+function resetForm() {
+    $('#res_tipo_maestro').val('');
+    $('#res_fecha_inicio').val('');
+    $('#res_fecha_fin').val('');
+    $('#res_motivo').val('');
+    $('.res-check').prop('checked', false);
+    actualizarUIUnificada();
+}
+
 function deleteRestriction(id) {
-    if (!confirm('¿Seguro que desea eliminar esta restricción?')) return;
-    $.post(`/api/restricciones/delete/${id}`, function() {
-        toastr.success('Eliminado.');
-        loadExistingRestrictions();
+    Swal.fire({
+        title: '¿Eliminar registro?',
+        text: "Esto liberará la disponibilidad del trabajador en este período.",
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonText: 'Sí, eliminar',
+        cancelButtonColor: '#d33'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            $.post(`/api/restricciones/delete/${id}`, function() {
+                toastr.success('Registro eliminado.');
+                loadExistingRestrictions();
+            });
+        }
     });
 }
 </script>
