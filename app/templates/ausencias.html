@@ -1,12 +1,12 @@
 {% extends "_partial.html" if is_htmx else "layout.html" %}
 
-{% block title %}Gestión de Ausencias{% endblock %}
-{% block header %}Planificación Operativa{% endblock %}
-{% block page_title %}Ausencias y Permisos{% endblock %}
+{% block title %}Gestión de Restricciones{% endblock %}
+{% block header %}Planificación Operativa SGT 2.1{% endblock %}
+{% block page_title %}Restricciones y Ausencias{% endblock %}
 
 {% block actions %}
 <button class="btn btn-primary shadow-sm" onclick="abrirModalAusencia()">
-    <i class="fa fa-calendar-plus me-1"></i> Nueva Ausencia
+    <i class="fa fa-plus-circle me-1"></i> Nueva Restricción / Ausencia
 </button>
 {% endblock %}
 
@@ -74,12 +74,12 @@
     </div>
 </div>
 
-<!-- LISTADO DE AUSENCIAS -->
+<!-- LISTADO UNIFICADO -->
 <div class="row">
     <div class="col-12">
         <div class="card shadow-sm border-0">
             <div class="card-header bg-white py-3 border-bottom d-flex align-items-center">
-                <h5 class="mb-0 fw-bold text-dark"><i class="fa fa-calendar-times me-2 text-primary"></i>Registro de Ausencias</h5>
+                <h5 class="mb-0 fw-bold text-dark"><i class="fa fa-shield-alt me-2 text-primary"></i>Panel Unificado de Restricciones</h5>
                 
                 <div class="ms-auto d-flex gap-2">
                     <select id="filtro_mes" class="form-select form-select-sm" style="width: 140px;" onchange="filtrar()">
@@ -101,10 +101,10 @@
                     <thead class="table-light">
                         <tr>
                             <th>Trabajador</th>
-                            <th>Tipo / Motivo</th>
+                            <th>Tipo / Categoría</th>
                             <th>Desde</th>
                             <th>Hasta</th>
-                            <th class="text-center">Duración</th>
+                            <th class="text-center">Detalle</th>
                             <th class="text-center">Acciones</th>
                         </tr>
                     </thead>
@@ -116,9 +116,16 @@
                                 <div class="small text-muted">{{ a.trabajador.rut }}</div>
                             </td>
                             <td>
-                                <span class="badge" style="background-color: {{ a.tipo_ausencia.color if a.tipo_ausencia else '#6c757d' }}">
-                                    {{ a.tipo_ausencia.nombre if a.tipo_ausencia else 'Ausencia' }}
-                                </span>
+                                <div class="d-flex align-items-center gap-2">
+                                    <span class="badge" style="background-color: {{ a.tipo_ausencia.color if a.tipo_ausencia else '#6c757d' }}">
+                                        {{ a.tipo_ausencia.nombre if a.tipo_ausencia else 'Ausencia' }}
+                                    </span>
+                                    {% if a.es_bloqueo_dia %}
+                                        <small class="text-danger fw-bold" title="Bloquea día completo"><i class="fa fa-ban"></i></small>
+                                    {% else %}
+                                        <small class="text-info fw-bold" title="Restricción de turno"><i class="fa fa-lock"></i></small>
+                                    {% endif %}
+                                </div>
                                 <div class="small text-muted text-truncate" style="max-width: 200px;">{{ a.motivo or '-' }}</div>
                             </td>
                             <td class="text-nowrap">{{ a.fecha_inicio.strftime('%d/%m/%Y') }}</td>
@@ -127,6 +134,9 @@
                                 <span class="badge bg-light text-dark border">
                                     {{ (a.fecha_fin - a.fecha_inicio).days + 1 }} días
                                 </span>
+                                {% if not a.es_bloqueo_dia %}
+                                    <div class="x-small text-info">{{ a.tipo_restriccion_val }}</div>
+                                {% endif %}
                             </td>
                             <td class="text-center">
                                 <div class="d-flex justify-content-center gap-1">
@@ -205,9 +215,7 @@ function editarAusencia(id) {
     });
 }
 
-function CerrarModal() {
-    $('#modalGeneral').modal('hide');
-}
+// CerrarModal ya está definido en layout.html de forma robusta
 
 function eliminarAusencia(id, nombre) {
     Swal.fire({

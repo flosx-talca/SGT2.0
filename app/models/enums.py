@@ -5,6 +5,10 @@ class TipoContrato(str, Enum):
     PART_TIME_30 = "part_time_30"
     PART_TIME_20 = "part_time_20"
 
+class CategoriaAusencia(str, Enum):
+    AUSENCIA    = "ausencia"
+    RESTRICCION = "restriccion"
+
 class RestrictionType(str, Enum):
     EXCLUIR_TURNO     = "excluir_turno"     # x[w,d,t] = 0 (Hard)
     SOLO_TURNO        = "solo_turno"        # x[w,d,t] = 1 solo para t (Hard)

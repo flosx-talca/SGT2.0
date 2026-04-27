@@ -55,10 +55,11 @@ class SchedulingService:
             TrabajadorAusencia.fecha_fin >= fecha_inicio
         ).all()
         for a in ausencias:
-            curr = max(a.fecha_inicio, fecha_inicio)
-            while curr <= min(a.fecha_fin, fecha_fin):
-                bloqueados.append((a.trabajador_id, curr.isoformat()))
-                curr += timedelta(days=1)
+            if a.es_bloqueo_dia:
+                curr = max(a.fecha_inicio, fecha_inicio)
+                while curr <= min(a.fecha_fin, fecha_fin):
+                    bloqueados.append((a.trabajador_id, curr.isoformat()))
+                    curr += timedelta(days=1)
 
         restricciones = TrabajadorRestriccionTurno.query.filter(
             TrabajadorRestriccionTurno.trabajador_id.in_([w.id for w in trabajadores]),
@@ -123,3 +124,27 @@ class SchedulingService:
 
         except Exception as e:
             return {'status': 'error', 'message': f'Error en el motor de resolución: {str(e)}'}
+
+    @staticmethod
+    def validar_cobertura_factible(trabajadores, turnos, dias_del_mes, bloqueados) -> list:
+        """
+        Detecta días donde las ausencias dejan cobertura imposible.
+        """
+        alertas = []
+        # Convertimos bloqueados a set para búsqueda rápida
+        bloq_set = set(bloqueados)
+
+        for d_str in dias_del_mes:
+            # Trabajadores disponibles este día
+            disponibles_dia = [w.id for w in trabajadores if (w.id, d_str) not in bloq_set]
+            
+            for t in turnos:
+                if len(disponibles_dia) < t.dotacion_diaria:
+                    alertas.append({
+                        "fecha": d_str,
+                        "turno": t.nombre,
+                        "disponibles": len(disponibles_dia),
+                        "requeridos": t.dotacion_diaria,
+                        "faltantes": t.dotacion_diaria - len(disponibles_dia)
+                    })
+        return alertas

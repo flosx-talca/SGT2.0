@@ -1,6 +1,7 @@
 from flask import Blueprint, render_template, request, jsonify, redirect, url_for
 from app.database import db
-from app.models.business import Trabajador, TrabajadorAusencia, TipoAusencia
+from app.models.business import Trabajador, TrabajadorAusencia, TipoAusencia, Turno, TrabajadorRestriccionTurno
+from app.models.enums import CategoriaAusencia
 from app.services.capacidad_service import calcular_capacidad_detallada
 from datetime import date, datetime
 
@@ -47,7 +48,14 @@ def modal_nueva(id=None):
     empresa_id = t_first.empresa_id if t_first else 1
     trabajadores = Trabajador.query.filter_by(empresa_id=empresa_id, activo=True).order_by(Trabajador.nombre).all()
     tipos = TipoAusencia.query.filter_by(activo=True).all()
-    return render_template('modal-ausencia.html', trabajadores=trabajadores, tipos=tipos, ausencia=ausencia)
+    turnos = Turno.query.filter_by(empresa_id=empresa_id, activo=True).all()
+    
+    return render_template('modal-ausencia.html', 
+                           trabajadores=trabajadores, 
+                           tipos=tipos, 
+                           turnos=turnos,
+                           ausencia=ausencia,
+                           CategoriaAusencia=CategoriaAusencia)
 
 @ausencia_bp.route('/ausencias/impacto', methods=['POST'])
 def impacto():
@@ -88,32 +96,76 @@ def guardar():
     aid = request.form.get('id')
     tid = request.form.get('trabajador_id')
     tipo_id = request.form.get('tipo_ausencia_id')
-    desde = request.form.get('fecha_inicio')
-    hasta = request.form.get('fecha_fin')
+    desde_str = request.form.get('fecha_inicio')
+    hasta_str = request.form.get('fecha_fin')
     motivo = request.form.get('motivo')
     
-    if not all([tid, tipo_id, desde, hasta]):
+    # Campos adicionales para restricciones
+    turno_id = request.form.get('turno_id')
+    dias_semana_raw = request.form.getlist('dias_semana[]') # [0,1,2,3,4,5,6]
+    
+    if not all([tid, tipo_id, desde_str, hasta_str]):
         return jsonify({'ok': False, 'msg': 'Faltan campos obligatorios.'}), 400
         
     try:
+        tipo = TipoAusencia.query.get_or_404(int(tipo_id))
+        trabajador = Trabajador.query.get_or_404(int(tid))
+        fecha_inicio = datetime.strptime(desde_str, '%Y-%m-%d').date()
+        fecha_fin = datetime.strptime(hasta_str, '%Y-%m-%d').date()
+
         if aid and aid != '0':
             ausencia = TrabajadorAusencia.query.get_or_404(int(aid))
-            ausencia.trabajador_id = int(tid)
-            ausencia.tipo_ausencia_id = int(tipo_id)
-            ausencia.fecha_inicio = datetime.strptime(desde, '%Y-%m-%d').date()
-            ausencia.fecha_fin = datetime.strptime(hasta, '%Y-%m-%d').date()
+            # Antes de actualizar, si era restricción, buscamos la antigua para actualizarla/eliminarla
+            old_tipo = ausencia.tipo_ausencia
+            
+            ausencia.trabajador_id = trabajador.id
+            ausencia.tipo_ausencia_id = tipo.id
+            ausencia.fecha_inicio = fecha_inicio
+            ausencia.fecha_fin = fecha_fin
             ausencia.motivo = motivo
-            msg = 'Ausencia actualizada correctamente.'
+            msg = 'Registro actualizado correctamente.'
+            
+            # Limpiar restricción antigua si existía
+            if old_tipo and old_tipo.categoria == CategoriaAusencia.RESTRICCION:
+                TrabajadorRestriccionTurno.query.filter_by(
+                    trabajador_id=trabajador.id,
+                    fecha_inicio=ausencia.fecha_inicio,
+                    fecha_fin=ausencia.fecha_fin,
+                    tipo=old_tipo.tipo_restriccion
+                ).delete()
         else:
             ausencia = TrabajadorAusencia(
-                trabajador_id = int(tid),
-                tipo_ausencia_id = int(tipo_id),
-                fecha_inicio = datetime.strptime(desde, '%Y-%m-%d').date(),
-                fecha_fin = datetime.strptime(hasta, '%Y-%m-%d').date(),
+                trabajador_id = trabajador.id,
+                tipo_ausencia_id = tipo.id,
+                fecha_inicio = fecha_inicio,
+                fecha_fin = fecha_fin,
                 motivo = motivo
             )
             db.session.add(ausencia)
-            msg = 'Ausencia registrada exitosamente.'
+            msg = 'Registro guardado exitosamente.'
+        
+        # Sincronización con TrabajadorRestriccionTurno si es RESTRICCION
+        if tipo.categoria == CategoriaAusencia.RESTRICCION:
+            dias_json = [int(d) for d in dias_semana_raw] if dias_semana_raw else None
+            
+            # Mapeo de naturaleza según tipo (Hard por defecto para tf, et, st)
+            naturaleza = "hard"
+            if tipo.tipo_restriccion == "turno_preferente":
+                naturaleza = "soft"
+                
+            restriccion = TrabajadorRestriccionTurno(
+                trabajador_id = trabajador.id,
+                empresa_id    = trabajador.empresa_id,
+                tipo          = tipo.tipo_restriccion,
+                naturaleza    = naturaleza,
+                fecha_inicio  = fecha_inicio,
+                fecha_fin     = fecha_fin,
+                dias_semana   = dias_json,
+                turno_id      = int(turno_id) if (turno_id and turno_id != '0') else None,
+                motivo        = motivo,
+                activo        = True
+            )
+            db.session.add(restriccion)
             
         db.session.commit()
         return jsonify({'ok': True, 'msg': msg})
@@ -124,10 +176,20 @@ def guardar():
 @ausencia_bp.route('/ausencias/eliminar/<int:id>', methods=['POST'])
 def eliminar(id):
     ausencia = TrabajadorAusencia.query.get_or_404(id)
+    tipo = ausencia.tipo_ausencia
     try:
+        # Si era restricción, eliminar también de la tabla técnica
+        if tipo and tipo.categoria == CategoriaAusencia.RESTRICCION:
+             TrabajadorRestriccionTurno.query.filter_by(
+                trabajador_id=ausencia.trabajador_id,
+                fecha_inicio=ausencia.fecha_inicio,
+                fecha_fin=ausencia.fecha_fin,
+                tipo=tipo.tipo_restriccion
+            ).delete()
+            
         db.session.delete(ausencia)
         db.session.commit()
-        return jsonify({'ok': True, 'msg': 'Ausencia eliminada correctamente.'})
+        return jsonify({'ok': True, 'msg': 'Registro eliminado correctamente.'})
     except Exception as e:
         db.session.rollback()
         return jsonify({'ok': False, 'msg': f'Error: {str(e)}'}), 500

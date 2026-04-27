@@ -438,7 +438,8 @@
         }
 
         function CerrarModal() {
-            $('#modal_contenido').modal('hide');
+            // Cierra cualquier modal abierto para evitar conflictos de IDs
+            $('.modal.show').modal('hide');
         }
 
         function cambiarSucursal(nombre) {

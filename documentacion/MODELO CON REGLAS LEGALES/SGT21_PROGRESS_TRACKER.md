@@ -58,6 +58,7 @@ Basado en la especificación técnica `sgt21_cursor_FINAL_v2.md`.
 - [x] Test con empresa de prueba (período de 1 semana)
 - [x] Verificar detección correcta de semanas cortas (inicio/fin de mes)
 - [x] Verificar legibilidad del cuadrante (bloques estables de turno)
+- [x] Sincronización de Restricciones Unificadas (Fase 8)
 
 ---
-*Ultima actualización: 2026-04-27 (Implementación y Estabilización Completa)*
+*Ultima actualización: 2026-04-27 (Implementación de Mantenedor Unificado Completa)*

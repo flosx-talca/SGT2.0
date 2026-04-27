@@ -1,6 +1,6 @@
 from app.database import db
 from datetime import datetime
-from app.models.enums import TipoContrato
+from app.models.enums import TipoContrato, CategoriaAusencia
 
 class Cliente(db.Model):
     __tablename__ = 'cliente'
@@ -82,6 +82,16 @@ class TipoAusencia(db.Model):
     nombre = db.Column(db.String(50), nullable=False)
     abreviacion = db.Column(db.String(5), nullable=False)
     color = db.Column(db.String(10), default='#95a5a6')
+    
+    # ── CAMPOS NUEVOS SGT 2.1 ─────────────────────────────────────────────
+    categoria = db.Column(
+        db.Enum(CategoriaAusencia), 
+        nullable=False, 
+        default=CategoriaAusencia.AUSENCIA
+    )
+    tipo_restriccion = db.Column(db.String(30), nullable=True)
+    # ──────────────────────────────────────────────────────────────────────
+    
     activo = db.Column(db.Boolean, default=True)
     creado_en = db.Column(db.DateTime, default=datetime.utcnow)
     actualizado_en = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
@@ -151,6 +161,27 @@ class TrabajadorAusencia(db.Model):
     tipo_ausencia_id = db.Column(db.Integer, db.ForeignKey('tipo_ausencia.id', ondelete='CASCADE'), nullable=True)
     tipo_ausencia = db.relationship('TipoAusencia', lazy=True)
     creado_en = db.Column(db.DateTime, default=datetime.utcnow)
+
+    @property
+    def es_bloqueo_dia(self) -> bool:
+        """True si bloquea el día completo (categoría AUSENCIA)."""
+        if self.tipo_ausencia is None:
+            return True  # sin tipo → bloquear por seguridad
+        return self.tipo_ausencia.categoria == CategoriaAusencia.AUSENCIA
+
+    @property
+    def es_restriccion_turno(self) -> bool:
+        """True si es una restricción de turno específica."""
+        if self.tipo_ausencia is None:
+            return False
+        return self.tipo_ausencia.categoria == CategoriaAusencia.RESTRICCION
+
+    @property
+    def tipo_restriccion_val(self) -> str | None:
+        """Retorna el tipo de restricción si aplica."""
+        if self.tipo_ausencia is None:
+            return None
+        return self.tipo_ausencia.tipo_restriccion
 
 
 class TrabajadorRestriccionTurno(db.Model):

@@ -21,12 +21,37 @@
 
             <div class="col-12">
                 <label class="form-label small fw-bold text-muted"><code>(*)</code> Tipo de Ausencia</label>
-                <select name="tipo_ausencia_id" id="tipo_ausencia_id_modal" class="form-select form-select-sm shadow-sm" required>
+                <select name="tipo_ausencia_id" id="tipo_ausencia_id_modal" class="form-select form-select-sm shadow-sm" required onchange="toggleCamposRestriccion()">
                     <option value="">-- Seleccione Tipo --</option>
                     {% for t in tipos %}
-                    <option value="{{ t.id }}" {{ 'selected' if ausencia and ausencia.tipo_ausencia_id == t.id }}>{{ t.nombre }}</option>
+                    <option value="{{ t.id }}" data-categoria="{{ t.categoria.value }}" {{ 'selected' if ausencia and ausencia.tipo_ausencia_id == t.id }}>{{ t.nombre }}</option>
                     {% endfor %}
                 </select>
+            </div>
+
+            <!-- CAMPOS DINAMICOS PARA RESTRICCIONES -->
+            <div id="campos_restriccion" class="d-none">
+                <div class="col-12 mb-3">
+                    <label class="form-label small fw-bold text-muted">Turno afectado</label>
+                    <select name="turno_id" class="form-select form-select-sm shadow-sm">
+                        <option value="">-- Seleccione Turno --</option>
+                        {% for tr in turnos %}
+                        <option value="{{ tr.id }}">{{ tr.nombre }} ({{ tr.abreviacion }})</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-12 mb-3">
+                    <label class="form-label small fw-bold text-muted">Días de la semana (opcional)</label>
+                    <div class="d-flex flex-wrap gap-2">
+                        {% set dias = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'] %}
+                        {% for dia in dias %}
+                        <div class="form-check form-check-inline">
+                            <input class="form-check-input" type="checkbox" name="dias_semana[]" value="{{ loop.index0 }}" id="dia_{{ loop.index0 }}">
+                            <label class="form-check-label small" for="dia_{{ loop.index0 }}">{{ dia }}</label>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
             </div>
 
             <div class="col-md-6">
@@ -64,6 +89,22 @@
 </div>
 
 <script>
+$(document).ready(function() {
+    toggleCamposRestriccion();
+});
+
+function toggleCamposRestriccion() {
+    const $select = $('#tipo_ausencia_id_modal');
+    const categoria = $select.find('option:selected').data('categoria');
+    const $campos = $('#campos_restriccion');
+    
+    if (categoria === 'restriccion') {
+        $campos.removeClass('d-none');
+    } else {
+        $campos.addClass('d-none');
+    }
+}
+
 function calcularImpacto() {
     const tid = $('#trabajador_id_modal').val();
     const inicio = $('#fecha_inicio_modal').val();
