@@ -1,0 +1,252 @@
+<div class="modal-header bg-warning text-dark">
+    <h5 class="modal-title fw-bold">
+        <i class="fa fa-user-lock me-2"></i>Restricciones Especiales: {{ trabajador.nombre }} {{ trabajador.apellido1 }}
+    </h5>
+    <button type="button" class="btn-close" onclick="CerrarModal()"></button>
+</div>
+
+<div class="modal-body p-4">
+    <form id="form_restriccion">
+        <input type="hidden" name="trabajador_id" id="res_trabajador_id" value="{{ trabajador.id }}">
+        <input type="hidden" name="empresa_id" value="{{ trabajador.empresa_id }}">
+
+        <div class="row g-3 mb-4">
+            <div class="col-md-6">
+                <label class="form-label small fw-bold text-muted">Tipo de Restricción</label>
+                <select name="tipo" id="res_tipo" class="form-select form-select-sm shadow-sm" onchange="actualizarMatrixUI()">
+                    <option value="turno_fijo">Turno Fijo (Hard)</option>
+                    <option value="solo_turno">Solo este Turno (Hard)</option>
+                    <option value="excluir_turno">Excluir Turno (Hard)</option>
+                    <option value="turno_preferente">Turno Preferente (Soft)</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label small fw-bold text-muted">Fecha Inicio</label>
+                <input type="date" name="fecha_inicio" id="res_fecha_inicio" class="form-control form-control-sm" required>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label small fw-bold text-muted">Fecha Fin</label>
+                <input type="date" name="fecha_fin" id="res_fecha_fin" class="form-control form-control-sm" required>
+            </div>
+        </div>
+
+        <div class="border rounded p-3 bg-light mb-4">
+            <h6 class="small fw-bold text-muted mb-3">Selección de Turnos por Día de la Semana</h6>
+            <div class="table-responsive">
+                <table class="table table-sm table-bordered bg-white align-middle text-center mb-0" style="font-size: 0.85rem;">
+                    <thead class="table-dark">
+                        <tr>
+                            <th class="text-start ps-3">Día de la Semana</th>
+                            {% for shift in shifts %}
+                            <th title="{{ shift.nombre }}">
+                                <span class="badge" style="background-color: {{ shift.color }};">{{ shift.abreviacion }}</span>
+                            </th>
+                            {% endfor %}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% set dias = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'] %}
+                        {% for i in range(7) %}
+                        <tr>
+                            <td class="text-start ps-3 fw-bold">{{ dias[i] }}</td>
+                            {% for shift in shifts %}
+                            <td>
+                                <input class="form-check-input res-check" type="checkbox" 
+                                       data-dia="{{ i }}" data-shift-id="{{ shift.id }}"
+                                       onclick="handleMatrixClick(this, {{ i }}, {{ shift.id }})">
+                            </td>
+                            {% endfor %}
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            <div id="matrix-hint" class="small text-muted mt-2 fst-italic">
+                * En "Turno Fijo", solo puedes seleccionar un turno por día.
+            </div>
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label small fw-bold text-muted">Motivo / Observación</label>
+            <input type="text" name="motivo" class="form-control form-control-sm" placeholder="Ej: Acuerdo mutuo, restricción médica...">
+        </div>
+
+        <div id="alert-conflict" class="alert alert-danger d-none small py-2">
+            <i class="fa fa-exclamation-triangle me-2"></i> <span id="conflict-msg"></span>
+        </div>
+
+        <div class="text-end">
+            <button type="button" class="btn btn-sm btn-outline-primary me-2" onclick="previewRestriccion()">
+                <i class="fa fa-search me-1"></i> Previsualizar Conflictos
+            </button>
+            <button type="button" id="btnGuardarRestriccion" class="btn btn-sm btn-warning fw-bold px-4" onclick="saveRestriccion()">
+                <i class="fa fa-save me-1"></i> Guardar Restricción
+            </button>
+        </div>
+    </form>
+
+    <hr class="my-4">
+
+    <h6 class="fw-bold text-muted mb-3"><i class="fa fa-history me-2"></i>Restricciones Activas</h6>
+    <div id="lista-restricciones" class="table-responsive small">
+        <table class="table table-sm table-hover border rounded">
+            <thead class="table-light">
+                <tr>
+                    <th>Tipo</th>
+                    <th>Período</th>
+                    <th>Días</th>
+                    <th>Turno</th>
+                    <th>Acción</th>
+                </tr>
+            </thead>
+            <tbody id="res-table-body">
+                <!-- AJAX content -->
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+$(document).ready(function() {
+    loadExistingRestrictions();
+    actualizarMatrixUI();
+});
+
+function loadExistingRestrictions() {
+    const workerId = $('#res_trabajador_id').val();
+    $.get(`/api/restricciones/worker/${workerId}`, function(data) {
+        let html = '';
+        if (data.length === 0) {
+            html = '<tr><td colspan="5" class="text-center text-muted italic py-3">No hay restricciones registradas.</td></tr>';
+        } else {
+            data.forEach(r => {
+                const diasStr = r.dias_semana ? r.dias_semana.map(d => ['L', 'M', 'X', 'J', 'V', 'S', 'D'][d]).join(',') : 'Todos';
+                html += `
+                    <tr>
+                        <td><span class="badge bg-secondary">${r.tipo}</span></td>
+                        <td>${r.fecha_inicio} al ${r.fecha_fin}</td>
+                        <td>${diasStr}</td>
+                        <td>${r.turno || '-'}</td>
+                        <td>
+                            <button class="btn btn-link btn-sm text-danger p-0" onclick="deleteRestriction(${r.id})">
+                                <i class="fa fa-trash"></i>
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            });
+        }
+        $('#res-table-body').html(html);
+    });
+}
+
+function handleMatrixClick(cb, dia, shiftId) {
+    const tipo = $('#res_tipo').val();
+    if (tipo === 'turno_fijo' || tipo === 'solo_turno') {
+        // En estos tipos, solo se permite UN turno por día (o globalmente si es solo_turno)
+        if ($(cb).is(':checked')) {
+            $(`.res-check[data-dia="${dia}"]`).not(cb).prop('checked', false);
+        }
+    }
+}
+
+function actualizarMatrixUI() {
+    const tipo = $('#res_tipo').val();
+    $('.res-check').prop('checked', false);
+    
+    if (tipo === 'solo_turno') {
+        $('#matrix-hint').text('* En "Solo Turno", selecciona el único turno permitido (se aplica a todos los días del rango).');
+    } else {
+        $('#matrix-hint').text('* Selecciona los turnos para cada día de la semana que aplica la restricción.');
+    }
+}
+
+function previewRestriccion() {
+    const data = getFormData();
+    if (!validateData(data)) return;
+
+    $.ajax({
+        url: '/api/restricciones/preview',
+        type: 'POST',
+        data: JSON.stringify(data),
+        contentType: 'application/json',
+        success: function(res) {
+            if (res.status === 'conflict') {
+                $('#conflict-msg').text(res.conflictos.join(' '));
+                $('#alert-conflict').removeClass('d-none');
+            } else {
+                $('#alert-conflict').addClass('d-none');
+                toastr.success('No se detectaron conflictos.');
+            }
+        }
+    });
+}
+
+function saveRestriccion() {
+    const data = getFormData();
+    if (!validateData(data)) return;
+
+    $('#btnGuardarRestriccion').prop('disabled', true).html('<i class="fa fa-spinner fa-spin"></i>');
+
+    $.ajax({
+        url: '/api/restricciones/save',
+        type: 'POST',
+        data: JSON.stringify(data),
+        contentType: 'application/json',
+        success: function(res) {
+            toastr.success('Restricción guardada con éxito.');
+            loadExistingRestrictions();
+            $('.res-check').prop('checked', false);
+            $('#btnGuardarRestriccion').prop('disabled', false).html('<i class="fa fa-save me-1"></i> Guardar Restricción');
+        },
+        error: function() {
+            toastr.error('Error al guardar.');
+            $('#btnGuardarRestriccion').prop('disabled', false).html('<i class="fa fa-save me-1"></i> Guardar Restricción');
+        }
+    });
+}
+
+function getFormData() {
+    const selected = [];
+    $('.res-check:checked').each(function() {
+        selected.push({
+            dia: $(this).data('dia'),
+            shiftId: $(this).data('shift-id')
+        });
+    });
+
+    const dias = [...new Set(selected.map(s => s.dia))];
+    const shiftId = selected.length > 0 ? selected[0].shiftId : null;
+
+    return {
+        trabajador_id: parseInt($('#res_trabajador_id').val()),
+        empresa_id: parseInt($('input[name="empresa_id"]').val()),
+        tipo: $('#res_tipo').val(),
+        fecha_inicio: $('#res_fecha_inicio').val(),
+        fecha_fin: $('#res_fecha_fin').val(),
+        dias_semana: dias,
+        turno_id: shiftId,
+        motivo: $('input[name="motivo"]').val()
+    };
+}
+
+function validateData(data) {
+    if (!data.fecha_inicio || !data.fecha_fin) {
+        toastr.warning('Selecciona las fechas.');
+        return false;
+    }
+    if (data.dias_semana.length === 0) {
+        toastr.warning('Selecciona al menos un turno en la matriz.');
+        return false;
+    }
+    return true;
+}
+
+function deleteRestriction(id) {
+    if (!confirm('¿Seguro que desea eliminar esta restricción?')) return;
+    $.post(`/api/restricciones/delete/${id}`, function() {
+        toastr.success('Eliminado.');
+        loadExistingRestrictions();
+    });
+}
+</script>

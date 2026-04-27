@@ -1,5 +1,6 @@
 from app.database import db
 from datetime import datetime
+from app.models.enums import TipoContrato
 
 class Cliente(db.Model):
     __tablename__ = 'cliente'
@@ -88,6 +89,19 @@ class TipoAusencia(db.Model):
     empresa = db.relationship('Empresa', backref=db.backref('tipos_ausencia', lazy=True))
 
 
+class ParametroLegal(db.Model):
+    __tablename__ = "parametro_legal"
+
+    id             = db.Column(db.Integer, primary_key=True)
+    codigo         = db.Column(db.String(60), nullable=False, unique=True)
+    valor          = db.Column(db.Float, nullable=False)
+    categoria      = db.Column(db.String(50), nullable=False, default="General")
+    descripcion    = db.Column(db.String(255), nullable=True)
+    es_activo      = db.Column(db.Boolean, default=True, nullable=False)
+    es_obligatorio = db.Column(db.Boolean, default=True, nullable=False)
+    actualizado_en = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
 class Trabajador(db.Model):
     __tablename__ = 'trabajador'
     id = db.Column(db.Integer, primary_key=True)
@@ -100,7 +114,7 @@ class Trabajador(db.Model):
     cargo = db.Column(db.String(100))
     email = db.Column(db.String(150))
     telefono = db.Column(db.String(20))
-    tipo_contrato = db.Column(db.String(50), nullable=False, default='full-time')
+    tipo_contrato = db.Column(db.Enum(TipoContrato), nullable=False, default=TipoContrato.FULL_TIME)
     # horas_semanales: horas contractuales por semana.
     # El builder usa este valor para calcular la meta mensual de turnos.
     # Ejemplos: 42 (jornada estándar Chile), 32 (part-time), 24 (part-time menor).
@@ -137,6 +151,33 @@ class TrabajadorAusencia(db.Model):
     tipo_ausencia_id = db.Column(db.Integer, db.ForeignKey('tipo_ausencia.id', ondelete='CASCADE'), nullable=True)
     tipo_ausencia = db.relationship('TipoAusencia', lazy=True)
     creado_en = db.Column(db.DateTime, default=datetime.utcnow)
+
+
+class TrabajadorRestriccionTurno(db.Model):
+    __tablename__ = "trabajador_restriccion_turno"
+
+    id            = db.Column(db.Integer, primary_key=True)
+    trabajador_id = db.Column(db.Integer, db.ForeignKey("trabajador.id", ondelete="CASCADE"), nullable=False)
+    empresa_id    = db.Column(db.Integer, db.ForeignKey("empresa.id",    ondelete="CASCADE"), nullable=False)
+
+    tipo = db.Column(db.String(30), nullable=False)
+    naturaleza = db.Column(db.String(10), nullable=False) # 'hard' o 'soft'
+
+    fecha_inicio = db.Column(db.Date, nullable=False)
+    fecha_fin    = db.Column(db.Date, nullable=False)
+
+    dias_semana  = db.Column(db.JSON, nullable=True) # [0=lun, 1=mar, ..., 6=dom]
+
+    turno_id             = db.Column(db.Integer, db.ForeignKey("turno.id", ondelete="RESTRICT"), nullable=True)
+    turno_alternativo_id = db.Column(db.Integer, db.ForeignKey("turno.id", ondelete="RESTRICT"), nullable=True)
+
+    motivo    = db.Column(db.String(200), nullable=True)
+    activo    = db.Column(db.Boolean, default=True)
+    creado_en = db.Column(db.DateTime, default=datetime.utcnow)
+
+    trabajador = db.relationship("Trabajador", backref=db.backref("restricciones_turno", lazy=True))
+    turno      = db.relationship("Turno", foreign_keys=[turno_id], lazy=True)
+    turno_alt  = db.relationship("Turno", foreign_keys=[turno_alternativo_id], lazy=True)
 
 
 class Regla(db.Model):

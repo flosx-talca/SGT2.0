@@ -1,0 +1,125 @@
+from datetime import datetime, timedelta
+from app.database import db
+from app.models.business import Trabajador, Turno, TrabajadorAusencia, TrabajadorRestriccionTurno
+from app.scheduler.builder import build_model
+from app.services.config_manager import ConfigManager
+
+class SchedulingService:
+    @staticmethod
+    def run_generation(mes: int, anio: int, sucursal_id: int):
+        """
+        Orquesta el proceso completo de generación de cuadrante.
+        1. Prepara datos.
+        2. Llama al Builder.
+        3. Guarda resultados.
+        """
+        ConfigManager.clear_cache()
+        ConfigManager.preload()
+
+        # Rango de fechas
+        fecha_inicio = datetime(anio, mes, 1).date()
+        if mes == 12:
+            fecha_fin = datetime(anio + 1, 1, 1).date() - timedelta(days=1)
+        else:
+            fecha_fin = datetime(anio, mes + 1, 1).date() - timedelta(days=1)
+
+        dias_del_mes = [(fecha_inicio + timedelta(days=i)).isoformat() 
+                        for i in range((fecha_fin - fecha_inicio).days + 1)]
+
+        # 1. Cargar Entidades
+        trabajadores = Trabajador.query.filter_by(servicio_id=sucursal_id, activo=True).all()
+        turnos = Turno.query.filter_by(servicio_id=sucursal_id, activo=True).all()
+        
+        if not trabajadores or not turnos:
+            return {'status': 'error', 'message': 'No hay trabajadores o turnos activos en esta sucursal.'}
+
+        # 2. Preparar Metadatos
+        trabajadores_meta = {w.id: {
+            'horas_semanales': w.horas_semanales,
+            'tipo_contrato': w.tipo_contrato,
+            'permite_horas_extra': w.permite_horas_extra
+        } for w in trabajadores}
+
+        turnos_meta = {t.id: {
+            'nombre': t.nombre,
+            'horas': t.duracion_hrs,
+            'es_nocturno': t.es_nocturno,
+            'dotacion': t.dotacion_diaria
+        } for t in turnos}
+
+        # 3. Cargar Restricciones (Ausencias y Especiales)
+        bloqueados = []
+        ausencias = TrabajadorAusencia.query.filter(
+            TrabajadorAusencia.trabajador_id.in_([w.id for w in trabajadores]),
+            TrabajadorAusencia.fecha_inicio <= fecha_fin,
+            TrabajadorAusencia.fecha_fin >= fecha_inicio
+        ).all()
+        for a in ausencias:
+            curr = max(a.fecha_inicio, fecha_inicio)
+            while curr <= min(a.fecha_fin, fecha_fin):
+                bloqueados.append((a.trabajador_id, curr.isoformat()))
+                curr += timedelta(days=1)
+
+        restricciones = TrabajadorRestriccionTurno.query.filter(
+            TrabajadorRestriccionTurno.trabajador_id.in_([w.id for w in trabajadores]),
+            TrabajadorRestriccionTurno.fecha_inicio <= fecha_fin,
+            TrabajadorRestriccionTurno.fecha_fin >= fecha_inicio,
+            TrabajadorRestriccionTurno.activo == True
+        ).all()
+
+        r_hard = []
+        r_soft = []
+        fijos = {}
+        
+        for r in restricciones:
+            curr = max(r.fecha_inicio, fecha_inicio)
+            while curr <= min(r.fecha_fin, fecha_fin):
+                if r.dias_semana is None or curr.weekday() in r.dias_semana:
+                    if r.tipo == 'turno_fijo':
+                        fijos[(r.trabajador_id, curr.isoformat())] = r.turno_id
+                    elif r.tipo == 'turno_preferente':
+                        r_soft.append({'w': r.trabajador_id, 'd': curr.isoformat(), 't': r.turno_id, 'weight': 500})
+                    else:
+                        r_hard.append({'w': r.trabajador_id, 'd': curr.isoformat(), 't': r.turno_id, 'action': r.tipo})
+                curr += timedelta(days=1)
+
+        # 4. Dotación (Cobertura)
+        coberturas = {d: {t.id: t.dotacion_diaria for t in turnos} for d in dias_del_mes}
+
+        # 5. Ejecutar Solver
+        try:
+            model, x = build_model(
+                [w.id for w in trabajadores],
+                dias_del_mes,
+                [t.id for t in turnos],
+                coberturas,
+                bloqueados,
+                fijos,
+                restricciones_hard=r_hard,
+                restricciones_soft=r_soft,
+                trabajadores_meta=trabajadores_meta,
+                turnos_meta=turnos_meta
+            )
+            
+            from ortools.sat.python import cp_model
+            solver = cp_model.CpSolver()
+            solver.parameters.max_time_in_seconds = ConfigManager.get_int("SOLVER_TIMEOUT_SEG", 60)
+            status = solver.Solve(model)
+
+            if status in (cp_model.OPTIMAL, cp_model.FEASIBLE):
+                asignaciones = []
+                for w in [w.id for w in trabajadores]:
+                    for d in dias_del_mes:
+                        for t in [t.id for t in turnos]:
+                            if solver.Value(x[w, d, t]):
+                                asignaciones.append({
+                                    'trabajador_id': w,
+                                    'fecha': d,
+                                    'turno_id': t
+                                })
+                return {'status': 'success', 'data': asignaciones}
+            else:
+                return {'status': 'error', 'message': 'No se encontró una solución factible con las reglas actuales.'}
+
+        except Exception as e:
+            return {'status': 'error', 'message': f'Error en el motor de resolución: {str(e)}'}

@@ -1,0 +1,98 @@
+<div class="modal-header bg-primary text-white">
+    <h5 class="modal-title fw-bold"><i class="fa fa-gavel me-2"></i>{{ modo }} Parámetro Legal</h5>
+    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+</div>
+<form id="form_parametro" onsubmit="guardarParametro(event)">
+    <div class="modal-body">
+        <input type="hidden" name="id" value="{{ registro.id if registro else 0 }}">
+        
+        <div class="row g-3">
+            <div class="col-md-6">
+                <label class="form-label fw-bold small text-muted">Código del Parámetro <span class="text-danger">*</span></label>
+                <input type="text" class="form-control bg-light" name="codigo" value="{{ registro.codigo if registro else '' }}" 
+                       placeholder="EJ: MAX_HRS_SEMANA" required {{ 'readonly' if registro else '' }}>
+                <div class="form-text small">Identificador único para el motor de turnos.</div>
+            </div>
+            
+            <div class="col-md-6">
+                <label class="form-label fw-bold small text-muted">Categoría</label>
+                <input type="text" class="form-control" name="categoria" list="cat_list" 
+                       value="{{ registro.categoria if registro else 'General' }}" placeholder="Escriba o seleccione...">
+                <datalist id="cat_list">
+                    {% for c in categorias %}
+                        <option value="{{ c }}">
+                    {% endfor %}
+                    <option value="Jornada">
+                    <option value="Descansos">
+                    <option value="Semanas Cortas">
+                    <option value="Optimización">
+                </datalist>
+            </div>
+
+            <div class="col-md-12">
+                <label class="form-label fw-bold small text-muted">Descripción <span class="text-danger">*</span></label>
+                <textarea class="form-control" name="descripcion" rows="2" placeholder="Explique qué regula este parámetro..." required>{{ registro.descripcion if registro else '' }}</textarea>
+            </div>
+
+            <div class="col-md-4">
+                <label class="form-label fw-bold small text-muted">Valor Numérico <span class="text-danger">*</span></label>
+                <input type="number" step="0.1" class="form-control fw-bold fs-5" name="valor" 
+                       value="{{ registro.valor if registro else '' }}" placeholder="0.0" required>
+            </div>
+
+            <div class="col-md-8 d-flex align-items-center justify-content-around bg-light rounded p-3">
+                <div class="form-check form-check-inline">
+                    <input class="form-check-input" type="checkbox" name="es_obligatorio" value="true" id="chk_oblig" 
+                           {{ 'checked' if (registro and registro.es_obligatorio) else '' }}>
+                    <label class="form-check-label small fw-bold" for="chk_oblig">Es Obligatorio</label>
+                </div>
+                <div class="form-check form-check-inline">
+                    <input class="form-check-input" type="checkbox" name="es_activo" value="true" id="chk_activo" 
+                           {{ 'checked' if (not registro or registro.es_activo) else '' }}>
+                    <label class="form-check-label small fw-bold" for="chk_activo">Activo</label>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="modal-footer bg-light border-0">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <button type="submit" class="btn btn-primary px-4 shadow-sm">
+            <i class="fa fa-save me-1"></i> Guardar Parámetro
+        </button>
+    </div>
+</form>
+
+<script>
+function guardarParametro(e) {
+    e.preventDefault();
+    const formData = new FormData(e.target);
+    
+    // Asegurar que los checkboxes envíen 'true' o nada
+    if (!formData.get('es_obligatorio')) formData.append('es_obligatorio', 'false');
+    if (!formData.get('es_activo')) formData.append('es_activo', 'false');
+
+    $('#fondo').addClass('visible');
+    $.ajax({
+        url: "{{ url_for('parametro_legal.guardar') }}",
+        type: 'POST',
+        data: formData,
+        processData: false,
+        contentType: false,
+        success: function(res) {
+            if (res.ok) {
+                toastr.success(res.msg);
+                CerrarModal();
+                refreshTabla();
+            } else {
+                toastr.error(res.msg);
+            }
+        },
+        error: function(xhr) {
+            toastr.error(xhr.responseJSON?.msg || 'Error en el servidor');
+        },
+        complete: function() {
+            $('#fondo').removeClass('visible');
+        }
+    });
+}
+</script>

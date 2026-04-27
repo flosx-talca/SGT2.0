@@ -1,0 +1,115 @@
+{% extends "layout.html" %}
+
+{% block title %}Parámetros Legales{% endblock %}
+{% block header %}Configuración Global SGT 2.1{% endblock %}
+{% block page_title %}Parámetros Legales{% endblock %}
+
+{% block actions %}
+<button class="btn btn-primary shadow-sm" onclick="Modal('Agregar', 0, '{{ url_for('parametro_legal.modal') }}')">
+    <i class="fa fa-plus me-1"></i> Nuevo Parámetro
+</button>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="card shadow-sm border-0">
+            <div class="card-header bg-white py-3 border-bottom d-flex justify-content-between align-items-center">
+                <h5 class="mb-0 fw-bold text-dark"><i class="fa fa-gavel me-2 text-primary"></i>Listado de Parámetros Legales</h5>
+                <div class="text-muted small">Configuración del motor de cumplimiento legal</div>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table id="tabla_parametros" class="table table-hover align-middle w-100">
+                        <thead class="table-light text-uppercase small">
+                            <tr>
+                                <th>Categoría</th>
+                                <th>Código</th>
+                                <th>Descripción</th>
+                                <th>Valor</th>
+                                <th class="text-center">Estado</th>
+                                <th class="text-center">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tbody-parametros">
+                            {% include 'parametros_legales/partials/table_rows.html' %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+var dtParams;
+
+$(document).ready(function() {
+    initDataTable();
+});
+
+function initDataTable() {
+    dtParams = $('#tabla_parametros').DataTable({
+        responsive: true,
+        order: [[0, 'asc'], [1, 'asc']],
+        pageLength: 25,
+        language: {
+            url: '/static/vendor/es-ES.json'
+        },
+        columnDefs: [
+            { targets: [4, 5], orderable: false }
+        ],
+        drawCallback: function() {
+            // Re-vincular eventos si es necesario después de cada redibujo
+        }
+    });
+}
+
+function refreshTabla() {
+    $.get("{{ url_for('parametro_legal.tabla') }}", function(html) {
+        dtParams.destroy();
+        $('#tbody-parametros').html(html);
+        initDataTable();
+    });
+}
+
+function toggleParametro(id) {
+    $.post("{{ url_for('parametro_legal.index') }}toggle/" + id)
+        .done(function(res) {
+            if (res.ok) {
+                toastr.success('Estado actualizado');
+            } else {
+                toastr.error('Error al actualizar estado');
+            }
+        });
+}
+
+function eliminarParametro(id, codigo) {
+    Swal.fire({
+        title: '¿Desactivar?',
+        text: `El parámetro "${codigo}" quedará inactivo y no será considerado por el motor.`,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonText: 'Sí, desactivar',
+        cancelButtonText: 'Cancelar',
+        confirmButtonColor: '#e74c3c'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            $('#fondo').addClass('visible');
+            $.post("{{ url_for('parametro_legal.eliminar') }}", { id: id })
+                .done(function(res) {
+                    if (res.ok) {
+                        toastr.success(res.msg);
+                        refreshTabla();
+                    } else {
+                        toastr.error(res.msg);
+                    }
+                })
+                .always(() => $('#fondo').removeClass('visible'));
+        }
+    });
+}
+</script>
+{% endblock %}

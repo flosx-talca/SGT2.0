@@ -58,6 +58,19 @@ def modal():
                            jornada_default=JORNADA_DEFAULT)
 
 
+@trabajador_bp.route('/modal_restriccion', methods=['POST'])
+def modal_restriccion():
+    trabajador_id = request.form.get('id')
+    trabajador = Trabajador.query.get_or_404(int(trabajador_id))
+    
+    # Obtener turnos de la empresa
+    shifts = Turno.query.filter_by(empresa_id=trabajador.empresa_id, activo=True).order_by(Turno.id).all()
+    
+    return render_template('modal-restriccion.html',
+                           trabajador=trabajador,
+                           shifts=shifts)
+
+
 @trabajador_bp.route('/guardar', methods=['POST'])
 def guardar():
     tid         = request.form.get('id', '').strip()

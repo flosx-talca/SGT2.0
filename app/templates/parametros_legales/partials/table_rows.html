@@ -1,0 +1,36 @@
+{% for p in parametros %}
+<tr id="row_{{ p.id }}" class="{{ 'text-muted bg-light' if not p.es_activo else '' }}">
+    <td>
+        <span class="badge bg-info-subtle text-info rounded-pill px-3">{{ p.categoria or 'General' }}</span>
+    </td>
+    <td>
+        <code class="fw-bold text-primary">{{ p.codigo }}</code>
+    </td>
+    <td>
+        <div class="small text-wrap" style="max-width: 300px;">{{ p.descripcion }}</div>
+        {% if p.es_obligatorio %}
+            <span class="badge bg-warning text-dark" style="font-size: 0.65rem;">Obligatorio</span>
+        {% endif %}
+    </td>
+    <td>
+        <span class="fw-bold fs-5 text-dark">{{ p.valor }}</span>
+    </td>
+    <td class="text-center">
+        <div class="form-check form-switch d-inline-block">
+            <input class="form-check-input" type="checkbox" role="switch" 
+                   id="switch_{{ p.id }}" {{ 'checked' if p.es_activo else '' }}
+                   onchange="toggleParametro({{ p.id }})">
+        </div>
+    </td>
+    <td class="text-center">
+        <div class="btn-group shadow-sm">
+            <button class="btn btn-white btn-sm border" onclick="Modal('Editar', {{ p.id }}, '{{ url_for('parametro_legal.modal') }}')" title="Editar">
+                <i class="fa fa-edit text-primary"></i>
+            </button>
+            <button class="btn btn-white btn-sm border" onclick="eliminarParametro({{ p.id }}, '{{ p.codigo }}')" title="Desactivar">
+                <i class="fa fa-trash text-danger"></i>
+            </button>
+        </div>
+    </td>
+</tr>
+{% endfor %}

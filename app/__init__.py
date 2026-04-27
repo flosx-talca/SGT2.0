@@ -38,23 +38,27 @@ def create_app():
     from .controllers.planificacion_bp import planificacion_bp
     from .controllers.tipo_ausencia_bp import tipo_ausencia_bp
     from .controllers.ausencia_bp import ausencia_bp
+    from .controllers.restricciones_bp import restricciones_bp
+    from .controllers.parametro_legal_bp import parametro_legal_bp
 
     app.register_blueprint(main_bp)
+    app.register_blueprint(usuario_bp)
     app.register_blueprint(region_bp)
     app.register_blueprint(comuna_bp)
-    app.register_blueprint(feriado_bp)
-    app.register_blueprint(servicio_bp)
-    app.register_blueprint(rol_bp)
-    app.register_blueprint(menu_bp)
-    app.register_blueprint(cliente_bp)
     app.register_blueprint(empresa_bp)
-    app.register_blueprint(turno_bp)
-    app.register_blueprint(usuario_bp)
+    app.register_blueprint(cliente_bp)
+    app.register_blueprint(servicio_bp)
     app.register_blueprint(trabajador_bp)
+    app.register_blueprint(turno_bp)
+    app.register_blueprint(planificacion_bp)
     app.register_blueprint(regla_bp)
     app.register_blueprint(regla_empresa_bp)
-    app.register_blueprint(planificacion_bp)
+    app.register_blueprint(feriado_bp)
     app.register_blueprint(tipo_ausencia_bp)
     app.register_blueprint(ausencia_bp)
+    app.register_blueprint(menu_bp)
+    app.register_blueprint(rol_bp)
+    app.register_blueprint(restricciones_bp)
+    app.register_blueprint(parametro_legal_bp)
 
     return app

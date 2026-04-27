@@ -41,6 +41,10 @@
                 onclick="Modal('Editar', {{ r.id }}, '{{ url_for('trabajador.modal') }}')">
                 <i class="fa fa-edit"></i>
             </button>
+            <button class="btn btn-outline-primary" title="Restricciones Especiales"
+                onclick="Modal('Restricciones', {{ r.id }}, '{{ url_for('trabajador.modal_restriccion') }}')">
+                <i class="fa fa-user-lock"></i>
+            </button>
             <button class="btn btn-outline-danger" title="Desactivar"
                 onclick="eliminarTrabajador({{ r.id }}, '{{ r.nombre }}')">
                 <i class="fa fa-ban"></i>

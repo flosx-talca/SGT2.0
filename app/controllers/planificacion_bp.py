@@ -3,7 +3,7 @@ import math
 from datetime import timedelta, datetime
 from flask import Blueprint, render_template, request, jsonify
 from app.database import db
-from app.models.business import Trabajador, Turno, ReglaEmpresa
+from app.models.business import Trabajador, Turno, ReglaEmpresa, TrabajadorRestriccionTurno
 from app.scheduler.builder import build_model
 from app.scheduler.solver import solve_model
 from app.scheduler.explain import extract_solution
@@ -180,12 +180,20 @@ def generar():
                     ausencias[(t.id, f_str)] = abr
                 curr += timedelta(days=1)
 
+    # ── Restricciones Especiales SGT 2.1 ─────────────────────────────────────
+    fecha_ini_periodo = datetime.strptime(dias_del_mes[0], '%Y-%m-%d').date()
+    fecha_fin_periodo = datetime.strptime(dias_del_mes[-1], '%Y-%m-%d').date()
+    restricciones_especiales = TrabajadorRestriccionTurno.query.filter(
+        TrabajadorRestriccionTurno.trabajador_id.in_(t_ids),
+        TrabajadorRestriccionTurno.fecha_inicio <= fecha_fin_periodo,
+        TrabajadorRestriccionTurno.fecha_fin >= fecha_ini_periodo,
+        TrabajadorRestriccionTurno.activo == True
+    ).all()
+
     # ── Pre-procesamiento: bloqueados, fijos y preferencias ─────────────────
-    # IMPORTANTE: debe ir ANTES de trabajadores_meta porque asigna
-    # t._turnos_solo en cada objeto trabajador
     from app.scheduler.builder import preparar_restricciones
-    bloqueados, fijos, turnos_bloqueados_por_dia = preparar_restricciones(
-        trabajadores_db, dias_del_mes, ausencias
+    bloqueados, fijos, turnos_bloqueados_por_dia, r_hard, r_soft = preparar_restricciones(
+        trabajadores_db, dias_del_mes, ausencias, restricciones_especiales
     )
 
     # ── trabajadores_meta ─────────────────────────────────────────────────────
@@ -205,7 +213,8 @@ def generar():
         duracion_w = round(sum(horas_w) / len(horas_w)) if horas_w else 8
 
         trabajadores_meta[t.id] = {
-            'horas_semanales':     t.horas_semanales or None,
+            'horas_semanales':     t.horas_semanales if t.horas_semanales else 42.0,
+            'tipo_contrato':       t.tipo_contrato.name if t.tipo_contrato else 'FULL_TIME',
             'turnos_permitidos':   getattr(t, '_turnos_solo', None),
             'duracion_turno':      duracion_w,
             'permite_horas_extra': getattr(t, 'permite_horas_extra', False) or False,
@@ -221,6 +230,8 @@ def generar():
             bloqueados,
             fijos,
             turnos_bloqueados_por_dia=turnos_bloqueados_por_dia,
+            restricciones_hard=r_hard,
+            restricciones_soft=r_soft,
             reglas=reglas_bd,
             trabajadores_meta=trabajadores_meta,
             turnos_meta=turnos_meta,
