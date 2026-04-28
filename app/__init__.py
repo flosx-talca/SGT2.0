@@ -47,15 +47,25 @@ def create_app():
         }
 
         if current_user.is_authenticated:
-            # Menus dinámicos
-            context['nav_menus'] = Menu.query.join(RolMenu).filter(
-                RolMenu.rol_id == current_user.rol_id,
-                Menu.activo == True
-            ).order_by(Menu.orden).all()
-            
             # Contexto multiempresa
             context['empresas_usuario'] = get_empresas_usuario()
             context['empresa_activa'] = get_empresa_activa()
+
+            # Menus dinámicos
+            rol_id_to_use = current_user.rol_id
+            
+            # Si es Super Admin y tiene una empresa seleccionada, 
+            # mostramos el menú como Cliente para facilitar la gestión operativa.
+            if current_user.is_super_admin and context['empresa_activa']:
+                from app.models.auth import Rol
+                cliente_rol = Rol.query.filter_by(descripcion='Cliente').first()
+                if cliente_rol:
+                    rol_id_to_use = cliente_rol.id
+
+            context['nav_menus'] = Menu.query.join(RolMenu).filter(
+                RolMenu.rol_id == rol_id_to_use,
+                Menu.activo == True
+            ).order_by(Menu.orden).all()
 
         return context
 
