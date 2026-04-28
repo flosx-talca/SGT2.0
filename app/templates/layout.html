@@ -99,6 +99,15 @@
     <!-- HTMX for SPA-like navigation -->
     <script src="{{ url_for('static', filename='vendor/htmx.min.js') }}"></script>
     
+    <!-- Core Vendor Scripts (Moved to head to avoid $ is not defined) -->
+    <script src="{{ url_for('static', filename='vendor/jquery-3.7.0.min.js') }}"></script>
+    <script src="{{ url_for('static', filename='vendor/bootstrap.bundle.min.js') }}"></script>
+    <script src="{{ url_for('static', filename='vendor/jquery.dataTables.min.js') }}"></script>
+    <script src="{{ url_for('static', filename='vendor/dataTables.bootstrap5.min.js') }}"></script>
+    <script src="{{ url_for('static', filename='vendor/dataTables.responsive.min.js') }}"></script>
+    <script src="{{ url_for('static', filename='vendor/sweetalert2@11.js') }}"></script>
+    <script src="{{ url_for('static', filename='vendor/toastr.min.js') }}"></script>
+
     {% block head %}{% endblock %}
 </head>
 {# Sin hx-indicator en body: la navegación HTMX no activa el overlay automáticamente #}
@@ -340,14 +349,7 @@
         </div>
     </div>
 
-    <!-- Scripts -->
-    <script src="{{ url_for('static', filename='vendor/jquery-3.7.0.min.js') }}"></script>
-    <script src="{{ url_for('static', filename='vendor/bootstrap.bundle.min.js') }}"></script>
-    <script src="{{ url_for('static', filename='vendor/jquery.dataTables.min.js') }}"></script>
-    <script src="{{ url_for('static', filename='vendor/dataTables.bootstrap5.min.js') }}"></script>
-    <script src="{{ url_for('static', filename='vendor/dataTables.responsive.min.js') }}"></script>
-    <script src="{{ url_for('static', filename='vendor/sweetalert2@11.js') }}"></script>
-    <script src="{{ url_for('static', filename='vendor/toastr.min.js') }}"></script>
+    <!-- Scripts (Moved to head) -->
     
     <script>
         $(document).ready(function() {

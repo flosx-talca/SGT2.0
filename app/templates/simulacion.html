@@ -26,6 +26,9 @@
         font-weight: bold;
         cursor: pointer;
         transition: transform 0.1s;
+        min-width: 40px;
+        height: 26px;
+        margin: 0 auto;
     }
     .badge-turno:hover { transform: scale(1.1); }
     .badge-turno.libre { background-color: #e9ecef; color: #6c757d; border: 1px dashed #dee2e6; }
@@ -232,15 +235,6 @@
         
         <div class="w-100 my-1 border-top"></div>
         
-        <!-- Tipos de Ausencia -->
-        {% for ta in tipos_ausencia %}
-        <button class="btn btn-sm text-white fw-bold shadow-xs" 
-                style="background-color: {{ ta.color|default('#95a5a6', true) }}; min-width: 45px;" 
-                onclick="seleccionarTurno('{{ ta.abreviacion }}', '{{ ta.color|default('#95a5a6', true) }}')">
-            {{ ta.abreviacion }}
-        </button>
-        {% endfor %}
-        
         <!-- Libre -->
         <button class="btn btn-sm btn-light border fw-bold shadow-xs" style="min-width: 45px;" onclick="seleccionarTurno('L', '#e9ecef')">L</button>
     </div>
@@ -286,7 +280,7 @@
 <script>
     // --- Configuración y Helpers (Hoisted) ---
     // Construir mapa de colores desde el backend
-    const COLORES_TURNO = {
+    var COLORES_TURNO = {
         {% for t in turnos %}
         "{{ t.abreviacion }}": "{{ t.color|default('#18bc9c', true) }}"{{ ',' if not loop.last or tipos_ausencia else '' }}
         {% endfor %}
@@ -295,7 +289,7 @@
         {% endfor %}
     };
 
-    const LISTA_TURNOS = [{% for t in turnos %}"{{ t.abreviacion }}"{% if not loop.last %}, {% endif %} {% endfor %}];
+    var LISTA_TURNOS = [{% for t in turnos %}"{{ t.abreviacion }}"{% if not loop.last %}, {% endif %} {% endfor %}];
 
     function getColorTurno(abr) {
         return COLORES_TURNO[abr] || '#adb5bd';
@@ -451,8 +445,10 @@
                     const color = typeof getColorTurno === 'function' ? getColorTurno(tAbr) : '#adb5bd';
                     const estiloExtra = sinResolver ? 'border: 1.5px dashed #fd7e14 !important;' : '';
                     
-                    return `<td class="celda-turno text-center" onclick="SGT.abrirPicker(this)" data-fecha="${dia.fecha}" data-wid="${t.id}" style="${estiloExtra}">
-                        <span class="badge-turno ${tAbr === 'L' ? 'libre' : ''}" style="${(tAbr !== 'L' && !sinResolver) ? 'background-color:' + color : ''}; min-width:40px; padding:0 5px;">${sinResolver ? '' : tAbr}</span>
+                    return `<td class="celda-turno text-center p-0 position-relative" onclick="SGT.abrirPicker(this)" data-fecha="${dia.fecha}" data-wid="${t.id}" style="${estiloExtra} position: relative; height: 45px; vertical-align: middle;">
+                        <div class="d-flex align-items-center justify-content-center h-100 w-100">
+                            <span class="badge-turno ${tAbr === 'L' ? 'libre' : ''}" style="${(tAbr !== 'L' && !sinResolver) ? 'background-color:' + color : ''};">${sinResolver ? '' : tAbr}</span>
+                        </div>
                     </td>`;
                 }).join('');
 
@@ -583,77 +579,146 @@
         const fecha = celdaActiva.dataset.fecha;
         const wid = celdaActiva.dataset.wid;
         const libreClass = abr === 'L' ? 'libre' : (abr === 'V' ? 'vac' : '');
-        const styleStr = (abr !== 'L' && abr !== 'V') ? `background-color:${color}` : '';
+        // SGT 2.1: Estilo centrado y estandarizado
+        let styleStr = '';
+        if (abr !== 'L' && abr !== 'V') {
+            styleStr = `background-color: ${color};`;
+        }
         $(celdaActiva).find('.badge-turno')
             .attr('class', `badge-turno ${libreClass}`)
             .attr('style', styleStr)
             .text(abr);
+        
+        // Agregar indicador manual "U"
+        $(celdaActiva).find('.manual-marker').remove();
+        $(celdaActiva).append('<span class="manual-marker" style="position:absolute; bottom:1px; right:2px; font-size:0.55rem; font-weight:bold; color:#777; opacity:0.8;">U</span>');
 
         // Actualizar datos locales
-        if (!cuadranteData.celdas[fecha]) cuadranteData.celdas[fecha] = {};
-        cuadranteData.celdas[fecha][wid] = abr;
+        if (!SGT.cuadranteData) SGT.cuadranteData = { celdas: {} };
+        if (!SGT.cuadranteData.celdas[fecha]) SGT.cuadranteData.celdas[fecha] = {};
+        SGT.cuadranteData.celdas[fecha][wid] = abr;
 
-        cerrarPicker();
         actualizarContadoresFila(celdaActiva);
+        cerrarPicker();
         guardarCambiosCelda(fecha, wid, abr);
     }
 
     function actualizarContadoresFila(celda) {
+        if (!celda) return;
         const fila = $(celda).closest('tr');
-        const fecha = celda.dataset.fecha;
         const wid = celda.dataset.wid;
+        const fecha = celda.dataset.fecha;
 
-        // 1. Actualizar Contadores de la Fila (Día)
+        // 1. Recalcular Cobertura de la Fila (Día)
         const contadores = { L: 0 };
-        LISTA_TURNOS.forEach(t => contadores[t] = 0);
+        if (typeof LISTA_TURNOS !== 'undefined') {
+            LISTA_TURNOS.forEach(t => contadores[t] = 0);
+        }
         let totalDia = 0;
         
         fila.find('.celda-turno').each(function () {
             const abr = $(this).find('.badge-turno').text().trim();
-            if (contadores[abr] !== undefined) contadores[abr]++;
-            if (LISTA_TURNOS.includes(abr)) totalDia++;
-        });
-
-        // Re-extraer requerimientos actuales
-        const req = {};
-        $('.cobertura-input').each(function () {
-            const key = this.id.replace('cob_', '').toUpperCase();
-            req[key] = parseInt($(this).val()) || 0;
-        });
-
-        // Actualizar celdas de cobertura en la fila
-        LISTA_TURNOS.forEach(t => {
-            const cobCell = fila.find(`.cob-val[data-turno="${t}"]`);
-            const count = contadores[t];
-            const isSun = fila.find('.col-fecha').hasClass('domingo');
-            const rSun = parseInt($('#cob_sun_' + t).val());
-            const r = (isSun && !isNaN(rSun)) ? rSun : req[t];
-
-            if (count < r) {
-                cobCell.html(`<span class="badge bg-danger shadow-sm px-2 rounded-pill"><i class="fa fa-exclamation-circle"></i> ${count}</span>`);
-            } else {
-                cobCell.html(count || '0');
+            if (abr === 'L') {
+                contadores.L++;
+            } else if (typeof LISTA_TURNOS !== 'undefined' && LISTA_TURNOS.includes(abr)) {
+                if (contadores[abr] !== undefined) contadores[abr]++;
+                totalDia++;
             }
         });
+
+        // Actualizar celdas de cobertura (Derecha)
+        if (typeof LISTA_TURNOS !== 'undefined') {
+            LISTA_TURNOS.forEach(t => {
+                const cobCell = fila.find(`.cob-val[data-turno="${t}"]`);
+                if (cobCell.length) {
+                    const count = contadores[t] || 0;
+                    const isSun = fila.find('.col-fecha').hasClass('domingo');
+                    const reqNormal = parseInt($(`#cob_${t}`).val()) || 0;
+                    const reqSun = parseInt($(`#cob_sun_${t}`).val());
+                    const r = (isSun && !isNaN(reqSun)) ? reqSun : reqNormal;
+
+                    if (count < r) {
+                        cobCell.html(`<span class="badge bg-danger shadow-sm px-2 rounded-pill"><i class="fa fa-exclamation-circle"></i> ${count}</span>`);
+                    } else {
+                        cobCell.html(count);
+                    }
+                }
+            });
+        }
         fila.find('.cob-val-l').text(contadores.L);
         fila.find('.total-dia').text(totalDia + contadores.L);
 
-        // 2. Actualizar Resumen del Trabajador (COLUMNA -> Pie de tabla)
+        // 2. Recalcular Totales del Trabajador (Última Fila)
         let sumT = 0, sumL = 0, sumD = 0;
-        const colIdx = $(celda).index();
+        const workerId = String(wid);
         
-        $('tbody tr').each(function() {
-            const isSun = $(this).find('.col-fecha').hasClass('domingo');
-            const abr = $(this).find('td').eq(colIdx).find('.badge-turno').text().trim();
+        $(`.celda-turno[data-wid="${workerId}"]`).each(function() {
+            const row = $(this).closest('tr');
+            const isSun = row.find('.col-fecha').hasClass('domingo');
+            const abr = $(this).find('.badge-turno').text().trim() || 'L';
+            
             if (abr === 'L') {
                 sumL++;
                 if (isSun) sumD++;
-            } else if (LISTA_TURNOS.includes(abr)) {
+            } else if (typeof LISTA_TURNOS !== 'undefined' && LISTA_TURNOS.includes(abr)) {
                 sumT++;
             }
         });
-        
-        $(`tfoot .resumen-w[data-wid="${wid}"]`).text(`${sumT}/${sumL}/${sumD}`);
+
+        const footerCell = $(`tfoot td.resumen-w[data-wid="${workerId}"], tfoot .resumen-w[data-wid="${workerId}"]`).first();
+        if (footerCell.length) {
+            const nombreDiv = footerCell.find('div.text-muted').prop('outerHTML') || "";
+            footerCell.html(`${nombreDiv}${sumT}/${sumL}/${sumD}`);
+        }
+
+        // 3. Recalcular Métricas Globales
+        if (typeof actualizarMetricasGlobales === 'function') {
+            actualizarMetricasGlobales();
+        }
+    }
+
+    function actualizarMetricasGlobales() {
+        let total_necesarios = 0;
+        let total_cubiertos = 0;
+        let suma_deficits = 0;
+        let suma_superavits = 0;
+
+        if (!SGT.cuadranteData || !SGT.cuadranteData.dias) return;
+        const { dias, trabajadores, celdas } = SGT.cuadranteData;
+
+        dias.forEach(dia => {
+            const isSun = dia.dia_semana === 6;
+            const conts = { L: 0 };
+            LISTA_TURNOS.forEach(t => conts[t] = 0);
+            
+            trabajadores.forEach(t => {
+                const tAbr = (celdas[dia.fecha] && celdas[dia.fecha][t.id]) || 'L';
+                if (conts[tAbr] !== undefined) conts[tAbr]++;
+                if (LISTA_TURNOS.includes(tAbr)) total_cubiertos++;
+            });
+
+            LISTA_TURNOS.forEach(t => {
+                const reqNormal = parseInt($('#cob_' + t).val()) || 0;
+                const reqSun = parseInt($('#cob_sun_' + t).val());
+                const req = (isSun && !isNaN(reqSun)) ? reqSun : reqNormal;
+                
+                total_necesarios += req;
+                const count = conts[t];
+                if (count < req) suma_deficits += (req - count);
+                if (count > req) suma_superavits += (count - req);
+            });
+        });
+
+        $('#metrica_req').text(total_necesarios);
+        $('#metrica_cub').text(total_cubiertos);
+        $('#metrica_sup').text(suma_superavits);
+        const defEl = $('#metrica_def');
+        defEl.text(suma_deficits);
+        if (suma_deficits > 0) {
+            defEl.addClass('text-danger').removeClass('text-muted');
+        } else {
+            defEl.removeClass('text-danger').addClass('text-muted');
+        }
     }
 
     function guardarCambiosCelda(fecha, wid, abr) {
