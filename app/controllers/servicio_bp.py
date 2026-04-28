@@ -1,20 +1,33 @@
 from flask import Blueprint, render_template, request, jsonify
+from flask_login import login_required, current_user
+from app.services.context import get_empresa_activa_id
 from app.database import db
-from app.models.business import Servicio
+from app.models.business import Servicio, Empresa
 
 servicio_bp = Blueprint('servicio', __name__, url_prefix='/servicios')
 
 @servicio_bp.route('/')
+@login_required
 def index():
-    registros = Servicio.query.order_by(Servicio.descripcion).all()
+    emp_id = get_empresa_activa_id()
+    if emp_id:
+        registros = Servicio.query.join(Servicio.empresas_asociadas).filter(Empresa.id == emp_id).all()
+    else:
+        registros = Servicio.query.order_by(Servicio.descripcion).all()
     return render_template('servicios.html', registros=registros)
 
 @servicio_bp.route('/tabla')
+@login_required
 def tabla():
-    registros = Servicio.query.order_by(Servicio.descripcion).all()
+    emp_id = get_empresa_activa_id()
+    if emp_id:
+        registros = Servicio.query.join(Servicio.empresas_asociadas).filter(Empresa.id == emp_id).all()
+    else:
+        registros = Servicio.query.order_by(Servicio.descripcion).all()
     return render_template('partials/servicio_rows.html', registros=registros)
 
 @servicio_bp.route('/modal', methods=['POST'])
+@login_required
 def modal():
     modo = request.form.get('modo', 'Agregar')
     registro_id = request.form.get('id', None)
@@ -24,6 +37,7 @@ def modal():
     return render_template('modal-servicio.html', modo=modo, registro=registro)
 
 @servicio_bp.route('/guardar', methods=['POST'])
+@login_required
 def guardar():
     sid = request.form.get('id', '').strip()
     descripcion = request.form.get('descripcion', '').strip()
@@ -57,6 +71,7 @@ def guardar():
         return jsonify({'ok': False, 'msg': str(e)}), 500
 
 @servicio_bp.route('/eliminar', methods=['POST'])
+@login_required
 def eliminar():
     sid = request.form.get('id', '').strip()
     servicio = Servicio.query.get_or_404(int(sid))

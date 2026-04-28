@@ -1,4 +1,6 @@
 from flask import Blueprint, render_template, request, jsonify, redirect, url_for
+from flask_login import login_required, current_user
+from app.services.context import get_empresa_activa_id
 from app.database import db
 from app.models.business import Trabajador, TrabajadorAusencia, TipoAusencia, Turno, TrabajadorRestriccionTurno
 from app.models.enums import CategoriaAusencia
@@ -8,26 +10,25 @@ from datetime import date, datetime
 ausencia_bp = Blueprint('ausencia', __name__)
 
 @ausencia_bp.route('/ausencias')
+@login_required
 def index():
-    # En un sistema multi-tenant real, empresa_id vendría de la sesión
-    # Para efectos de la demo, tomamos la empresa del primer trabajador
-    t_first = Trabajador.query.first()
-    empresa_id = t_first.empresa_id if t_first else 1
-    
+    empresa_id = get_empresa_activa_id()
     mes = int(request.args.get('mes', date.today().month))
     anio = int(request.args.get('anio', date.today().year))
     
-    # Obtener todas las ausencias registradas (puedes filtrar por mes si la tabla es grande)
-    ausencias = TrabajadorAusencia.query.join(Trabajador).filter(
-        Trabajador.empresa_id == empresa_id
-    ).order_by(TrabajadorAusencia.fecha_inicio.desc()).all()
-    
-    # Calcular capacidad detallada para el mes seleccionado
-    capacidad = calcular_capacidad_detallada(empresa_id, mes, anio)
-    
-    # Datos para los selectores del modal
-    trabajadores = Trabajador.query.filter_by(empresa_id=empresa_id, activo=True).order_by(Trabajador.nombre).all()
-    tipos = TipoAusencia.query.filter_by(activo=True).all()
+    # Si hay empresa activa, filtramos. Si no (Super Admin), vemos todo.
+    if empresa_id:
+        ausencias = TrabajadorAusencia.query.join(Trabajador).filter(
+            Trabajador.empresa_id == empresa_id
+        ).order_by(TrabajadorAusencia.fecha_inicio.desc()).all()
+        capacidad = calcular_capacidad_detallada(empresa_id, mes, anio)
+        trabajadores = Trabajador.query.filter_by(empresa_id=empresa_id, activo=True).order_by(Trabajador.nombre).all()
+        tipos = TipoAusencia.query.filter_by(empresa_id=empresa_id, activo=True).all()
+    else:
+        ausencias = TrabajadorAusencia.query.order_by(TrabajadorAusencia.fecha_inicio.desc()).all()
+        capacidad = {'estado': 'ok', 'mensaje': 'Seleccione una empresa para ver el análisis de capacidad.', 'dias_con_problema': []}
+        trabajadores = Trabajador.query.filter_by(activo=True).order_by(Trabajador.nombre).all()
+        tipos = TipoAusencia.query.filter_by(activo=True).all()
     
     return render_template('ausencias.html',
                            ausencias=ausencias,
@@ -39,15 +40,18 @@ def index():
 
 @ausencia_bp.route('/ausencias/modal')
 @ausencia_bp.route('/ausencias/modal/<int:id>')
+@login_required
 def modal_nueva(id=None):
     ausencia = None
     if id:
         ausencia = TrabajadorAusencia.query.get_or_404(id)
         
-    t_first = Trabajador.query.first()
-    empresa_id = t_first.empresa_id if t_first else 1
+    empresa_id = get_empresa_activa_id()
+    if not empresa_id:
+        return "Seleccione una empresa primero", 400
+
     trabajadores = Trabajador.query.filter_by(empresa_id=empresa_id, activo=True).order_by(Trabajador.nombre).all()
-    tipos = TipoAusencia.query.filter_by(activo=True).all()
+    tipos = TipoAusencia.query.filter_by(empresa_id=empresa_id, activo=True).all()
     turnos = Turno.query.filter_by(empresa_id=empresa_id, activo=True).all()
     
     return render_template('modal-ausencia.html', 
@@ -58,6 +62,7 @@ def modal_nueva(id=None):
                            CategoriaAusencia=CategoriaAusencia)
 
 @ausencia_bp.route('/ausencias/impacto', methods=['POST'])
+@login_required
 def impacto():
     data = request.get_json()
     tid = data.get('trabajador_id')
@@ -92,6 +97,7 @@ def impacto():
     return jsonify(resultado)
 
 @ausencia_bp.route('/ausencias/guardar', methods=['POST'])
+@login_required
 def guardar():
     aid = request.form.get('id')
     tid = request.form.get('trabajador_id')
@@ -171,6 +177,7 @@ def guardar():
         return jsonify({'ok': False, 'msg': f'Error: {str(e)}'}), 500
 
 @ausencia_bp.route('/ausencias/eliminar/<int:id>', methods=['POST'])
+@login_required
 def eliminar(id):
     ausencia = TrabajadorAusencia.query.get_or_404(id)
     try:

@@ -59,6 +59,18 @@ class Usuario(db.Model, UserMixin):
     # Relaciones
     empresas = db.relationship('UsuarioEmpresa', backref='usuario', lazy=True, cascade="all, delete-orphan")
 
+    @property
+    def is_super_admin(self):
+        return self.rol.descripcion == 'Super Admin' if self.rol else False
+
+    @property
+    def is_cliente(self):
+        return self.rol.descripcion == 'Cliente' if self.rol else False
+
+    @property
+    def is_administrador(self):
+        return self.rol.descripcion == 'Administrador' if self.rol else False
+
     def get_id(self):
         return str(self.id)
 

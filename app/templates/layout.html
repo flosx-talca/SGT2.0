@@ -145,18 +145,13 @@
             <div class="sidebar-content flex-grow-1">
                 <nav class="nav flex-column sidebar-nav">
                     {% if current_user.is_authenticated %}
-                        {% for rm in current_user.rol.menus | sort(attribute='menu_asociado.orden') %}
-                            {% if rm.menu_asociado.activo %}
-                                {# Lógica: Si hay empresa activa, ver operativos (es_base=True). Si no, ver globales (es_base=False). #}
-                                {% if (current_user.empresa_activa_id and rm.menu_asociado.es_base) or (not current_user.empresa_activa_id and not rm.menu_asociado.es_base) %}
-                                <a class="nav-link {{ 'active' if request.endpoint == rm.menu_asociado.endpoint else '' }}" 
-                                   href="{{ url_for(rm.menu_asociado.endpoint) if rm.menu_asociado.endpoint else '#' }}"
-                                   hx-get="{{ url_for(rm.menu_asociado.endpoint) if rm.menu_asociado.endpoint else '#' }}" 
-                                   hx-target="#body-content" hx-push-url="true" hx-select="#body-content" hx-swap="outerHTML">
-                                    <i class="{{ rm.menu_asociado.icono or 'fa fa-circle' }}"></i> {{ rm.menu_asociado.nombre }}
-                                </a>
-                                {% endif %}
-                            {% endif %}
+                        {% for menu in nav_menus %}
+                            <a class="nav-link {{ 'active' if request.endpoint == menu.endpoint else '' }}" 
+                               href="{{ url_for(menu.endpoint) if menu.endpoint else '#' }}"
+                               hx-get="{{ url_for(menu.endpoint) if menu.endpoint else '#' }}" 
+                               hx-target="#body-content" hx-push-url="true" hx-select="#body-content" hx-swap="outerHTML">
+                                <i class="{{ menu.icono or 'fa fa-circle' }}"></i> {{ menu.nombre }}
+                            </a>
                         {% endfor %}
                     {% else %}
                         <a class="nav-link active" href="{{ url_for('auth.login') }}">
@@ -186,19 +181,18 @@
                     </ul>
                 </div>
 
-                <!-- Branch Display (Simple Link) -->
+                <!-- Company Display (Simple Link) -->
                 <a href="{{ url_for('auth.select_company') }}" class="d-flex align-items-center text-decoration-none mt-3" id="branchSelector">
                     <div class="bg-primary-subtle rounded-circle p-2 me-2 text-primary d-flex align-items-center justify-content-center" style="width: 35px; height: 35px;">
-                        <i class="fa fa-map-marker-alt"></i>
+                        <i class="fa fa-building"></i>
                     </div>
                     <div class="overflow-hidden flex-grow-1">
-                        <small class="text-muted d-block text-uppercase fw-bold" style="font-size: 0.6rem; letter-spacing: 0.5px;">Sucursal Activa</small>
+                        <small class="text-muted d-block text-uppercase fw-bold" style="font-size: 0.6rem; letter-spacing: 0.5px;">Empresa Activa</small>
                         <p class="mb-0 fw-bold small text-truncate text-primary" id="currentBranchName">
-                            {% if current_user.empresa_activa_id %}
-                                {% set emp = current_user.empresas | selectattr('empresa_id', 'equalto', current_user.empresa_activa_id) | first %}
-                                {{ emp.empresa.razon_social if emp else 'Sin Empresa' }}
-                            {% elif current_user.rol.descripcion == 'Super Admin' %}
-                                Visión Global (Admin)
+                            {% if empresa_activa %}
+                                {{ empresa_activa.razon_social }}
+                            {% elif current_user.is_super_admin %}
+                                Modo Super Admin
                             {% else %}
                                 Seleccionar...
                             {% endif %}

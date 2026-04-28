@@ -19,7 +19,15 @@ def login():
         if usuario_val.lower() == 'admin':
             user = Usuario.query.filter_by(rut='99999999-9').first()
         else:
-            user = Usuario.query.filter((Usuario.rut == usuario_val) | (Usuario.email == usuario_val)).first()
+            # Normalizar RUT para búsqueda (quitar puntos y guiones si parece un RUT)
+            import re
+            rut_normalizado = re.sub(r'[^0-9kK]', '', usuario_val)
+            
+            user = Usuario.query.filter(
+                (Usuario.rut == usuario_val) | 
+                (Usuario.rut == rut_normalizado) | 
+                (Usuario.email == usuario_val)
+            ).first()
         
         if user and user.activo:
             print(f"DEBUG: Usuario encontrado: {user.rut}")
@@ -43,18 +51,22 @@ def login():
             if is_valid:
                 login_user(user)
                 
+                # SGT 2.1: Usar el servicio de contexto para obtener empresas accesibles
+                from app.services.context import get_empresas_usuario
+                empresas_disponibles = get_empresas_usuario()
+                
                 # Si solo tiene una empresa, activarla de una vez
-                if len(user.empresas) == 1:
-                    user.empresa_activa_id = user.empresas[0].empresa_id
+                if len(empresas_disponibles) == 1:
+                    user.empresa_activa_id = empresas_disponibles[0].id
                     db.session.commit()
                     return jsonify({'ok': True, 'msg': 'Bienvenido', 'redirect': url_for('main.index')})
                 
                 # Si tiene varias, debe elegir
-                if len(user.empresas) > 1:
+                if len(empresas_disponibles) > 1:
                     return jsonify({'ok': True, 'msg': 'Seleccione empresa', 'redirect': url_for('auth.select_company')})
                 
                 # Super Admin sin empresas asignadas directamente (ve todo)
-                if user.rol.descripcion == 'Super Admin':
+                if user.is_super_admin:
                     return jsonify({'ok': True, 'msg': 'Bienvenido Admin', 'redirect': url_for('main.index')})
                 
                 return jsonify({'ok': False, 'msg': 'Usuario sin empresas asignadas.'})
@@ -74,24 +86,32 @@ def logout():
 @auth_bp.route('/select_company')
 @login_required
 def select_company():
-    empresas = user_empresas = user_empresas = UsuarioEmpresa.query.filter_by(usuario_id=current_user.id, activo=True).all()
-    if not empresas and current_user.rol.descripcion != 'Super Admin':
+    from app.services.context import get_empresas_usuario
+    empresas_obj = get_empresas_usuario()
+    if not empresas_obj and current_user.rol.descripcion != 'Super Admin':
         flash('No tienes empresas asignadas.', 'warning')
         return redirect(url_for('auth.login'))
     
+    # Adaptar para el template que espera objetos con propiedad .empresa
+    # (Como venían de UsuarioEmpresa)
+    class Adaptador:
+        def __init__(self, e): self.empresa = e
+
+    empresas = [Adaptador(e) for e in empresas_obj]
     return render_template('auth/select_company.html', empresas=empresas)
 
 @auth_bp.route('/set_company/<int:empresa_id>')
 @login_required
 def set_company(empresa_id):
     # Verificar que el usuario tenga acceso a esa empresa
-    if current_user.rol.descripcion != 'Super Admin':
-        acceso = UsuarioEmpresa.query.filter_by(usuario_id=current_user.id, empresa_id=empresa_id, activo=True).first()
-        if not acceso:
-            flash('No tienes acceso a esta empresa.', 'danger')
-            return redirect(url_for('auth.select_company'))
+    from app.services.context import usuario_tiene_acceso
+    if not usuario_tiene_acceso(current_user, empresa_id):
+        flash('No tienes acceso a esta empresa.', 'danger')
+        return redirect(url_for('auth.select_company'))
     
     current_user.empresa_activa_id = empresa_id
+    from flask import session
+    session['empresa_activa_id'] = empresa_id
     db.session.commit()
     return redirect(url_for('main.index'))
 
@@ -102,5 +122,7 @@ def clear_company():
         return redirect(url_for('auth.select_company'))
     
     current_user.empresa_activa_id = None
+    from flask import session
+    session.pop('empresa_activa_id', None)
     db.session.commit()
     return redirect(url_for('main.index'))

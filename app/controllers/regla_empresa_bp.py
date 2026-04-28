@@ -7,7 +7,12 @@ regla_empresa_bp = Blueprint('regla_empresa', __name__, url_prefix='/reglas_empr
 @regla_empresa_bp.route('/')
 def index():
     """Página completa: renderiza tabla con todos los registros."""
-    registros = ReglaEmpresa.query.order_by(ReglaEmpresa.id).all()
+    from app.services.context import get_empresa_activa_id
+    emp_id = get_empresa_activa_id()
+    if emp_id:
+        registros = ReglaEmpresa.query.filter_by(empresa_id=emp_id).order_by(ReglaEmpresa.id).all()
+    else:
+        registros = ReglaEmpresa.query.order_by(ReglaEmpresa.id).all()
     return render_template('reglas_empresa.html', registros=registros)
 
 @regla_empresa_bp.route('/tabla')

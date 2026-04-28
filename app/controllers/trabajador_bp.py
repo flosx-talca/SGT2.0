@@ -1,4 +1,6 @@
 from flask import Blueprint, render_template, request, jsonify
+from flask_login import login_required, current_user
+from app.services.context import get_empresa_activa_id
 from app.database import db
 from app.models.business import Trabajador, Empresa, Servicio, Turno, TrabajadorPreferencia, TrabajadorAusencia, TipoAusencia
 
@@ -7,18 +9,29 @@ trabajador_bp = Blueprint('trabajador', __name__, url_prefix='/trabajadores')
 JORNADA_DEFAULT = 42  # horas semanales por defecto (jornada estándar Chile)
 
 @trabajador_bp.route('/')
+@login_required
 def index():
-    registros = Trabajador.query.order_by(Trabajador.nombre).all()
+    emp_id = get_empresa_activa_id()
+    if emp_id:
+        registros = Trabajador.query.filter_by(empresa_id=emp_id).order_by(Trabajador.nombre).all()
+    else:
+        registros = Trabajador.query.order_by(Trabajador.nombre).all()
     return render_template('trabajadores.html', registros=registros)
 
 
 @trabajador_bp.route('/tabla')
+@login_required
 def tabla():
-    registros = Trabajador.query.order_by(Trabajador.nombre).all()
+    emp_id = get_empresa_activa_id()
+    if emp_id:
+        registros = Trabajador.query.filter_by(empresa_id=emp_id).order_by(Trabajador.nombre).all()
+    else:
+        registros = Trabajador.query.order_by(Trabajador.nombre).all()
     return render_template('partials/trabajador_rows.html', registros=registros)
 
 
 @trabajador_bp.route('/modal', methods=['POST'])
+@login_required
 def modal():
     modo = request.form.get('modo', 'Agregar')
     registro_id = request.form.get('id', None)
@@ -26,11 +39,31 @@ def modal():
     if registro_id and registro_id != '0':
         registro = Trabajador.query.get_or_404(int(registro_id))
 
-    empresas  = Empresa.query.filter_by(activo=True).order_by(Empresa.razon_social).all()
-    servicios = Servicio.query.filter_by(activo=True).order_by(Servicio.descripcion).all()
+    emp_id = get_empresa_activa_id()
+    print(f"DEBUG: modal - emp_id={emp_id}, current_user={current_user.nombre}, rol={current_user.rol.descripcion}")
+    
+    if emp_id:
+        empresas  = Empresa.query.filter_by(id=emp_id, activo=True).all()
+        servicios = Servicio.query.join(Servicio.empresas_asociadas).filter(Empresa.id == emp_id, Servicio.activo == True).order_by(Servicio.descripcion).all()
+        turnos_db = Turno.query.filter_by(empresa_id=emp_id, activo=True).all()
+        tipos_ausencia = TipoAusencia.query.filter_by(empresa_id=emp_id, activo=True).all()
+    else:
+        # Modo Super Admin o Cliente sin empresa seleccionada
+        from app.services.context import get_empresas_usuario
+        empresas = get_empresas_usuario()
+        ids = [e.id for e in empresas]
+        print(f"DEBUG: modal - ids_asignados={ids}")
+        if ids:
+            servicios = Servicio.query.join(Servicio.empresas_asociadas).filter(Empresa.id.in_(ids), Servicio.activo == True).order_by(Servicio.descripcion).all()
+            turnos_db = Turno.query.filter(Turno.empresa_id.in_(ids), Turno.activo == True).all()
+            tipos_ausencia = TipoAusencia.query.filter(TipoAusencia.empresa_id.in_(ids), TipoAusencia.activo == True).all()
+        else:
+            servicios = []
+            turnos_db = []
+            tipos_ausencia = []
+    
+    print(f"DEBUG: modal - data loaded: empresas={len(empresas)}, servicios={len(servicios)}, turnos={len(turnos_db)}")
 
-    # Turnos únicos para la tabla de preferencias (por empresa si hay contexto)
-    turnos_db = Turno.query.filter_by(activo=True).all()
     tipos_turno = []
     vistos = set()
     for t in turnos_db:
@@ -45,8 +78,6 @@ def modal():
             {'abreviacion': 'I', 'color': '#f39c12'},
             {'abreviacion': 'N', 'color': '#34495e'}
         ]
-
-    tipos_ausencia = TipoAusencia.query.filter_by(activo=True).all()
 
     return render_template('modal-trabajador.html',
                            modo=modo,
@@ -80,6 +111,7 @@ def modal_restriccion():
 
 
 @trabajador_bp.route('/guardar', methods=['POST'])
+@login_required
 def guardar():
     tid         = request.form.get('id', '').strip()
     rut         = request.form.get('rut', '').strip()
@@ -172,6 +204,7 @@ def guardar():
 
 
 @trabajador_bp.route('/eliminar', methods=['POST'])
+@login_required
 def eliminar():
     tid = request.form.get('id', '').strip()
     trabajador = Trabajador.query.get_or_404(int(tid))

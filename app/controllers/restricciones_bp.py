@@ -1,4 +1,6 @@
 from flask import Blueprint, request, jsonify
+from flask_login import login_required, current_user
+from app.services.context import get_empresa_activa_id, usuario_tiene_acceso
 from app.database import db
 from app.models.business import Trabajador, TrabajadorRestriccionTurno, Turno, TrabajadorAusencia, TipoAusencia
 from app.models.enums import RestrictionType, NATURALEZA_POR_TIPO, CategoriaAusencia
@@ -7,7 +9,12 @@ from datetime import datetime
 restricciones_bp = Blueprint('restricciones', __name__)
 
 @restricciones_bp.route('/api/restricciones/worker/<int:worker_id>', methods=['GET'])
+@login_required
 def get_worker_restrictions(worker_id):
+    # Validar acceso al trabajador
+    worker = Trabajador.query.get_or_404(worker_id)
+    if not usuario_tiene_acceso(current_user, worker.empresa_id):
+        return jsonify({'status': 'error', 'msg': 'Sin acceso a este trabajador'}), 403
     # Obtener ausencias (bloqueos de día) y restricciones técnicas ordenadas cronológicamente
     ausencias = TrabajadorAusencia.query.filter_by(trabajador_id=worker_id).order_by(TrabajadorAusencia.fecha_inicio.asc()).all()
     
@@ -42,7 +49,15 @@ def get_worker_restrictions(worker_id):
     return jsonify(res)
 
 @restricciones_bp.route('/api/restricciones/preview', methods=['POST'])
+@login_required
 def preview_restriction():
+    data = request.json
+    worker_id = data.get('trabajador_id')
+    
+    # Validar acceso al trabajador
+    worker = Trabajador.query.get_or_404(worker_id)
+    if not usuario_tiene_acceso(current_user, worker.empresa_id):
+        return jsonify({'status': 'error', 'msg': 'Sin acceso a este trabajador'}), 403
     data = request.json
     worker_id = data.get('trabajador_id')
     fecha_inicio = datetime.strptime(data.get('fecha_inicio'), '%Y-%m-%d').date()
@@ -91,7 +106,15 @@ def preview_restriction():
     })
 
 @restricciones_bp.route('/api/restricciones/save', methods=['POST'])
+@login_required
 def save_restriction():
+    data = request.json
+    worker_id = data.get('trabajador_id')
+
+    # Validar acceso al trabajador
+    worker = Trabajador.query.get_or_404(worker_id)
+    if not usuario_tiene_acceso(current_user, worker.empresa_id):
+        return jsonify({'status': 'error', 'msg': 'Sin acceso a este trabajador'}), 403
     data = request.json
     worker_id = data.get('trabajador_id')
     tipo_id = data.get('tipo_ausencia_id')
@@ -304,9 +327,14 @@ def save_restriction():
         return jsonify({'status': 'error', 'msg': str(e)}), 500
 
 @restricciones_bp.route('/api/restricciones/delete/<int:id>', methods=['POST'])
+@login_required
 def delete_restriction(id):
     # Aquí el ID es el de TrabajadorAusencia (el registro unificado)
     a = TrabajadorAusencia.query.get_or_404(id)
+    
+    # Validar acceso al trabajador dueño de la ausencia
+    if not usuario_tiene_acceso(current_user, a.trabajador.empresa_id):
+        return jsonify({'status': 'error', 'msg': 'Sin acceso a este registro'}), 403
     
     if a.restriccion:
         db.session.delete(a.restriccion)

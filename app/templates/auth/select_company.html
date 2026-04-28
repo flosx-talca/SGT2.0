@@ -64,6 +64,21 @@
         </div>
 
         <div class="row g-4">
+            {% if current_user.rol.descripcion == 'Super Admin' %}
+            <div class="col-md-6 col-lg-4">
+                <div class="card company-card shadow-sm h-100 border-primary" style="background: rgba(24, 188, 156, 0.05);" onclick="window.location.href='{{ url_for('auth.clear_company') }}'">
+                    <div class="card-body text-center p-4">
+                        <div class="company-icon mx-auto" style="background: var(--bs-primary); color: white;">
+                            <i class="fa fa-shield-alt"></i>
+                        </div>
+                        <h5 class="fw-bold mb-1">Modo Super Admin</h5>
+                        <p class="small text-muted mb-3">Acceso global a todas las empresas</p>
+                        <button class="btn btn-primary btn-sm rounded-pill px-4">Entrar</button>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
             {% for ue in empresas %}
             <div class="col-md-6 col-lg-4">
                 <div class="card company-card shadow-sm h-100" onclick="window.location.href='{{ url_for('auth.set_company', empresa_id=ue.empresa.id) }}'">
@@ -79,21 +94,6 @@
                 </div>
             </div>
             {% endfor %}
-            
-            {% if current_user.rol.descripcion == 'Super Admin' %}
-            <div class="col-md-6 col-lg-4">
-                <div class="card company-card shadow-sm h-100 border-primary" style="background: rgba(24, 188, 156, 0.05);">
-                    <div class="card-body text-center p-4">
-                        <div class="company-icon mx-auto" style="background: var(--bs-primary); color: white;">
-                            <i class="fa fa-shield-alt"></i>
-                        </div>
-                        <h5 class="fw-bold mb-1">Modo Super Admin</h5>
-                        <p class="small text-muted mb-3">Acceso global a todas las empresas</p>
-                        <button class="btn btn-primary btn-sm rounded-pill px-4" onclick="window.location.href='{{ url_for('auth.clear_company') }}'">Entrar</button>
-                    </div>
-                </div>
-            </div>
-            {% endif %}
         </div>
 
         <div class="text-center mt-5">

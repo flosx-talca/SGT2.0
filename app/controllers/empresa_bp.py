@@ -72,6 +72,11 @@ def guardar():
                 activo=activo
             )
             db.session.add(empresa)
+            db.session.flush() # Para obtener el ID
+            
+            from app.services.empresa_setup import ejecutar_setup_empresa
+            ejecutar_setup_empresa(empresa)
+            
             msg = f'Empresa "{razon_social}" creada.'
 
         db.session.commit()

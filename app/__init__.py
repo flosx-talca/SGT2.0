@@ -24,7 +24,9 @@ def create_app():
     from .models.auth import Usuario
     @login_manager.user_loader
     def load_user(user_id):
-        return Usuario.query.get(int(user_id))
+        from sqlalchemy.orm import joinedload
+        # Usar joinedload para evitar "Parent instance is not bound to a Session" en el rol
+        return Usuario.query.options(joinedload(Usuario.rol)).get(int(user_id))
 
     # DEBUG: Ver qué URL se está usando realmente
     print(f"\n--- DEBUG: SQLALCHEMY_DATABASE_URI = {app.config.get('SQLALCHEMY_DATABASE_URI')} ---\n")
@@ -32,10 +34,31 @@ def create_app():
     # Inyectar variables globales en todos los templates automáticamente
     @app.context_processor
     def inject_globals():
-        return {
+        from flask_login import current_user
+        from app.services.context import get_empresas_usuario, get_empresa_activa
+        from app.models.auth import Menu, RolMenu
+
+        context = {
             'is_htmx': flask_request.headers.get('HX-Request', False),
-            'now': datetime.utcnow()
+            'now': datetime.utcnow(),
+            'nav_menus': [],
+            'empresas_usuario': [],
+            'empresa_activa': None
         }
+
+        if current_user.is_authenticated:
+            # Menus dinámicos
+            context['nav_menus'] = Menu.query.join(RolMenu).filter(
+                RolMenu.rol_id == current_user.rol_id,
+                Menu.activo == True
+            ).order_by(Menu.orden).all()
+            
+            # Contexto multiempresa
+            context['empresas_usuario'] = get_empresas_usuario()
+            context['empresa_activa'] = get_empresa_activa()
+
+        return context
+
 
     from flask import redirect, url_for
     from flask_login import current_user

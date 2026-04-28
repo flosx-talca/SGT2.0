@@ -8,6 +8,8 @@ from app.scheduler.builder import build_model
 from app.scheduler.solver import solve_model
 from app.scheduler.explain import extract_solution
 from app.scheduler.conflict import get_conflict_report
+from flask_login import login_required, current_user
+from app.services.context import get_empresa_activa_id, usuario_tiene_acceso
 from ortools.sat.python import cp_model
 
 planificacion_bp = Blueprint('planificacion', __name__, url_prefix='/planificacion')
@@ -36,6 +38,7 @@ def _calcular_es_nocturno(hora_inicio, hora_fin):
 
 
 @planificacion_bp.route('/generar', methods=['POST'])
+@login_required
 def generar():
     data = request.json
     mes        = int(data.get('mes', 0))
@@ -46,9 +49,12 @@ def generar():
         return jsonify({'status': 'error',
                         'message': 'Faltan parámetros básicos (mes, anio, sucursal).'}), 400
 
-    # ── Trabajadores del servicio ─────────────────────────────────────────────
+    # ── Trabajadores del servicio (Filtrado estricto por Empresa y Servicio) ────
+    empresa_id_activa = get_empresa_activa_id()
     trabajadores_db = Trabajador.query.filter_by(
-        servicio_id=servicio_id, activo=True
+        empresa_id=empresa_id_activa,
+        servicio_id=servicio_id, 
+        activo=True
     ).all()
     if not trabajadores_db:
         return jsonify({'status': 'error',
@@ -60,6 +66,10 @@ def generar():
 
     # Empresa se obtiene del primer trabajador (todos pertenecen a la misma)
     empresa_id = trabajadores_db[0].empresa_id
+    
+    # Validar que el usuario tiene acceso a esta empresa
+    if not usuario_tiene_acceso(current_user, empresa_id):
+        return jsonify({'status': 'error', 'message': 'Sin acceso a esta empresa.'}), 403
 
     # ── Turnos de la empresa (no todos del sistema) ───────────────────────────
     turnos_db = Turno.query.filter_by(empresa_id=empresa_id, activo=True).all()
@@ -379,6 +389,7 @@ def generar():
 
 
 @planificacion_bp.route('/generar_stream')
+@login_required
 def generar_stream():
     from flask import Response, stream_with_context
     import json
@@ -398,9 +409,14 @@ def generar_stream():
                 yield f"event: error_sgt\ndata: {json.dumps({'message': 'Faltan parámetros básicos.'})}\n\n"
                 return
 
-            # 2. Carga de Datos
+            # 2. Carga de Datos (Filtrado por Empresa y Servicio)
             yield f"event: log\ndata: {json.dumps({'msg': 'Cargando dotación y contratos...', 'progress': 15, 'status': 'Cargando datos...'})}\n\n"
-            trabajadores_db = Trabajador.query.filter_by(servicio_id=servicio_id, activo=True).all()
+            emp_id_stream = get_empresa_activa_id()
+            trabajadores_db = Trabajador.query.filter_by(
+                empresa_id=emp_id_stream,
+                servicio_id=servicio_id, 
+                activo=True
+            ).all()
             if not trabajadores_db:
                 yield f"event: error_sgt\ndata: {json.dumps({'message': 'No hay trabajadores activos.'})}\n\n"
                 return

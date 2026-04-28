@@ -1,4 +1,6 @@
 from flask import Blueprint, render_template, request, jsonify
+from flask_login import login_required, current_user
+from app.services.context import get_empresa_activa_id
 from app.database import db
 from app.models.business import Turno, Empresa
 from datetime import datetime
@@ -18,34 +20,52 @@ def _es_nocturno(hora_inicio, hora_fin):
 
 
 @turno_bp.route('/')
+@login_required
 def index():
-    registros = Turno.query.order_by(Turno.nombre).all()
-    empresas_filtro = Empresa.query.filter_by(activo=True).order_by(Empresa.razon_social).all()
+    emp_id = get_empresa_activa_id()
+    if emp_id:
+        registros = Turno.query.filter_by(empresa_id=emp_id).order_by(Turno.nombre).all()
+        empresas_filtro = Empresa.query.filter_by(id=emp_id, activo=True).all()
+    else:
+        registros = Turno.query.order_by(Turno.nombre).all()
+        empresas_filtro = Empresa.query.filter_by(activo=True).order_by(Empresa.razon_social).all()
     return render_template('turnos.html', registros=registros, empresas_filtro=empresas_filtro)
 
 
 @turno_bp.route('/tabla')
+@login_required
 def tabla():
-    empresa_id = request.args.get('empresa_id', '0')
-    query = Turno.query
-    if empresa_id != '0':
-        query = query.filter_by(empresa_id=int(empresa_id))
-    registros = query.order_by(Turno.nombre).all()
+    emp_id = get_empresa_activa_id()
+    if emp_id:
+        registros = Turno.query.filter_by(empresa_id=emp_id).order_by(Turno.nombre).all()
+    else:
+        req_emp_id = request.args.get('empresa_id', '0')
+        query = Turno.query
+        if req_emp_id != '0':
+            query = query.filter_by(empresa_id=int(req_emp_id))
+        registros = query.order_by(Turno.nombre).all()
     return render_template('partials/turno_cards.html', registros=registros)
 
 
 @turno_bp.route('/modal', methods=['POST'])
+@login_required
 def modal():
     modo = request.form.get('modo', 'Agregar')
     registro_id = request.form.get('id', None)
     registro = None
     if registro_id and registro_id != '0':
         registro = Turno.query.get_or_404(int(registro_id))
-    empresas = Empresa.query.filter_by(activo=True).order_by(Empresa.razon_social).all()
+    
+    emp_id = get_empresa_activa_id()
+    if emp_id:
+        empresas = Empresa.query.filter_by(id=emp_id, activo=True).all()
+    else:
+        empresas = Empresa.query.filter_by(activo=True).order_by(Empresa.razon_social).all()
     return render_template('modal-turno.html', modo=modo, registro=registro, empresas=empresas)
 
 
 @turno_bp.route('/guardar', methods=['POST'])
+@login_required
 def guardar():
     tid             = request.form.get('id', '').strip()
     empresa_id      = request.form.get('empresa_id', '').strip()
@@ -102,6 +122,7 @@ def guardar():
 
 
 @turno_bp.route('/eliminar', methods=['POST'])
+@login_required
 def eliminar():
     tid = request.form.get('id', '').strip()
     turno = Turno.query.get_or_404(int(tid))
