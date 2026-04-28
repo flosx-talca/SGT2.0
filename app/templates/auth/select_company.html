@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SGT 2.1 - Seleccionar Empresa</title>
+    <!-- Bootswatch CSS (Local) -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/bootstrap.css') }}">
+    <!-- Font Awesome 6.4.2 -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='vendor/all.min.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    
+    <style>
+        body {
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        .selection-container {
+            width: 100%;
+            max-width: 800px;
+            animation: fadeIn 0.6s ease-out;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .company-card {
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: none;
+            border-radius: 12px;
+        }
+        .company-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.1) !important;
+        }
+        .company-icon {
+            width: 60px;
+            height: 60px;
+            background: rgba(24, 188, 156, 0.1);
+            color: var(--bs-primary);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            margin-bottom: 1rem;
+        }
+        .header-section {
+            text-align: center;
+            margin-bottom: 3rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="selection-container">
+        <div class="header-section">
+            <h1 class="fw-bold text-dark mb-2">Bienvenido, {{ current_user.nombre }}</h1>
+            <p class="text-muted">Seleccione la empresa o sucursal con la que desea trabajar hoy.</p>
+        </div>
+
+        <div class="row g-4">
+            {% for ue in empresas %}
+            <div class="col-md-6 col-lg-4">
+                <div class="card company-card shadow-sm h-100" onclick="window.location.href='{{ url_for('auth.set_company', empresa_id=ue.empresa.id) }}'">
+                    <div class="card-body text-center p-4">
+                        <div class="company-icon mx-auto">
+                            <i class="fa fa-building"></i>
+                        </div>
+                        <h5 class="fw-bold mb-1">{{ ue.empresa.razon_social }}</h5>
+                        <p class="small text-muted mb-0">RUT: {{ ue.empresa.rut }}</p>
+                        <p class="small text-muted mb-3">{{ ue.empresa.direccion }}</p>
+                        <button class="btn btn-outline-primary btn-sm rounded-pill px-4">Seleccionar</button>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+            
+            {% if current_user.rol.descripcion == 'Super Admin' %}
+            <div class="col-md-6 col-lg-4">
+                <div class="card company-card shadow-sm h-100 border-primary" style="background: rgba(24, 188, 156, 0.05);">
+                    <div class="card-body text-center p-4">
+                        <div class="company-icon mx-auto" style="background: var(--bs-primary); color: white;">
+                            <i class="fa fa-shield-alt"></i>
+                        </div>
+                        <h5 class="fw-bold mb-1">Modo Super Admin</h5>
+                        <p class="small text-muted mb-3">Acceso global a todas las empresas</p>
+                        <button class="btn btn-primary btn-sm rounded-pill px-4" onclick="window.location.href='{{ url_for('auth.clear_company') }}'">Entrar</button>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+
+        <div class="text-center mt-5">
+            <a href="{{ url_for('auth.logout') }}" class="text-decoration-none text-muted">
+                <i class="fa fa-sign-out-alt me-1"></i> Cerrar sesión y volver
+            </a>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='vendor/jquery-3.7.0.min.js') }}"></script>
+    <script src="{{ url_for('static', filename='vendor/bootstrap.bundle.min.js') }}"></script>
+</body>
+</html>

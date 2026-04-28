@@ -144,119 +144,30 @@
             <!-- Nav: scrollable -->
             <div class="sidebar-content flex-grow-1">
                 <nav class="nav flex-column sidebar-nav">
-                    <a class="nav-link {{ 'active' if request.endpoint == 'index' else '' }}" 
-                       href="{{ url_for('main.index') }}" 
-                       hx-get="{{ url_for('main.index') }}" hx-target="#body-content" hx-push-url="true" hx-select="#body-content" hx-swap="outerHTML">
-                        <i class="fa fa-th-large"></i> Dashboard
-                    </a>
-                    <a class="nav-link {{ 'active' if request.endpoint == 'trabajador.index' else '' }}" 
-                       href="{{ url_for('trabajador.index') }}"
-                       hx-get="{{ url_for('trabajador.index') }}" hx-target="#body-content" hx-push-url="true" hx-select="#body-content" hx-swap="outerHTML">
-                        <i class="fa fa-users"></i> Trabajadores
-                    </a>
-                    <a class="nav-link {{ 'active' if request.endpoint == 'turno.index' else '' }}" 
-                       href="{{ url_for('turno.index') }}"
-                       hx-get="{{ url_for('turno.index') }}" hx-target="#body-content" hx-push-url="true" hx-select="#body-content" hx-swap="outerHTML">
-                        <i class="fa fa-clock"></i> Turnos
-                    </a>
-                    <a class="nav-link {{ 'active' if request.endpoint == 'ausencia.index' else '' }}" 
-                       href="{{ url_for('ausencia.index') }}"
-                       hx-get="{{ url_for('ausencia.index') }}" hx-target="#body-content" hx-push-url="true" hx-select="#body-content" hx-swap="outerHTML">
-                        <i class="fa fa-calendar-times"></i> Ausencias
-                    </a>
-                    <a class="nav-link {{ 'active' if request.endpoint == 'tipo_ausencia.index' else '' }}" 
-                       href="{{ url_for('tipo_ausencia.index') }}"
-                       hx-get="{{ url_for('tipo_ausencia.index') }}" hx-target="#body-content" hx-push-url="true" hx-select="#body-content" hx-swap="outerHTML">
-                        <i class="fa fa-user-minus"></i> Tipos de Ausencia
-                    </a>
-                    <a class="nav-link {{ 'active' if request.endpoint == 'planificacion' else '' }}" 
-                       href="{{ url_for('main.planificacion') }}"
-                       hx-get="{{ url_for('main.planificacion') }}" hx-target="#body-content" hx-push-url="true" hx-select="#body-content" hx-swap="outerHTML">
-                        <i class="fa fa-calendar-alt"></i> Planificación
-                    </a>
-
-                    <div class="sidebar-heading text-muted small fw-bold px-4 py-2 mt-2 text-uppercase" style="font-size: 0.65rem; letter-spacing: 1px;">Administración Local</div>
-                    <a class="nav-link {{ 'active' if request.endpoint == 'cliente.index' else '' }}" 
-                       href="{{ url_for('cliente.index') }}"
-                       hx-get="{{ url_for('cliente.index') }}" hx-target="#body-content" hx-push-url="true" hx-select="#body-content" hx-swap="outerHTML">
-                        <i class="fa fa-handshake"></i> Clientes
-                    </a>
-                    <a class="nav-link {{ 'active' if request.endpoint == 'usuario.index' else '' }}" 
-                       href="{{ url_for('usuario.index') }}"
-                       hx-get="{{ url_for('usuario.index') }}" hx-target="#body-content" hx-push-url="true" hx-select="#body-content" hx-swap="outerHTML">
-                        <i class="fa fa-users-cog"></i> Usuarios
-                    </a>
-                    <a class="nav-link {{ 'active' if request.endpoint == 'empresa.index' else '' }}" 
-                       href="{{ url_for('empresa.index') }}"
-                       hx-get="{{ url_for('empresa.index') }}" hx-target="#body-content" hx-push-url="true" hx-select="#body-content" hx-swap="outerHTML">
-                        <i class="fa fa-building"></i> Empresas
-                    </a>
-                    <a class="nav-link {{ 'active' if request.endpoint == 'servicio.index' else '' }}" 
-                       href="{{ url_for('servicio.index') }}"
-                       hx-get="{{ url_for('servicio.index') }}" hx-target="#body-content" hx-push-url="true" hx-select="#body-content" hx-swap="outerHTML">
-                        <i class="fa fa-concierge-bell"></i> Servicios
-                    </a>
-                    <a class="nav-link {{ 'active' if request.endpoint == 'region.index' else '' }}" 
-                       href="{{ url_for('region.index') }}"
-                       hx-get="{{ url_for('region.index') }}" hx-target="#body-content" hx-push-url="true" hx-select="#body-content" hx-swap="outerHTML">
-                        <i class="fa fa-map-marked-alt"></i> Regiones
-                    </a>
-                    <a class="nav-link {{ 'active' if request.endpoint == 'comuna.index' else '' }}" 
-                       href="{{ url_for('comuna.index') }}"
-                       hx-get="{{ url_for('comuna.index') }}" hx-target="#body-content" hx-push-url="true" hx-select="#body-content" hx-swap="outerHTML">
-                        <i class="fa fa-map-pin"></i> Comunas
-                    </a>
-                    <a class="nav-link {{ 'active' if request.endpoint == 'feriado.index' else '' }}" 
-                       href="{{ url_for('feriado.index') }}"
-                       hx-get="{{ url_for('feriado.index') }}" hx-target="#body-content" hx-push-url="true" hx-select="#body-content" hx-swap="outerHTML">
-                        <i class="fa fa-umbrella-beach"></i> Feriados
-                    </a>
-                    <a class="nav-link {{ 'active' if request.endpoint == 'rol.index' else '' }}" 
-                       href="{{ url_for('rol.index') }}"
-                       hx-get="{{ url_for('rol.index') }}" hx-target="#body-content" hx-push-url="true" hx-select="#body-content" hx-swap="outerHTML">
-                        <i class="fa fa-id-badge"></i> Roles
-                    </a>
-                    <a class="nav-link {{ 'active' if request.endpoint == 'menu.index' else '' }}" 
-                       href="{{ url_for('menu.index') }}"
-                       hx-get="{{ url_for('menu.index') }}" hx-target="#body-content" hx-push-url="true" hx-select="#body-content" hx-swap="outerHTML">
-                        <i class="fa fa-list"></i> Menús
-                    </a>
-
-                    <div class="sidebar-heading text-muted small fw-bold px-4 py-2 mt-2 text-uppercase" style="font-size: 0.65rem; letter-spacing: 1px;">Soporte y Configuración</div>
-                    <a class="nav-link {{ 'active' if request.endpoint == 'simulacion' else '' }}" 
-                       href="{{ url_for('main.simulacion') }}"
-                       hx-get="{{ url_for('main.simulacion') }}" hx-target="#body-content" hx-push-url="true" hx-select="#body-content" hx-swap="outerHTML">
-                        <i class="fa fa-robot"></i> Simulación
-                    </a>
-                    <a class="nav-link {{ 'active' if request.endpoint == 'regla_empresa.index' else '' }}" 
-                       href="{{ url_for('regla_empresa.index') }}"
-                       hx-get="{{ url_for('regla_empresa.index') }}" hx-target="#body-content" hx-push-url="true" hx-select="#body-content" hx-swap="outerHTML">
-                        <i class="fa fa-briefcase"></i> Reglas Empresa
-                    </a>
-                    <a class="nav-link {{ 'active' if request.endpoint == 'reglas_familias' else '' }}" 
-                       href="{{ url_for('main.reglas_familias') }}"
-                       hx-get="{{ url_for('main.reglas_familias') }}" hx-target="#body-content" hx-push-url="true" hx-select="#body-content" hx-swap="outerHTML">
-                        <i class="fa fa-layer-group"></i> Reglas Familia
-                    </a>
-                    <a class="nav-link {{ 'active' if request.endpoint == 'regla.index' else '' }}" 
-                       href="{{ url_for('regla.index') }}"
-                       hx-get="{{ url_for('regla.index') }}" hx-target="#body-content" hx-push-url="true" hx-select="#body-content" hx-swap="outerHTML">
-                        <i class="fa fa-cogs"></i> Reglas Generales
-                    </a>
-                    <a class="nav-link {{ 'active' if request.endpoint == 'reglas_config' else '' }}" 
-                       href="{{ url_for('main.reglas_config') }}"
-                       hx-get="{{ url_for('main.reglas_config') }}" hx-target="#body-content" hx-push-url="true" hx-select="#body-content" hx-swap="outerHTML">
-                        <i class="fa fa-sliders-h"></i> Configuración Reglas
-                    </a>
-                    <a class="nav-link {{ 'active' if request.endpoint == 'parametro_legal.index' else '' }}" 
-                       href="{{ url_for('parametro_legal.index') }}"
-                       hx-get="{{ url_for('parametro_legal.index') }}" hx-target="#body-content" hx-push-url="true" hx-select="#body-content" hx-swap="outerHTML">
-                        <i class="fa fa-gavel"></i> Parámetros Legales
-                    </a>
+                    {% if current_user.is_authenticated %}
+                        {% for rm in current_user.rol.menus | sort(attribute='menu_asociado.orden') %}
+                            {% if rm.menu_asociado.activo %}
+                                {# Lógica: Si hay empresa activa, ver operativos (es_base=True). Si no, ver globales (es_base=False). #}
+                                {% if (current_user.empresa_activa_id and rm.menu_asociado.es_base) or (not current_user.empresa_activa_id and not rm.menu_asociado.es_base) %}
+                                <a class="nav-link {{ 'active' if request.endpoint == rm.menu_asociado.endpoint else '' }}" 
+                                   href="{{ url_for(rm.menu_asociado.endpoint) if rm.menu_asociado.endpoint else '#' }}"
+                                   hx-get="{{ url_for(rm.menu_asociado.endpoint) if rm.menu_asociado.endpoint else '#' }}" 
+                                   hx-target="#body-content" hx-push-url="true" hx-select="#body-content" hx-swap="outerHTML">
+                                    <i class="{{ rm.menu_asociado.icono or 'fa fa-circle' }}"></i> {{ rm.menu_asociado.nombre }}
+                                </a>
+                                {% endif %}
+                            {% endif %}
+                        {% endfor %}
+                    {% else %}
+                        <a class="nav-link active" href="{{ url_for('auth.login') }}">
+                            <i class="fa fa-sign-in-alt"></i> Iniciar Sesión
+                        </a>
+                    {% endif %}
                 </nav>
             </div>
 
             <div class="sidebar-footer-desktop p-3">
+                {% if current_user.is_authenticated %}
                 <!-- User Profile Dropdown -->
                 <div class="dropdown mb-3">
                     <a href="#" class="d-flex align-items-center text-decoration-none dropdown-toggle" id="userMenu" data-bs-toggle="dropdown" aria-expanded="false">
@@ -264,35 +175,38 @@
                             <i class="fa fa-user"></i>
                         </div>
                         <div class="overflow-hidden">
-                            <p class="mb-0 fw-bold small text-dark">M. Cordero</p>
-                            <small class="text-muted" style="font-size: 0.75rem;">Administrador</small>
+                            <p class="mb-0 fw-bold small text-dark">{{ current_user.nombre }}</p>
+                            <small class="text-muted" style="font-size: 0.75rem;">{{ current_user.rol.descripcion }}</small>
                         </div>
                     </a>
                     <ul class="dropdown-menu shadow border-0" aria-labelledby="userMenu">
                         <li><a class="dropdown-item small py-2" href="#" onclick="toastr.info('Cargando perfil...')"><i class="fa fa-key me-2 text-warning"></i> Cambiar Clave</a></li>
                         <li><hr class="dropdown-divider"></li>
-                        <li><a class="dropdown-item small py-2 text-danger" href="{{ url_for('main.login') }}"><i class="fa fa-sign-out-alt me-2"></i> Cerrar Sesión</a></li>
+                        <li><a class="dropdown-item small py-2 text-danger" href="{{ url_for('auth.logout') }}"><i class="fa fa-sign-out-alt me-2"></i> Cerrar Sesión</a></li>
                     </ul>
                 </div>
 
-                <!-- Branch Selector Dropdown -->
-                <div class="dropdown">
-                    <a href="#" class="bg-white rounded p-2 border border-primary-subtle d-flex align-items-center shadow-sm text-decoration-none dropdown-toggle" id="branchSelector" data-bs-toggle="dropdown" aria-expanded="false">
-                        <div class="bg-primary rounded-circle p-1 me-2 text-white d-flex align-items-center justify-content-center" style="width: 24px; height: 24px;">
-                            <i class="fa fa-map-marker-alt" style="font-size: 0.7rem;"></i>
-                        </div>
-                        <div class="overflow-hidden flex-grow-1">
-                            <small class="text-muted d-block text-uppercase fw-bold" style="font-size: 0.6rem; letter-spacing: 0.5px;">Sucursal Activa</small>
-                            <p class="mb-0 fw-bold small text-truncate text-primary" id="currentBranchName">Estación Central Copec</p>
-                        </div>
-                    </a>
-                    <ul class="dropdown-menu w-100 shadow border-0" aria-labelledby="branchSelector">
-                        <li><h6 class="dropdown-header small text-uppercase">Cambiar Sucursal</h6></li>
-                        <li><a class="dropdown-item small py-2" href="#" onclick="cambiarSucursal('Estación Central Copec')"><i class="fa fa-check me-2 text-success"></i> Estación Central</a></li>
-                        <li><a class="dropdown-item small py-2" href="#" onclick="cambiarSucursal('Pronto Vitacura')"><i class="fa fa-circle me-2 text-muted" style="font-size: 0.5rem;"></i> Pronto Vitacura</a></li>
-                        <li><a class="dropdown-item small py-2" href="#" onclick="cambiarSucursal('Bencinera Norte')"><i class="fa fa-circle me-2 text-muted" style="font-size: 0.5rem;"></i> Bencinera Norte</a></li>
-                    </ul>
-                </div>
+                <!-- Branch Display (Simple Link) -->
+                <a href="{{ url_for('auth.select_company') }}" class="d-flex align-items-center text-decoration-none mt-3" id="branchSelector">
+                    <div class="bg-primary-subtle rounded-circle p-2 me-2 text-primary d-flex align-items-center justify-content-center" style="width: 35px; height: 35px;">
+                        <i class="fa fa-map-marker-alt"></i>
+                    </div>
+                    <div class="overflow-hidden flex-grow-1">
+                        <small class="text-muted d-block text-uppercase fw-bold" style="font-size: 0.6rem; letter-spacing: 0.5px;">Sucursal Activa</small>
+                        <p class="mb-0 fw-bold small text-truncate text-primary" id="currentBranchName">
+                            {% if current_user.empresa_activa_id %}
+                                {% set emp = current_user.empresas | selectattr('empresa_id', 'equalto', current_user.empresa_activa_id) | first %}
+                                {{ emp.empresa.razon_social if emp else 'Sin Empresa' }}
+                            {% elif current_user.rol.descripcion == 'Super Admin' %}
+                                Visión Global (Admin)
+                            {% else %}
+                                Seleccionar...
+                            {% endif %}
+                        </p>
+                    </div>
+                    <i class="fa fa-exchange-alt text-muted ms-2" style="font-size: 0.8rem;"></i>
+                </a>
+                {% endif %}
             </div>
         </aside>
 

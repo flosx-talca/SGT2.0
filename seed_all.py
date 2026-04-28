@@ -1,14 +1,12 @@
 import os
 import sys
-from types import ModuleType
+from dotenv import load_dotenv
 
-# Añadir el directorio raíz al path para evitar errores de importación
+# Anadir el directorio raiz al path
 sys.path.append(os.getcwd())
 
-# Mock dotenv para entornos donde no esté instalado
-m = ModuleType("dotenv")
-m.load_dotenv = lambda *args, **kwargs: None
-sys.modules["dotenv"] = m
+# Cargar variables de entorno
+load_dotenv(override=True)
 
 from app import create_app
 from app.database import db
@@ -16,11 +14,9 @@ from app.models.business import Empresa
 from app.seeds.parametros_legales import seed_parametros_legales
 from app.seeds.reglas_base import seed_reglas_base
 from app.seeds.tipos_ausencia_base import seed_tipos_ausencia_base
+from app.seeds.auth_base import seed_auth_base
 
 def run_all_seeds():
-    """
-    Script maestro para inicializar todos los datos necesarios del sistema SGT 2.1.
-    """
     app = create_app()
     with app.app_context():
         print("====================================================")
@@ -28,30 +24,33 @@ def run_all_seeds():
         print("====================================================")
         
         try:
-            # 1. Parámetros Legales (Límites de jornada, descansos, etc.)
-            print("\n[1/3] Sembrando Parámetros Legales...")
+            # 0. Autenticacion
+            print("\n[0/4] Sembrando Autenticacion...")
+            seed_auth_base()
+
+            # 1. Parametros Legales
+            print("\n[1/4] Sembrando Parametros Legales...")
             seed_parametros_legales()
             
-            # 2. Reglas Base (Lógica del optimizador y penalizaciones)
-            print("\n[2/3] Sembrando Reglas de Negocio (Solver)...")
+            # 2. Reglas Base
+            print("\n[2/4] Sembrando Reglas de Negocio...")
             seed_reglas_base()
             
-            # 3. Tipos de Ausencia y Restricciones (Por Empresa)
-            print("\n[3/3] Sembrando Tipos de Ausencia y Restricciones...")
+            # 3. Tipos de Ausencia
+            print("\n[3/4] Sembrando Tipos de Ausencia...")
             empresas = Empresa.query.all()
-            if not empresas:
-                print(" (!) ADVERTENCIA: No hay empresas registradas. No se crearon tipos de ausencia.")
-            else:
-                for e in empresas:
-                    print(f" -> Procesando empresa: {e.razon_social} (ID: {e.id})")
-                    seed_tipos_ausencia_base(e.id)
+            for e in empresas:
+                print(f" -> Procesando empresa: {e.razon_social}")
+                seed_tipos_ausencia_base(e.id)
             
             print("\n====================================================")
-            print("   ¡PROCESO FINALIZADO EXITOSAMENTE!                ")
+            print("   PROCESO FINALIZADO EXITOSAMENTE!                 ")
             print("====================================================")
             
         except Exception as ex:
-            print(f"\n [ERROR CRÍTICO] Ocurrió un fallo durante el seeding: {ex}")
+            import traceback
+            print(f"\n [ERROR] Ocurrio un fallo: {ex}")
+            traceback.print_exc()
             db.session.rollback()
 
 if __name__ == "__main__":

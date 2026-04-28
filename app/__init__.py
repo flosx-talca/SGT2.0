@@ -1,7 +1,9 @@
 from flask import Flask, request as flask_request
+from datetime import datetime
 from .config import Config
 from .database import db
 from flask_migrate import Migrate
+from flask_login import LoginManager
 from . import models
 
 def create_app():
@@ -12,15 +14,54 @@ def create_app():
     db.init_app(app)
     Migrate(app, db)
 
+    # Configurar Flask-Login
+    login_manager = LoginManager()
+    login_manager.init_app(app)
+    login_manager.login_view = 'auth.login'
+    login_manager.login_message = "Por favor, inicie sesión para acceder a esta página."
+    login_manager.login_message_category = "info"
+
+    from .models.auth import Usuario
+    @login_manager.user_loader
+    def load_user(user_id):
+        return Usuario.query.get(int(user_id))
+
     # DEBUG: Ver qué URL se está usando realmente
     print(f"\n--- DEBUG: SQLALCHEMY_DATABASE_URI = {app.config.get('SQLALCHEMY_DATABASE_URI')} ---\n")
 
-    # Inyectar is_htmx en todos los templates automáticamente
+    # Inyectar variables globales en todos los templates automáticamente
     @app.context_processor
-    def inject_htmx():
-        return {'is_htmx': flask_request.headers.get('HX-Request', False)}
+    def inject_globals():
+        return {
+            'is_htmx': flask_request.headers.get('HX-Request', False),
+            'now': datetime.utcnow()
+        }
+
+    from flask import redirect, url_for
+    from flask_login import current_user
+
+    @app.before_request
+    def require_login():
+        # Rutas públicas o estáticas
+        if flask_request.endpoint in ['auth.login', 'static'] or not flask_request.endpoint:
+            return
+        
+        print(f"DEBUG: Endpoint: {flask_request.endpoint}, User Authenticated: {current_user.is_authenticated}")
+        
+        if not current_user.is_authenticated:
+            return redirect(url_for('auth.login'))
+        
+        # Obligar a elegir empresa si no hay una activa
+        # Excepto en las rutas de selección de empresa
+        if not current_user.empresa_activa_id:
+            if flask_request.endpoint not in ['auth.select_company', 'auth.set_company', 'auth.logout']:
+                # Los Super Admin pueden navegar sin empresa si el controlador lo permite, 
+                # pero para la mayoría de las vistas operativas, es mejor forzar la selección.
+                if current_user.rol.descripcion != 'Super Admin':
+                    return redirect(url_for('auth.select_company'))
 
     # Registrar Blueprints
+    from .controllers.auth_bp import auth_bp
     from .controllers.main_bp import main_bp
     from .controllers.region_bp import region_bp
     from .controllers.comuna_bp import comuna_bp
@@ -41,6 +82,7 @@ def create_app():
     from .controllers.restricciones_bp import restricciones_bp
     from .controllers.parametro_legal_bp import parametro_legal_bp
 
+    app.register_blueprint(auth_bp)
     app.register_blueprint(main_bp)
     app.register_blueprint(usuario_bp)
     app.register_blueprint(region_bp)

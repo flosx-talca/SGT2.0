@@ -8,9 +8,7 @@ main_bp = Blueprint('main', __name__)
 def index():
     return render_template('index.html')
 
-@main_bp.route('/login')
-def login():
-    return render_template('login.html')
+
 
 @main_bp.route('/planificacion')
 def planificacion():

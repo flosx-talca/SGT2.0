@@ -85,24 +85,35 @@
 
                 $('#loader').css('display', 'flex');
 
-                // Simulación de validación para el prototipo
-                setTimeout(() => {
-                    $('#loader').hide();
-                    if((user === 'admin' && pass === '1234') || (user === '11111111-7' && pass === '1234')) {
-                        toastr.success('Bienvenido al sistema');
-                        setTimeout(() => {
-                            window.location.href = "{{ url_for('main.index') }}";
-                        }, 500);
-                    } else {
-                        Swal.fire({
-                            title: 'Error de Acceso',
-                            text: 'Usuario o contraseña incorrectos',
-                            icon: 'error',
-                            confirmButtonText: 'Reintentar',
-                            confirmButtonColor: '#18bc9c'
-                        });
+                $.ajax({
+                    url: "{{ url_for('auth.login') }}",
+                    method: "POST",
+                    data: {
+                        usuario: user,
+                        password: pass
+                    },
+                    success: function(res) {
+                        $('#loader').hide();
+                        if(res.ok) {
+                            toastr.success(res.msg);
+                            setTimeout(() => {
+                                window.location.href = res.redirect;
+                            }, 500);
+                        } else {
+                            Swal.fire({
+                                title: 'Error de Acceso',
+                                text: res.msg,
+                                icon: 'error',
+                                confirmButtonText: 'Reintentar',
+                                confirmButtonColor: '#18bc9c'
+                            });
+                        }
+                    },
+                    error: function() {
+                        $('#loader').hide();
+                        toastr.error('Error de conexión con el servidor');
                     }
-                }, 1000);
+                });
             });
         });
     </script>

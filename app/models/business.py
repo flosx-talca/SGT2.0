@@ -26,7 +26,7 @@ empresa_servicio = db.Table('empresa_servicio',
 class Empresa(db.Model):
     __tablename__ = 'empresa'
     id = db.Column(db.Integer, primary_key=True)
-    rut = db.Column(db.String(15), nullable=False, unique=True)
+    rut = db.Column(db.String(15), nullable=False) # Removido unique para sucursales
     razon_social = db.Column(db.String(200), nullable=False)
     cliente_id = db.Column(db.Integer, db.ForeignKey('cliente.id', ondelete='RESTRICT'), nullable=False)
     comuna_id = db.Column(db.Integer, db.ForeignKey('comuna.id', ondelete='RESTRICT'), nullable=False)
@@ -70,6 +70,7 @@ class Turno(db.Model):
     # Se calcula automáticamente al guardar en turno_bp.py, no requiere input del usuario.
     # Migración: ver a1b2c3d4e5f6_add_es_nocturno_nuevas_reglas.py
     es_nocturno = db.Column(db.Boolean, default=False, nullable=False)
+    es_base = db.Column(db.Boolean, default=False, nullable=False)
     activo = db.Column(db.Boolean, default=True)
     creado_en = db.Column(db.DateTime, default=datetime.utcnow)
     actualizado_en = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
@@ -101,6 +102,7 @@ class TipoAusencia(db.Model):
         default=CategoriaAusencia.AUSENCIA
     )
     tipo_restriccion = db.Column(db.String(30), nullable=True)
+    es_base = db.Column(db.Boolean, default=False, nullable=False)
     # ──────────────────────────────────────────────────────────────────────
     
     activo = db.Column(db.Boolean, default=True)
@@ -259,6 +261,29 @@ class ReglaEmpresa(db.Model):
     empresa_id = db.Column(db.Integer, db.ForeignKey('empresa.id', ondelete='CASCADE'), nullable=False)
     regla_id = db.Column(db.Integer, db.ForeignKey('regla.id', ondelete='CASCADE'), nullable=False)
     params_custom = db.Column(db.JSON)
+    es_base = db.Column(db.Boolean, default=False, nullable=False)
     activo = db.Column(db.Boolean, default=True)
     creado_en = db.Column(db.DateTime, default=datetime.utcnow)
     actualizado_en = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+class TurnoPlantilla(db.Model):
+    __tablename__ = 'turno_plantilla'
+    id = db.Column(db.Integer, primary_key=True)
+    nombre = db.Column(db.String(50), nullable=False)
+    abreviacion = db.Column(db.String(5), nullable=False, unique=True)
+    hora_inicio = db.Column(db.Time(timezone=False), nullable=False)
+    hora_fin    = db.Column(db.Time(timezone=False), nullable=False)
+    color = db.Column(db.String(10), default='#18bc9c')
+    dotacion_diaria = db.Column(db.Integer, default=1)
+    es_nocturno = db.Column(db.Boolean, default=False)
+    activo = db.Column(db.Boolean, default=True)
+    creado_en = db.Column(db.DateTime, default=datetime.utcnow)
+
+class TipoAusenciaPlantilla(db.Model):
+    __tablename__ = 'tipo_ausencia_plantilla'
+    id = db.Column(db.Integer, primary_key=True)
+    nombre = db.Column(db.String(50), nullable=False)
+    abreviacion = db.Column(db.String(5), nullable=False, unique=True)
+    color = db.Column(db.String(10), default='#95a5a6')
+    activo = db.Column(db.Boolean, default=True)
+    creado_en = db.Column(db.DateTime, default=datetime.utcnow)
