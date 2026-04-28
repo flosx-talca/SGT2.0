@@ -2,17 +2,27 @@ from flask import Blueprint, render_template, request, jsonify
 from app.database import db
 from app.models.business import Regla
 
+from flask_login import login_required, current_user
+
 regla_bp = Blueprint('regla', __name__, url_prefix='/reglas')
 
 @regla_bp.route('/')
+@login_required
 def index():
     """Página completa: renderiza tabla con todos los registros."""
+    if not current_user.is_super_admin:
+        from flask import abort
+        abort(403)
     registros = Regla.query.order_by(Regla.id).all()
     return render_template('reglas.html', registros=registros)
 
 @regla_bp.route('/tabla')
+@login_required
 def tabla():
     """Solo el <tbody> para HTMX partial refresh (no recarga la página)."""
+    if not current_user.is_super_admin:
+        from flask import abort
+        abort(403)
     registros = Regla.query.order_by(Regla.id).all()
     return render_template('partials/regla_rows.html', registros=registros)
 

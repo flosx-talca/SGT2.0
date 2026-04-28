@@ -4,16 +4,43 @@ from app.models.auth import Usuario, Rol
 from app.models.business import Cliente
 from werkzeug.security import generate_password_hash
 
+from flask_login import login_required, current_user
+
 usuario_bp = Blueprint('usuario', __name__, url_prefix='/usuarios')
 
 @usuario_bp.route('/')
+@login_required
 def index():
-    registros = Usuario.query.order_by(Usuario.nombre).all()
+    if current_user.is_super_admin:
+        registros = Usuario.query.order_by(Usuario.nombre).all()
+    elif current_user.is_cliente:
+        registros = Usuario.query.filter_by(cliente_id=current_user.cliente_id).order_by(Usuario.nombre).all()
+    else:
+        # Administradores solo ven usuarios de sus empresas asignadas
+        from app.services.context import get_empresas_usuario
+        empresas = get_empresas_usuario()
+        ids = [e.id for e in empresas]
+        from app.models.auth import UsuarioEmpresa
+        u_ids = [ue.usuario_id for ue in UsuarioEmpresa.query.filter(UsuarioEmpresa.empresa_id.in_(ids)).all()]
+        registros = Usuario.query.filter(Usuario.id.in_(u_ids)).order_by(Usuario.nombre).all()
+        
     return render_template('usuarios.html', registros=registros)
 
 @usuario_bp.route('/tabla')
+@login_required
 def tabla():
-    registros = Usuario.query.order_by(Usuario.nombre).all()
+    if current_user.is_super_admin:
+        registros = Usuario.query.order_by(Usuario.nombre).all()
+    elif current_user.is_cliente:
+        registros = Usuario.query.filter_by(cliente_id=current_user.cliente_id).order_by(Usuario.nombre).all()
+    else:
+        from app.services.context import get_empresas_usuario
+        empresas = get_empresas_usuario()
+        ids = [e.id for e in empresas]
+        from app.models.auth import UsuarioEmpresa
+        u_ids = [ue.usuario_id for ue in UsuarioEmpresa.query.filter(UsuarioEmpresa.empresa_id.in_(ids)).all()]
+        registros = Usuario.query.filter(Usuario.id.in_(u_ids)).order_by(Usuario.nombre).all()
+        
     return render_template('partials/usuario_rows.html', registros=registros)
 
 @usuario_bp.route('/modal', methods=['POST'])

@@ -2,17 +2,27 @@ from flask import Blueprint, render_template, request, jsonify
 from app.database import db
 from app.models.business import ParametroLegal
 
+from flask_login import login_required, current_user
+
 parametro_legal_bp = Blueprint('parametro_legal', __name__, url_prefix='/parametros_legales')
 
 @parametro_legal_bp.route('/')
+@login_required
 def index():
     """Página principal del mantenedor."""
+    if not current_user.is_super_admin:
+        from flask import abort
+        abort(403)
     parametros = ParametroLegal.query.order_by(ParametroLegal.categoria, ParametroLegal.codigo).all()
     return render_template('parametros_legales/index.html', parametros=parametros)
 
 @parametro_legal_bp.route('/tabla')
+@login_required
 def tabla():
     """Partial para recarga HTMX de la tabla."""
+    if not current_user.is_super_admin:
+        from flask import abort
+        abort(403)
     parametros = ParametroLegal.query.order_by(ParametroLegal.categoria, ParametroLegal.codigo).all()
     return render_template('parametros_legales/partials/table_rows.html', parametros=parametros)
 

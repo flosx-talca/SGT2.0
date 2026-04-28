@@ -285,5 +285,7 @@ class TipoAusenciaPlantilla(db.Model):
     nombre = db.Column(db.String(50), nullable=False)
     abreviacion = db.Column(db.String(5), nullable=False, unique=True)
     color = db.Column(db.String(10), default='#95a5a6')
+    categoria = db.Column(db.Enum(CategoriaAusencia), nullable=False, default=CategoriaAusencia.AUSENCIA)
+    tipo_restriccion = db.Column(db.String(30), nullable=True)
     activo = db.Column(db.Boolean, default=True)
     creado_en = db.Column(db.DateTime, default=datetime.utcnow)

@@ -2,15 +2,25 @@ from flask import Blueprint, render_template, request, jsonify
 from app.database import db
 from app.models.business import Cliente
 
+from flask_login import login_required, current_user
+
 cliente_bp = Blueprint('cliente', __name__, url_prefix='/clientes')
 
 @cliente_bp.route('/')
+@login_required
 def index():
+    if not current_user.is_super_admin:
+        from flask import abort
+        abort(403)
     registros = Cliente.query.order_by(Cliente.nombre).all()
     return render_template('clientes.html', registros=registros)
 
 @cliente_bp.route('/tabla')
+@login_required
 def tabla():
+    if not current_user.is_super_admin:
+        from flask import abort
+        abort(403)
     registros = Cliente.query.order_by(Cliente.nombre).all()
     return render_template('partials/cliente_rows.html', registros=registros)
 

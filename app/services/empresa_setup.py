@@ -30,6 +30,7 @@ def ejecutar_setup_empresa(empresa):
         db.session.add(TipoAusencia(
             empresa_id=empresa.id, nombre=p.nombre,
             abreviacion=p.abreviacion, color=p.color,
+            categoria=p.categoria, tipo_restriccion=p.tipo_restriccion,
             es_base=True, activo=True,
         ))
 

@@ -3,16 +3,35 @@ from app.database import db
 from app.models.business import Empresa, Cliente
 from app.models.core import Comuna
 
+from flask_login import login_required, current_user
+
 empresa_bp = Blueprint('empresa', __name__, url_prefix='/empresas')
 
 @empresa_bp.route('/')
+@login_required
 def index():
-    registros = Empresa.query.order_by(Empresa.razon_social).all()
+    if current_user.is_super_admin:
+        registros = Empresa.query.order_by(Empresa.razon_social).all()
+    elif current_user.is_cliente:
+        registros = Empresa.query.filter_by(cliente_id=current_user.cliente_id).order_by(Empresa.razon_social).all()
+    else:
+        # Administradores normales solo ven sus empresas asignadas
+        from app.services.context import get_empresas_usuario
+        registros = get_empresas_usuario()
+        
     return render_template('empresas.html', registros=registros)
 
 @empresa_bp.route('/tabla')
+@login_required
 def tabla():
-    registros = Empresa.query.order_by(Empresa.razon_social).all()
+    if current_user.is_super_admin:
+        registros = Empresa.query.order_by(Empresa.razon_social).all()
+    elif current_user.is_cliente:
+        registros = Empresa.query.filter_by(cliente_id=current_user.cliente_id).order_by(Empresa.razon_social).all()
+    else:
+        from app.services.context import get_empresas_usuario
+        registros = get_empresas_usuario()
+        
     return render_template('partials/empresa_rows.html', registros=registros)
 
 @empresa_bp.route('/modal', methods=['POST'])
