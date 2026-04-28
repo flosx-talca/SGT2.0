@@ -378,14 +378,172 @@ def generar():
         }), 500
 
 
+@planificacion_bp.route('/generar_stream')
+def generar_stream():
+    from flask import Response, stream_with_context
+    import json
+    import time
+
+    def event_stream():
+        try:
+            # 1. Preparación de Parámetros
+            yield f"event: log\ndata: {json.dumps({'msg': 'Analizando parámetros...', 'progress': 5, 'status': 'Preparando...'})}\n\n"
+            time.sleep(0.5)
+
+            mes = int(request.args.get('mes', 0))
+            anio = int(request.args.get('anio', 0))
+            servicio_id = request.args.get('sucursal_id')
+
+            if not mes or not anio or not servicio_id:
+                yield f"event: error_sgt\ndata: {json.dumps({'message': 'Faltan parámetros básicos.'})}\n\n"
+                return
+
+            # 2. Carga de Datos
+            yield f"event: log\ndata: {json.dumps({'msg': 'Cargando dotación y contratos...', 'progress': 15, 'status': 'Cargando datos...'})}\n\n"
+            trabajadores_db = Trabajador.query.filter_by(servicio_id=servicio_id, activo=True).all()
+            if not trabajadores_db:
+                yield f"event: error_sgt\ndata: {json.dumps({'message': 'No hay trabajadores activos.'})}\n\n"
+                return
+
+            t_dicts = [{'id': t.id, 'nombre': f"{t.nombre} {t.apellido1}"} for t in trabajadores_db]
+            turnos_db = Turno.query.filter_by(empresa_id=trabajadores_db[0].empresa_id, activo=True).all()
+            
+            # 3. Construcción del Modelo
+            yield f"event: log\ndata: {json.dumps({'msg': 'Construyendo modelo de planificación...', 'progress': 35, 'status': 'Construyendo...'})}\n\n"
+            time.sleep(0.8)
+            
+            # Recopilar coberturas desde args
+            coberturas_raw = {}
+            for k, v in request.args.items():
+                if k.startswith('cob_'): coberturas_raw[k] = v
+
+            # 4. Invocación al Solver
+            yield f"event: log\ndata: {json.dumps({'msg': 'Buscando la mejor combinación de turnos...', 'progress': 50, 'status': 'Optimizando...'})}\n\n"
+            
+            # --- LÓGICA DE DÍAS Y RESTRICCIONES ---
+            _, num_days = calendar.monthrange(anio, mes)
+            dias_mes_objs = [datetime(anio, mes, d).date() for d in range(1, num_days + 1)]
+            dias_del_mes = [d.isoformat() for d in dias_mes_objs]
+            
+            # Coberturas por día
+            coberturas_por_dia = {}
+            for d_str in dias_del_mes:
+                d_obj = datetime.strptime(d_str, '%Y-%m-%d').date()
+                es_dom = (d_obj.weekday() == 6)
+                key_prefix = 'cob_sun_' if es_dom else 'cob_'
+                day_cobs = {}
+                for t in turnos_db:
+                    val = request.args.get(f"{key_prefix}{t.abreviacion}")
+                    if val is None and es_dom: val = request.args.get(f"cob_{t.abreviacion}")
+                    day_cobs[t.abreviacion] = int(val) if val else 0
+                coberturas_por_dia[d_str] = day_cobs
+
+            # Carga de restricciones especiales y ausencias
+            from app.models.business import TrabajadorAusencia, TrabajadorRestriccionTurno
+            ausencias_db = TrabajadorAusencia.query.filter(TrabajadorAusencia.trabajador_id.in_([t.id for t in trabajadores_db])).all()
+            
+            # Expandir rangos de ausencia en días individuales
+            ausencias_set = set()
+            ausencias_dict = {} # Para extract_solution (Prioridad visual)
+            for a in ausencias_db:
+                curr_a = a.fecha_inicio
+                while curr_a <= a.fecha_fin:
+                    d_str = curr_a.isoformat()
+                    # Solo bloqueamos el día en el solver si es un bloqueo real (Vacaciones, Licencia, etc.)
+                    if a.es_bloqueo_dia:
+                        ausencias_set.add((a.trabajador_id, d_str))
+                        # Para bloqueos (VAC, LM), mostramos la abreviación del tipo
+                        ausencias_dict[(a.trabajador_id, d_str)] = a.tipo_ausencia.abreviacion if a.tipo_ausencia else 'A'
+                    
+                    # Las restricciones técnicas (Turno Fijo) NO van en ausencias_dict 
+                    # para que el solver muestre el turno real asignado (M, T, etc.)
+                    
+                    curr_a += timedelta(days=1)
+            
+            restricciones_especiales = TrabajadorRestriccionTurno.query.filter(
+                TrabajadorRestriccionTurno.trabajador_id.in_([t.id for t in trabajadores_db]),
+                TrabajadorRestriccionTurno.activo == True
+            ).all()
+
+            # Preparar bloques y fijos
+            from app.scheduler.builder import preparar_restricciones
+            bloqueados, fijos, turnos_bloqueados, res_hard, res_soft = preparar_restricciones(
+                trabajadores_db, dias_del_mes, ausencias_set, restricciones_especiales
+            )
+
+            # Metadatos para el solver
+            trabajadores_meta = {t.id: {
+                'tipo_contrato': t.tipo_contrato,
+                'horas_semanales': t.horas_semanales,
+                'permite_horas_extra': t.permite_horas_extra
+            } for t in trabajadores_db}
+            
+            turnos_meta = {t.abreviacion: {
+                'horas': t.duracion_hrs,
+                'es_nocturno': t.es_nocturno,
+                'nombre': t.nombre
+            } for t in turnos_db}
+
+            yield f"event: log\ndata: {json.dumps({'msg': 'Validando cumplimiento de Ley 21.561...', 'progress': 75, 'status': 'Construyendo...'})}\n\n"
+            
+            # Llamada al builder corregida
+            model, variables = build_model(
+                trabajadores=[t.id for t in trabajadores_db],
+                dias_del_mes=dias_del_mes,
+                turnos=[t.abreviacion for t in turnos_db],
+                coberturas=coberturas_por_dia,
+                bloqueados=bloqueados,
+                fijos=fijos,
+                turnos_bloqueados_por_dia=turnos_bloqueados,
+                restricciones_hard=res_hard,
+                restricciones_soft=res_soft,
+                trabajadores_meta=trabajadores_meta,
+                turnos_meta=turnos_meta
+            )
+            
+            yield f"event: log\ndata: {json.dumps({'msg': 'Buscando solución óptima...', 'progress': 85, 'status': 'Resolviendo...'})}\n\n"
+            
+            # Llamada al solver
+            solver, status = solve_model(model)
+
+            if status == cp_model.FEASIBLE or status == cp_model.OPTIMAL:
+                yield f"event: log\ndata: {json.dumps({'msg': '¡Planificación optimizada con éxito!', 'type': 'success', 'progress': 95, 'status': 'Finalizando...'})}\n\n"
+                celdas = extract_solution(solver, status, variables, [t.id for t in trabajadores_db], dias_del_mes, [t.abreviacion for t in turnos_db], ausencias_dict)
+                
+                # Formatear respuesta final
+                dias_dict = []
+                DIAS_SEM = ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"]
+                for i, d_str in enumerate(dias_del_mes):
+                    d_obj = dias_mes_objs[i]
+                    dias_dict.append({'fecha': d_str, 'dia_semana': d_obj.weekday(), 'label': f"{d_obj.day:02d} {DIAS_SEM[d_obj.weekday()]}"})
+                
+                turnos_info = {t.abreviacion: {'color': t.color, 'nombre': t.nombre} for t in turnos_db}
+                turnos_necesarios = sum(v for c in coberturas_por_dia.values() for v in c.values() if isinstance(v, int))
+
+                result_data = {
+                    'dias': dias_dict,
+                    'trabajadores': t_dicts,
+                    'celdas': celdas,
+                    'turnos': turnos_info,
+                    'estado': 'simulacion',
+                    'metricas': {'necesarios': turnos_necesarios}
+                }
+                
+                yield f"event: result\ndata: {json.dumps({'data': result_data})}\n\n"
+            else:
+                yield f"event: error_sgt\ndata: {json.dumps({'message': 'No se pudo encontrar una solución válida (INFEASIBLE).'})}\n\n"
+
+        except Exception as e:
+            yield f"event: error_sgt\ndata: {json.dumps({'message': str(e)})}\n\n"
+
+    return Response(stream_with_context(event_stream()), mimetype='text/event-stream')
+
+
 @planificacion_bp.route('/celda', methods=['POST'])
 def update_celda():
-    # En modo simulación solo confirmamos el cambio.
-    # La persistencia real ocurre al publicar.
     return jsonify({'status': 'ok'})
 
 
 @planificacion_bp.route('/publicar', methods=['POST'])
 def publicar():
-    # Aquí irá la lógica para guardar el cuadrante oficial en BD.
     return jsonify({'status': 'ok', 'message': 'El cuadrante ha sido publicado.'})

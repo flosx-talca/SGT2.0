@@ -100,13 +100,12 @@
                 <label class="form-label small fw-bold text-muted"><code>(*)</code> Tipo de Contrato</label>
                 <select name="tipo_contrato" id="tipo_contrato_modal" class="form-select form-select-sm shadow-sm {% if modo == 'Visualizar' %}bg-light{% endif %}"
                         {% if modo == 'Visualizar' %}disabled{% endif %}>
-                    <option value="full-time" {% if registro is none or registro.tipo_contrato == 'full-time' %}selected{% endif %}>Full-time (44 hrs)</option>
-                    <option value="part-time" {% if registro and registro.tipo_contrato == 'part-time' %}selected{% endif %}>Part-time (Variable)</option>
-                    <option value="honorarios" {% if registro and registro.tipo_contrato == 'honorarios' %}selected{% endif %}>Honorarios</option>
+                    <option value="full_time" {% if registro is none or registro.tipo_contrato == 'full_time' %}selected{% endif %}>Full-time (44 hrs)</option>
+                    <option value="part_time_30" {% if registro and (registro.tipo_contrato == 'part_time_30' or registro.tipo_contrato == 'part_time_20') %}selected{% endif %}>Part-time (Variable)</option>
                 </select>
             </div>
 
-            <div class="col-md-6" id="div_horas_part_time" style="{{ 'display:none;' if registro is none or registro.tipo_contrato != 'part-time' else '' }}">
+            <div class="col-md-6" id="div_horas_part_time" style="{{ 'display:none;' if registro is none or (registro.tipo_contrato != 'part_time_30' and registro.tipo_contrato != 'part_time_20') else '' }}">
                 <label class="form-label small fw-bold text-muted"><code>(*)</code> Horas Semanales</label>
                 <select name="horas_semanales" id="horas_semanales" class="form-select form-select-sm shadow-sm" {% if modo == 'Visualizar' %}disabled{% endif %}>
                     <!-- JS populated -->
@@ -275,7 +274,7 @@ $(document).ready(function() {
         $('#horas_semanales').html(options).val({{ registro.horas_semanales if (registro and registro.horas_semanales) else 44 }});
 
         $('#tipo_contrato_modal').on('change', function() {
-            if($(this).val() === 'part-time') {
+            if($(this).val() === 'part_time_30') {
                 $('#div_horas_part_time').fadeIn();
             } else {
                 $('#div_horas_part_time').fadeOut();

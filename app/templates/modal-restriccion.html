@@ -45,15 +45,25 @@
 
         <!-- Contenedor de Matriz (Solo para Restricciones Técnicas) -->
         <div id="contenedor-matriz" class="border rounded p-3 bg-light mb-4" style="display: none;">
-            <h6 class="small fw-bold text-muted mb-3"><i class="fa fa-th me-2"></i>Configuración de Turnos por Día</h6>
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h6 class="small fw-bold text-muted mb-0"><i class="fa fa-th me-2"></i>Configuración de Turnos por Día</h6>
+                 <span class="badge bg-white text-dark border shadow-sm" style="font-size: 0.75rem;">
+                    <i class="fa fa-clock me-1 text-primary"></i> 
+                    Horas: <span id="horas-seleccionadas" class="fw-bold">0</span> / 
+                    <span id="max-horas-label" class="fw-bold text-primary">{{ trabajador.horas_semanales }}</span>h
+                    <input type="hidden" id="max_horas_legal" value="{{ trabajador.horas_semanales }}">
+                    <input type="hidden" id="permite_extra" value="{{ 'true' if trabajador.permite_horas_extra else 'false' }}">
+                </span>
+            </div>
             <div class="table-responsive">
                 <table class="table table-sm table-bordered bg-white align-middle text-center mb-0" style="font-size: 0.85rem;">
                     <thead class="table-dark">
                         <tr>
                             <th class="text-start ps-3">Día</th>
                             {% for shift in shifts %}
-                            <th title="{{ shift.nombre }}">
+                             <th title="{{ shift.nombre }}">
                                 <span class="badge" style="background-color: {{ shift.color }};">{{ shift.abreviacion }}</span>
+                                <div class="text-muted" style="font-size: 0.6rem;">{{ shift.duracion_hrs }}h</div>
                             </th>
                             {% endfor %}
                         </tr>
@@ -61,12 +71,17 @@
                     <tbody>
                         {% set dias = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'] %}
                         {% for i in range(7) %}
-                        <tr>
-                            <td class="text-start ps-3 fw-bold">{{ dias[i] }}</td>
+                        <tr {% if i == 6 %}class="bg-warning-subtle" data-bs-toggle="tooltip" title="Los domingos tienen prioridad de descanso legal."{% endif %}>
+                            <td class="text-start ps-3 fw-bold">
+                                {{ dias[i] }}
+                                {% if i == 6 %}<br><small class="text-danger" style="font-size: 0.65rem;">(Restringido)</small>{% endif %}
+                            </td>
                             {% for shift in shifts %}
-                            <td>
+                             <td>
                                 <input class="form-check-input res-check" type="checkbox" 
-                                       data-dia="{{ i }}" data-shift-id="{{ shift.id }}"
+                                       data-dia="{{ i }}" 
+                                       data-shift-id="{{ shift.id }}"
+                                       data-horas="{{ shift.duracion_hrs }}"
                                        onclick="handleMatrixClick(this, {{ i }}, {{ shift.id }})">
                             </td>
                             {% endfor %}
@@ -199,12 +214,63 @@ function actualizarUIUnificada() {
 function handleMatrixClick(cb, dia, shiftId) {
     const $option = $('#res_tipo_maestro option:selected');
     const tipoTecnico = $option.data('tipo-tecnico');
+    const categoria = $option.data('categoria');
+
+    if (dia === 6 && tipoTecnico === 'turno_fijo' && $(cb).is(':checked')) {
+        toastr.error('No se pueden asignar turnos fijos los domingos por normativa legal.');
+        $(cb).prop('checked', false);
+        return;
+    }
     
     if (tipoTecnico === 'turno_fijo' || tipoTecnico === 'solo_turno') {
         if ($(cb).is(':checked')) {
             $(`.res-check[data-dia="${dia}"]`).not(cb).prop('checked', false);
         }
     }
+
+    // Actualizar contador y validar (solo para turno fijo)
+    if (tipoTecnico === 'turno_fijo') {
+        let totalH = 0;
+        $('.res-check:checked').each(function() {
+            totalH += parseFloat($(this).data('horas') || 0);
+        });
+
+        const maxH = parseFloat($('#max_horas_legal').val());
+        const permiteExtra = $('#permite_extra').val() === 'true';
+        
+        $('#horas-seleccionadas').text(totalH.toFixed(1));
+        
+        if (totalH > maxH) {
+            if (!permiteExtra) {
+                toastr.error(`Error: Se ha excedido el límite legal de ${maxH}h.`);
+                $(cb).prop('checked', false);
+                actualizarContadorHoras();
+                return;
+            } else {
+                $('#horas-seleccionadas').addClass('text-danger');
+                toastr.info('Aviso: Excediendo horas base (Horas Extra permitidas).');
+            }
+        } else {
+            $('#horas-seleccionadas').removeClass('text-danger');
+        }
+        
+        if (totalH > maxH) {
+            $('#horas-seleccionadas').addClass('text-danger');
+        } else {
+            $('#horas-seleccionadas').removeClass('text-danger');
+        }
+    }
+}
+
+function actualizarContadorHoras() {
+    let totalH = 0;
+    $('.res-check:checked').each(function() {
+        totalH += parseFloat($(this).data('horas') || 0);
+    });
+    $('#horas-seleccionadas').text(totalH.toFixed(1));
+    const maxH = parseFloat($('#max_horas_legal').val());
+    if (totalH > maxH) $('#horas-seleccionadas').addClass('text-danger');
+    else $('#horas-seleccionadas').removeClass('text-danger');
 }
 
 function previewRestriccion() {

@@ -8,18 +8,21 @@ from app.services.legal_engine import LegalEngine
 from app.models.enums import RestrictionType, TipoContrato
 
 # ── Pesos de la función objetivo ─────────────────────────────────────────────
-W_DEFICIT  = 10_000_000   # cobertura mínima — prioridad absoluta
-W_EXCESO   =    100_000   # exceso de cobertura
-W_EQUIDAD  =    100_000   # equidad mensual por grupo de contrato
-W_EQ_SEM   =      5_000   # equidad semanal por grupo de contrato
-W_MIN_SEM  =      2_000   # mínimo días/semana según contrato
-W_MAX_SEM  =      1_000   # máximo días/semana según contrato
-W_FRAG     =        100   # anti-fragmentación (día trabajado aislado)
-W_NOCHE    =         10   # balancear turnos noche equitativamente
-W_BALANCE  =      3_000   # balance de turnos por tipo entre trabajadores
+W_DEFICIT  = 10_000_000   # cobertura mínima
+W_EXCESO   =     10_000   # exceso de cobertura
+W_EQUIDAD  =  1_000_000   # equidad mensual
+W_EQ_SEM   =      5_000   # equidad semanal
+W_MIN_SEM  =      2_000   # mínimo días/semana
+W_MAX_SEM  =      1_000   # máximo días/semana
+W_FRAG     =        100   # anti-fragmentación
+W_NOCHE_BALANCE = 5_000   # balancear turnos noche
+W_BALANCE  =      3_000   # balance de turnos por tipo
 W_CONSEC   =         50   # reward días consecutivos
-W_REWARD   =          1   # utilización del personal disponible
-W_META     =     50_000   # penalización por desviarse de la meta mensual
+W_REWARD   =     10_000   # utilización del personal
+W_META     =    200_000   # penalización por desviarse de la meta mensual
+W_EXCESO_HORAS = 20_000_000 # LEGAL: Mas caro que el deficit
+W_DOMINGO  = 50_000_000   # LEGAL: Mas caro que todo
+W_NOCHE_REWARD = 20_000   # Incentivo extra para cubrir noches
 
 # ── SGT 2.1: Defaults para pesos adicionales ────────────────────────────────
 DEFAULT_PENALTY_CAMBIO_TURNO = 150
@@ -86,6 +89,11 @@ def preparar_restricciones(trabajadores_db, dias_del_mes, ausencias, restriccion
                 if r.dias_semana is None or curr.weekday() in r.dias_semana:
                     d_str = curr.isoformat()
                     if d_str in dias_del_mes and (t.id, d_str) not in bloqueados:
+                        # SGT 2.1: PROTECCIÓN DOMINGOS - Nunca permitir TURNO_FIJO en domingo
+                        if r.tipo == RestrictionType.TURNO_FIJO and curr.weekday() == 6:
+                            curr += timedelta(days=1)
+                            continue
+
                         if r.tipo == RestrictionType.TURNO_FIJO and r.turno:
                             fijos[(t.id, d_str)] = r.turno.abreviacion
                         elif r.tipo == RestrictionType.SOLO_TURNO and r.turno:
@@ -118,6 +126,7 @@ def build_model(trabajadores, dias_del_mes, turnos, coberturas,
     if restricciones_soft is None: restricciones_soft = []
 
     ConfigManager.preload()
+    est_penalties, est_bonus, pref_penalties = [], [], []
     
     duracion_default = ConfigManager.get_int('DURACION_TURNO_PROMEDIO', 8)
     jornada_default  = ConfigManager.get('MAX_HRS_SEMANA_FULL', 42.0)
@@ -125,17 +134,23 @@ def build_model(trabajadores, dias_del_mes, turnos, coberturas,
     # ── 3. Pre-validaciones ───────────────────────────────────
     class MockWorker:
         def __init__(self, meta):
-            tc_str = meta.get('tipo_contrato', 'FULL_TIME')
-            try:
-                self.tipo_contrato = TipoContrato[tc_str]
-            except:
-                self.tipo_contrato = TipoContrato.FULL_TIME
+            tc = meta.get('tipo_contrato', TipoContrato.FULL_TIME)
+            if isinstance(tc, str):
+                try:
+                    self.tipo_contrato = TipoContrato[tc.upper()]
+                except:
+                    self.tipo_contrato = next((e for e in TipoContrato if e.value == tc.lower()), TipoContrato.FULL_TIME)
+            else:
+                self.tipo_contrato = tc
+            
             self.horas_semanales = float(meta.get('horas_semanales', 42.0))
+            self.permite_horas_extra = bool(meta.get('permite_horas_extra', False))
 
     class MockTurno:
         def __init__(self, m):
             self.nombre = m.get('nombre', 'T')
             self.duracion_hrs = float(m.get('horas', 8.0))
+            self.es_nocturno = bool(m.get('es_nocturno', False))
 
     for w in trabajadores:
         meta_w = trabajadores_meta.get(w, {})
@@ -172,10 +187,21 @@ def build_model(trabajadores, dias_del_mes, turnos, coberturas,
                 for w in trabajadores:
                     if (w, d) not in bloqueados: model.Add(x[w, d, t] == 0)
 
-    # HR2: Fijos
+    # HR2: Fijos (Soft Presence, Hard Turn Type)
+    fijos_penalties = []
     for (w, d), t_fijo in fijos.items():
         if w in trabajadores and d in dias_del_mes and t_fijo in turnos:
-            model.Add(x[w, d, t_fijo] == 1)
+            # Hard: Si trabaja, DEBE ser t_fijo
+            for t_idx in turnos:
+                if t_idx != t_fijo:
+                    model.Add(x[w, d, t_idx] == 0)
+            
+            # Soft: Preferencia por trabajar (para cumplir el deseo del usuario de que sea "fijo")
+            # Pero permitimos que el solver le de libre si es necesario por Ley (ej: 6x1)
+            worked = sum(x[w, d, t_idx] for t_idx in turnos)
+            not_worked = model.NewBoolVar(f'not_work_fixed_{w}_{d}')
+            model.Add(worked == 0).OnlyEnforceIf(not_worked)
+            fijos_penalties.append(not_worked * 1000)
 
     # HR2b: Preferencia por día
     if turnos_bloqueados_por_dia:
@@ -210,6 +236,7 @@ def build_model(trabajadores, dias_del_mes, turnos, coberturas,
     for w in trabajadores:
         meta_w = trabajadores_meta.get(w, {})
         w_obj = MockWorker(meta_w)
+        res_w = LegalEngine.resumen_legal(w_obj, None, 7) # Perfil legal estándar
         max_consec = meta_w.get('max_dias_consecutivos', 6) or 6
 
         for sem in semanas_objs:
@@ -217,15 +244,35 @@ def build_model(trabajadores, dias_del_mes, turnos, coberturas,
             if not s_strs: continue
             res = LegalEngine.resumen_legal(w_obj, None, len(s_strs))
             print(f"[DEBUG] Worker {w} Week {s_strs[0]}: max_hrs={res['max_horas_semana']} max_dias={res['max_dias_semana']}")
+            # SGT 2.1: Convertir límite de horas en SOFT para evitar INFEASIBLE por turnos fijos
+            max_hrs_val = int(res['max_horas_semana'] * 10)
             h_asig = [x[w, d, t] * int(turnos_meta.get(t, {}).get('horas', 8.0) * 10) for d in s_strs for t in turnos]
-            model.Add(sum(h_asig) <= int(res['max_horas_semana'] * 10))
+            h_total_sem = sum(h_asig)
+            
+            # Variable de exceso de horas (Soft)
+            permite_extra = getattr(w_obj, 'permite_horas_extra', False)
+            if permite_extra:
+                max_extra_val = 100 # 10h extra
+                exceso_h = model.NewIntVar(0, max_extra_val, f'exc_h_{w}_{s_strs[0]}')
+                model.Add(h_total_sem <= max_hrs_val + exceso_h)
+                est_penalties.append(exceso_h * W_EXCESO_HORAS)
+            else:
+                # Si no permite extra, es una restricción HARD
+                model.Add(h_total_sem <= max_hrs_val)
+
             model.Add(sum(x[w, d, t] for d in s_strs for t in turnos) <= res['max_dias_semana'])
 
         if domingos:
-            res_m = LegalEngine.resumen_legal(w_obj, None, 7)
-            if res_m['aplica_domingo']:
-                max_d = max(0, len(domingos) - res_m['min_domingos_mes'])
-                model.Add(sum(x[w, d, t] for d in domingos for t in turnos) <= max_d)
+            # SGT 2.1: Regla robusta de domingos (HARD)
+            # Forzamos la regla para cualquier trabajador con jornada completa (>= 30h)
+            aplica = res_w.get('aplica_domingo', False) or (w_obj.horas_semanales >= 30)
+            if aplica:
+                min_libres = res_w.get('min_domingos_mes', 2) or 2
+                max_asig_dom = max(0, len(domingos) - min_libres)
+                
+                # REGLA HARD: No se puede trabajar más de (Total - MinLibres) domingos
+                asig_dom = sum(x[w, d, t] for d in domingos for t in turnos)
+                model.Add(asig_dom <= max_asig_dom)
 
         for i in range(N - max_consec):
             vent = dias_del_mes[i : i + max_consec + 1]
@@ -248,7 +295,12 @@ def build_model(trabajadores, dias_del_mes, turnos, coberturas,
                 asig = sum(x[w, d, t] for w in trabajadores)
                 defic = model.NewIntVar(0, req, f'def_{d}_{t}')
                 model.Add(asig + defic >= req)
-                deficits.append(defic)
+                
+                # Priorizar noches en cobertura (Déficit de noche es el doble de caro)
+                is_noche = turnos_meta.get(t, {}).get('es_nocturno', False)
+                w_def = W_DEFICIT * 2 if is_noche else W_DEFICIT
+                deficits.append(defic * w_def)
+                
                 exce = model.NewIntVar(0, len(trabajadores), f'exc_{d}_{t}')
                 model.Add(asig - exce <= req)
                 excesses.append(exce)
@@ -293,7 +345,6 @@ def build_model(trabajadores, dias_del_mes, turnos, coberturas,
     w_dominante = ConfigManager.get_int('W_TURNO_DOMINANTE', DEFAULT_BONUS_TURNO_DOMINANTE)
     w_no_pref = ConfigManager.get_int('W_NO_PREFERENTE', DEFAULT_PENALTY_NO_PREFERENTE)
 
-    est_penalties, est_bonus, pref_penalties = [], [], []
     for w in trabajadores:
         for t in turnos:
             worked_t = [x[w, d, t] for d in dias_del_mes]
@@ -340,14 +391,22 @@ def build_model(trabajadores, dias_del_mes, turnos, coberturas,
             balance_por_turno.append(rango_t)
 
     # SR-DOMINANTE: Bonus por turno dominante
-    reward_list = [x[w, d, t] for d in dias_del_mes for t in turnos if coberturas_norm[d].get(t, 0) > 0 for w in trabajadores]
+    # SGT 2.1: Incluir incentivo extra para noches
+    reward_list = []
+    for d in dias_del_mes:
+        for t in turnos:
+            if coberturas_norm[d].get(t, 0) > 0:
+                is_noche = turnos_meta.get(t, {}).get('es_nocturno', False)
+                w_r = W_NOCHE_REWARD if is_noche else W_REWARD
+                for w in trabajadores:
+                    reward_list.append(x[w, d, t] * w_r)
 
     model.Minimize(
         (sum(deficits) * W_DEFICIT) + (sum(excesses) * W_EXCESO) +
         (sum(rango_cargas) * W_EQUIDAD) + (sum(balance_por_turno) * W_BALANCE) +
         (sum(desviaciones_meta) * W_META) + (sum(est_penalties)) +
-        (sum(pref_penalties)) + (sum(penalizaciones_frag)) -
-        (sum(est_bonus)) - (sum(reward_list) * W_REWARD)
+        (sum(pref_penalties)) + (sum(penalizaciones_frag)) + (sum(fijos_penalties)) -
+        (sum(est_bonus)) - (sum(reward_list))
     )
 
     model._debug_meta = {w: {'horas': trabajadores_meta.get(w, {}).get('horas_semanales', jornada_default), 'duracion': trabajadores_meta.get(w, {}).get('duracion_turno', duracion_default)} for w in trabajadores}

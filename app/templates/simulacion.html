@@ -29,7 +29,33 @@
     }
     .badge-turno:hover { transform: scale(1.1); }
     .badge-turno.libre { background-color: #e9ecef; color: #6c757d; border: 1px dashed #dee2e6; }
-    .badge-turno.vac { background-color: #f39c12; color: white; }
+    .badge-turno.vac { background-color: #95a5a6; color: white; }
+    .cuadrante-wrapper {
+        overflow-x: auto;
+        min-height: 500px;
+        border-radius: 8px;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        position: relative;
+    }
+    .sticky-col-left {
+        position: sticky;
+        left: 0;
+        z-index: 10;
+        border-right: 2px solid #dee2e6 !important;
+        background-color: #f8f9fa !important;
+    }
+    .header-fechas th {
+        vertical-align: middle;
+        white-space: nowrap;
+        min-width: 45px;
+    }
+    tfoot td { font-weight: bold; }
+    .fila-cobertura td { border-top: 2px solid #eee; }
+    .resumen-trabajador, .total-trabajador { background-color: #f0f9ff !important; }
+    .progress-glow {
+        box-shadow: 0 0 15px rgba(52, 152, 219, 0.5);
+        height: 10px !important;
+    }
 </style>
 {% endblock %}
 
@@ -220,6 +246,40 @@
     </div>
 </div>
 
+<!-- Modal de Progreso IA Premium -->
+<div class="modal fade" id="modalIA" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content overflow-hidden">
+            <div class="modal-body p-4 text-center">
+                <div class="mb-4">
+                    <div class="spinner-grow text-primary mb-3" style="width: 3rem; height: 3rem;" role="status"></div>
+                    <h5 class="fw-bold mb-1">Optimizando Cuadrante con IA</h5>
+                    <p class="text-muted small">SGT 2.1 Engine - Ley 21.561 & CP-SAT Solver</p>
+                </div>
+
+                <!-- Consola de Logs -->
+                <div id="ai-console" class="text-start mb-4">
+                    <div class="console-line">Iniciando motor de optimización...</div>
+                </div>
+
+                <!-- Barra de Progreso -->
+                <div class="progress mb-2" style="height: 10px; border-radius: 5px;">
+                    <div id="ai-progress-bar" class="progress-bar progress-bar-striped progress-bar-animated progress-glow" 
+                         role="progressbar" style="width: 0%"></div>
+                </div>
+                <div class="d-flex justify-content-between small text-muted mb-4">
+                    <span id="ai-status-text">Analizando parámetros...</span>
+                    <span id="ai-percentage">0%</span>
+                </div>
+
+                <button id="btn-ai-ready" class="btn btn-secondary w-100 py-2 fw-bold" disabled onclick="SGT.verResultados()">
+                    <i class="fa fa-hourglass-half me-2"></i> Procesando...
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 {% endblock %}
 
 {% block scripts %}
@@ -235,67 +295,85 @@
         {% endfor %}
     };
 
-    // Lista de turnos dinámicos
     const LISTA_TURNOS = [{% for t in turnos %}"{{ t.abreviacion }}"{% if not loop.last %}, {% endif %} {% endfor %}];
 
     function getColorTurno(abr) {
         return COLORES_TURNO[abr] || '#adb5bd';
     }
 
-    // --- Lógica Global de Simulación (v3 - Inyección Forzada) ---
+    // --- Lógica Global de Simulación (v4 - Streaming Progress) ---
     window.SGT = {
         cuadranteData: null,
+        eventSource: null,
 
         generarCuadrante: function () {
-            console.log("SGT: [1] Iniciando generación...");
-            const btn = document.getElementById('btn_generar');
-            if (!btn) { console.error("SGT: No se encontró el botón btn_generar"); return; }
+            const mes = document.getElementById('sel_mes').value;
+            const anio = document.getElementById('sel_anio').value;
+            const suc = document.getElementById('sel_sucursal').value;
+            
+            // Preparar Modal
+            $('#modalIA').modal('show');
+            $('#ai-console').html('<div class="console-line info">Estableciendo conexión con SGT AI Engine...</div>');
+            $('#ai-progress-bar').css('width', '0%').removeClass('bg-success').addClass('bg-primary');
+            $('#ai-status-text').text('Iniciando...');
+            $('#ai-percentage').text('0%');
+            $('#btn-ai-ready').prop('disabled', true).removeClass('btn-success').addClass('btn-secondary').html('<i class="fa fa-hourglass-half me-2"></i> Procesando...');
 
-            const oldHtml = btn.innerHTML;
-            btn.disabled = true;
-            btn.innerHTML = '<i class="fa fa-spinner fa-spin me-1"></i> Generando...';
+            // Recopilar parámetros para el stream (via URL params)
+            let params = `?mes=${mes}&anio=${anio}&sucursal_id=${suc}`;
+            $('.cobertura-input').each(function () { params += `&${this.id}=${this.value}`; });
+            $('.cobertura-dom-input').each(function () { if (this.value !== "") params += `&${this.id}=${this.value}`; });
 
-            const payload = {
-                mes: document.getElementById('sel_mes').value,
-                anio: document.getElementById('sel_anio').value,
-                sucursal_id: document.getElementById('sel_sucursal').value
+            // Iniciar EventSource
+            if (this.eventSource) this.eventSource.close();
+            this.eventSource = new EventSource(`/planificacion/generar_stream${params}`);
+
+            this.eventSource.addEventListener('log', (e) => {
+                const data = JSON.parse(e.data);
+                this.addLog(data.msg, data.type || 'info');
+                if (data.progress) this.updateProgress(data.progress, data.status);
+            });
+
+            this.eventSource.addEventListener('result', (e) => {
+                const res = JSON.parse(e.data);
+                this.cuadranteData = res.data;
+                this.updateProgress(100, 'Optimización completada');
+                this.addLog('Cuadrante generado exitosamente.', 'success');
+                
+                $('#ai-progress-bar').removeClass('bg-primary').addClass('bg-success');
+                $('#btn-ai-ready').prop('disabled', false).removeClass('btn-secondary').addClass('btn-success').html('<i class="fa fa-check me-2"></i> Ver Resultados');
+                this.eventSource.close();
+            });
+
+            this.eventSource.addEventListener('error_sgt', (e) => {
+                const data = JSON.parse(e.data);
+                this.addLog(`ERROR: ${data.message}`, 'warning');
+                toastr.error(data.message);
+                this.eventSource.close();
+                $('#btn-ai-ready').prop('disabled', false).text('Cerrar');
+            });
+
+            this.eventSource.onerror = (e) => {
+                console.error("SSE Error:", e);
+                this.eventSource.close();
             };
+        },
 
-            // Añadir coberturas dinámicamente
-            $('.cobertura-input').each(function () {
-                payload[this.id] = this.value; // Ej: cob_M: 2
-            });
-            $('.cobertura-dom-input').each(function () {
-                if (this.value !== "") {
-                    payload[this.id] = this.value; // Ej: cob_sun_M: 1
-                }
-            });
+        addLog: function(msg, type) {
+            const console = $('#ai-console');
+            console.append(`<div class="console-line ${type}">${msg}</div>`);
+            console.scrollTop(console[0].scrollHeight);
+        },
 
-            $.ajax({
-                url: '/planificacion/generar',
-                type: 'POST',
-                contentType: 'application/json',
-                data: JSON.stringify(payload),
-                success: (res) => {
-                    btn.disabled = false;
-                    btn.innerHTML = oldHtml;
+        updateProgress: function(pct, status) {
+            $('#ai-progress-bar').css('width', pct + '%');
+            $('#ai-percentage').text(pct + '%');
+            if (status) $('#ai-status-text').text(status);
+        },
 
-                    if (res.status === 'ok') {
-                        this.cuadranteData = res.data;
-                        console.log("SGT: [4] Datos listos, llamando a renderCuadrante...");
-                        this.renderCuadrante();
-                    } else {
-                        toastr.error(res.message || 'Error en el generador IA.');
-                    }
-                },
-                error: (xhr) => {
-                    btn.disabled = false;
-                    btn.innerHTML = oldHtml;
-                    let msg = 'Error en el servidor.';
-                    if (xhr.responseJSON && xhr.responseJSON.message) msg = xhr.responseJSON.message;
-                    toastr.error(msg);
-                }
-            });
+        verResultados: function() {
+            $('#modalIA').modal('hide');
+            this.renderCuadrante();
         },
 
         mostrarMock: function () {
@@ -336,59 +414,91 @@
         renderCuadrante: function () {
             console.log("SGT: [5] Iniciando renderCuadrante...");
             if (!this.cuadranteData) { console.error("SGT: ERROR - No hay cuadranteData"); return; }
-
             const { dias, trabajadores, celdas } = this.cuadranteData;
             const container = document.getElementById('cuadrante_tabla');
             if (!container) { console.error("SGT: ERROR - No se encontró el elemento #cuadrante_tabla"); return; }
 
-            let html = `<table class="cuadrante-table table mb-0"><thead><tr><th class="col-fecha">Día</th>`;
-            html += trabajadores.map(t => `<th title="${t.nombre}">${t.nombre.split(' ')[0]}</th>`).join('');
+            // --- CABECERA ---
+            let html = `<table class="cuadrante-table table table-bordered table-sm mb-0"><thead><tr class="header-trabajadores">`;
+            html += `<th class="col-fecha" style="width: auto; white-space: nowrap;">Fecha</th>`;
+            html += trabajadores.map(t => `<th title="${t.nombre}" class="text-center" style="min-width: 60px;">${t.nombre.split(' ')[0]}</th>`).join('');
             
-            // Badges de cobertura directamente en la primera fila
+            // Badges de cobertura dinámica
             LISTA_TURNOS.forEach(t => {
                 const color = typeof getColorTurno === 'function' ? getColorTurno(t) : '#adb5bd';
                 html += `<th class="text-center bg-light border-start" style="width: 50px;">
                     <span class="badge shadow-sm" style="background-color: ${color}; font-size: 0.65rem; padding: 2px 5px;">${t}</span>
                 </th>`;
             });
-            html += `<th class="text-center text-muted bg-light border-start" style="width: 40px; font-size:0.75rem;">L</th></tr></thead><tbody>`;
+            html += `<th class="text-center text-muted bg-light border-start" style="width: 40px; font-size:0.75rem;">L</th>`;
+            html += `<th class="text-center bg-primary text-white" style="width: 60px; font-size:0.75rem;">Total</th></tr></thead><tbody>`;
 
+            // --- FILAS POR DÍA ---
             dias.forEach(dia => {
                 const esDom = dia.dia_semana === 0;
                 const conts = { L: 0 };
                 LISTA_TURNOS.forEach(t => conts[t] = 0);
+                let totalDia = 0;
 
                 let celdas_html = trabajadores.map(t => {
-                    // raw puede ser: 'M','T','N' (turno), 'L' (libre), 'VAC' (ausencia), '' (sin resolver)
-                    const raw  = (celdas[dia.fecha] !== undefined) ? celdas[dia.fecha][t.id] : undefined;
+                    const raw = (celdas[dia.fecha] !== undefined) ? celdas[dia.fecha][t.id] : undefined;
                     const tAbr = (raw !== undefined && raw !== null && raw !== '') ? raw : 'L';
                     const sinResolver = (raw === '' || raw === undefined || raw === null);
+                    
                     if (conts[tAbr] !== undefined) conts[tAbr]++;
+                    if (LISTA_TURNOS.includes(tAbr)) totalDia++;
+                    
                     const color = typeof getColorTurno === 'function' ? getColorTurno(tAbr) : '#adb5bd';
-                    // Celda sin resolver: borde punteado naranja para que el usuario la identifique
                     const estiloExtra = sinResolver ? 'border: 1.5px dashed #fd7e14 !important;' : '';
-                    return `<td class="celda-turno" onclick="SGT.abrirPicker(this)" data-fecha="${dia.fecha}" data-wid="${t.id}" style="${estiloExtra}">
-                        <span class="badge-turno ${tAbr === 'L' ? 'libre' : ''}" style="${tAbr !== 'L' ? 'background-color:' + color : ''}; min-width:40px; padding:0 5px;">${sinResolver ? '' : tAbr}</span>
+                    
+                    return `<td class="celda-turno text-center" onclick="SGT.abrirPicker(this)" data-fecha="${dia.fecha}" data-wid="${t.id}" style="${estiloExtra}">
+                        <span class="badge-turno ${tAbr === 'L' ? 'libre' : ''}" style="${(tAbr !== 'L' && !sinResolver) ? 'background-color:' + color : ''}; min-width:40px; padding:0 5px;">${sinResolver ? '' : tAbr}</span>
                     </td>`;
                 }).join('');
 
-                html += `<tr><td class="col-fecha ${esDom ? 'domingo' : ''}">${dia.label}</td>${celdas_html}`;
+                html += `<tr><td class="col-fecha ${esDom ? 'domingo' : ''}" style="white-space: nowrap;">${dia.label}</td>${celdas_html}`;
 
-                LISTA_TURNOS.forEach((t, i) => {
-                    const req = parseInt($('#cob_' + t).val()) || 0;
+                // Columnas de Cobertura
+                LISTA_TURNOS.forEach(t => {
+                    const isSun = dia.dia_semana === 0;
+                    const reqNormal = parseInt($('#cob_' + t).val()) || 0;
+                    const reqSun = parseInt($('#cob_sun_' + t).val());
+                    const req = (isSun && !isNaN(reqSun)) ? reqSun : reqNormal;
+                    
                     const count = conts[t];
-                    // Alertar si la cobertura es menor a la requerida
                     let content = count;
                     if (count < req) {
                         content = `<span class="badge bg-danger shadow-sm px-2 rounded-pill" title="Faltan ${req - count}"><i class="fa fa-exclamation-circle"></i> ${count}</span>`;
                     }
-                    html += `<td class="text-center small border-start">${content}</td>`;
+                    html += `<td class="text-center small border-start cob-val" data-turno="${t}">${content}</td>`;
                 });
 
-                html += `<td class="text-center text-muted small">${conts.L}</td></tr>`;
+                html += `<td class="text-center text-muted small cob-val-l">${conts.L}</td>`;
+                html += `<td class="text-center fw-bold bg-light total-dia">${totalDia + conts.L}</td></tr>`;
             });
 
-            html += `</tbody></table>`;
+            html += `</tbody>`;
+            
+            // --- PIE DE TABLA: RESUMEN TRABAJADORES ---
+            html += `<tfoot class="bg-light">`;
+            let resumen_row = `<tr><td class="fw-bold">TOTALES</td>`;
+            trabajadores.forEach(t => {
+                let sumT = 0, sumL = 0, sumD = 0;
+                dias.forEach(dia => {
+                    const raw = (celdas[dia.fecha] && celdas[dia.fecha][t.id]) || 'L';
+                    const isSun = dia.dia_semana === 6; // Python weekday() 6 is Sunday
+                    if (raw === 'L') {
+                        sumL++;
+                        if (isSun) sumD++;
+                    } else if (LISTA_TURNOS.includes(raw)) {
+                        sumT++;
+                    }
+                });
+                const nombreCorto = t.nombre.split(' ')[0];
+                resumen_row += `<td class="text-center fw-bold resumen-w" data-wid="${t.id}" style="font-size: 0.75rem;"><div class="small text-muted" style="font-size: 0.6rem;">${nombreCorto}</div>${sumT}/${sumL}/${sumD}</td>`;
+            });
+            html += resumen_row;
+            html += `</tfoot></table>`;
 
             console.log("SGT: [6] Inyectando HTML...");
             container.innerHTML = html;
@@ -406,34 +516,41 @@
             const badge = document.getElementById('estado_badge');
             if (badge) badge.innerHTML = '<span class="badge bg-warning text-dark">Simulación</span>';
 
-            // --- Calcular métricas de cobertura (DESPUÉS de inyectar HTML) ---
-            let total_necesarios = this.cuadranteData.metricas ? this.cuadranteData.metricas.necesarios : 0;
-            if (!total_necesarios) {
-                let req_diario_total = 0;
-                LISTA_TURNOS.forEach(t => req_diario_total += (parseInt($('#cob_' + t).val()) || 0));
-                total_necesarios = req_diario_total * dias.length;
-            }
-
+            // --- Calcular métricas de cobertura REALES (Suma de brechas diarias/turno) ---
+            let total_necesarios = 0;
             let total_cubiertos = 0;
+            let suma_deficits = 0;
+            let suma_superavits = 0;
+
             dias.forEach(dia => {
+                const isSun = dia.dia_semana === 6; // Python 6=Dom
+                const conts = { L: 0 };
+                LISTA_TURNOS.forEach(t => conts[t] = 0);
+                
                 trabajadores.forEach(t => {
                     const tAbr = (celdas[dia.fecha] && celdas[dia.fecha][t.id]) || 'L';
-                    if (LISTA_TURNOS.includes(tAbr)) {
-                        total_cubiertos++;
-                    }
+                    if (conts[tAbr] !== undefined) conts[tAbr]++;
+                    if (LISTA_TURNOS.includes(tAbr)) total_cubiertos++;
+                });
+
+                LISTA_TURNOS.forEach(t => {
+                    const reqNormal = parseInt($('#cob_' + t).val()) || 0;
+                    const reqSun = parseInt($('#cob_sun_' + t).val());
+                    const req = (isSun && !isNaN(reqSun)) ? reqSun : reqNormal;
+                    
+                    total_necesarios += req;
+                    const count = conts[t];
+                    if (count < req) suma_deficits += (req - count);
+                    if (count > req) suma_superavits += (count - req);
                 });
             });
 
-            const deficit = Math.max(0, total_necesarios - total_cubiertos);
-            const superavit = Math.max(0, total_cubiertos - total_necesarios);
-
             $('#metrica_req').text(total_necesarios);
             $('#metrica_cub').text(total_cubiertos);
-            $('#metrica_sup').text(superavit);
-
+            $('#metrica_sup').text(suma_superavits);
             const defEl = $('#metrica_def');
-            defEl.text(deficit);
-            if (deficit > 0) {
+            defEl.text(suma_deficits);
+            if (suma_deficits > 0) {
                 defEl.addClass('text-danger');
             } else {
                 defEl.removeClass('text-danger').addClass('text-muted');
@@ -483,40 +600,60 @@
 
     function actualizarContadoresFila(celda) {
         const fila = $(celda).closest('tr');
-        console.log("Actualizando contadores para fila:", fila);
+        const fecha = celda.dataset.fecha;
+        const wid = celda.dataset.wid;
 
+        // 1. Actualizar Contadores de la Fila (Día)
         const contadores = { L: 0 };
         LISTA_TURNOS.forEach(t => contadores[t] = 0);
+        let totalDia = 0;
+        
         fila.find('.celda-turno').each(function () {
             const abr = $(this).find('.badge-turno').text().trim();
             if (contadores[abr] !== undefined) contadores[abr]++;
+            if (LISTA_TURNOS.includes(abr)) totalDia++;
         });
 
-        console.log("Nuevos contadores:", contadores);
-
-        // Re-extraer requerimientos actuales de los inputs
+        // Re-extraer requerimientos actuales
         const req = {};
         $('.cobertura-input').each(function () {
-            const key = this.id.replace('cob_', '').toUpperCase(); // Asegurar mayúsculas
+            const key = this.id.replace('cob_', '').toUpperCase();
             req[key] = parseInt($(this).val()) || 0;
         });
 
-        console.log("Requerimientos detectados:", req);
+        // Actualizar celdas de cobertura en la fila
+        LISTA_TURNOS.forEach(t => {
+            const cobCell = fila.find(`.cob-val[data-turno="${t}"]`);
+            const count = contadores[t];
+            const isSun = fila.find('.col-fecha').hasClass('domingo');
+            const rSun = parseInt($('#cob_sun_' + t).val());
+            const r = (isSun && !isNaN(rSun)) ? rSun : req[t];
 
-        const turnos_a_actualizar = [...LISTA_TURNOS, 'L'];
-        const tds = fila.find('td:not(.col-fecha):not(.celda-turno)');
-
-        tds.each((i, td) => {
-            const turno = turnos_a_actualizar[i];
-            const count = contadores[turno];
-            const r = req[turno] || 0;
-
-            if (turno !== 'L' && count < r) {
-                $(td).html(`<span class="badge bg-danger shadow-sm px-2 rounded-pill" title="Faltan ${r - count} persona(s)"><i class="fa fa-exclamation-circle"></i> ${count}</span>`);
+            if (count < r) {
+                cobCell.html(`<span class="badge bg-danger shadow-sm px-2 rounded-pill"><i class="fa fa-exclamation-circle"></i> ${count}</span>`);
             } else {
-                $(td).html(count || '');
+                cobCell.html(count || '0');
             }
         });
+        fila.find('.cob-val-l').text(contadores.L);
+        fila.find('.total-dia').text(totalDia + contadores.L);
+
+        // 2. Actualizar Resumen del Trabajador (COLUMNA -> Pie de tabla)
+        let sumT = 0, sumL = 0, sumD = 0;
+        const colIdx = $(celda).index();
+        
+        $('tbody tr').each(function() {
+            const isSun = $(this).find('.col-fecha').hasClass('domingo');
+            const abr = $(this).find('td').eq(colIdx).find('.badge-turno').text().trim();
+            if (abr === 'L') {
+                sumL++;
+                if (isSun) sumD++;
+            } else if (LISTA_TURNOS.includes(abr)) {
+                sumT++;
+            }
+        });
+        
+        $(`tfoot .resumen-w[data-wid="${wid}"]`).text(`${sumT}/${sumL}/${sumD}`);
     }
 
     function guardarCambiosCelda(fecha, wid, abr) {

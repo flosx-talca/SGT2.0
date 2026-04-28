@@ -74,6 +74,17 @@ class Turno(db.Model):
     creado_en = db.Column(db.DateTime, default=datetime.utcnow)
     actualizado_en = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
+    @property
+    def duracion_hrs(self) -> float:
+        """Calcula la duración en horas del turno."""
+        if not self.hora_inicio or not self.hora_fin:
+            return 8.0
+        h_ini = self.hora_inicio.hour * 60 + self.hora_inicio.minute
+        h_fin = self.hora_fin.hour   * 60 + self.hora_fin.minute
+        if h_fin <= h_ini:
+            h_fin += 24 * 60
+        return round((h_fin - h_ini) / 60, 2)
+
 
 class TipoAusencia(db.Model):
     __tablename__ = 'tipo_ausencia'

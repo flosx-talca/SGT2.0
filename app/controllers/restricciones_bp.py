@@ -8,8 +8,8 @@ restricciones_bp = Blueprint('restricciones', __name__)
 
 @restricciones_bp.route('/api/restricciones/worker/<int:worker_id>', methods=['GET'])
 def get_worker_restrictions(worker_id):
-    # Obtener ausencias (bloqueos de día) y restricciones técnicas
-    ausencias = TrabajadorAusencia.query.filter_by(trabajador_id=worker_id).order_by(TrabajadorAusencia.fecha_inicio.desc()).all()
+    # Obtener ausencias (bloqueos de día) y restricciones técnicas ordenadas cronológicamente
+    ausencias = TrabajadorAusencia.query.filter_by(trabajador_id=worker_id).order_by(TrabajadorAusencia.fecha_inicio.asc()).all()
     
     # Mapear a un formato unificado para la tabla de la UI
     res = []
@@ -100,7 +100,38 @@ def save_restriction():
     
     tipo_maestro = TipoAusencia.query.get_or_404(tipo_id)
     
+    # VALIDACIÓN DOMINGOS: No permitir TURNO_FIJO en domingos (dia 6)
+    dias_semana = data.get('dias_semana', [])
+    if tipo_maestro.categoria == CategoriaAusencia.RESTRICCION:
+        rt_tipo = tipo_maestro.tipo_restriccion or RestrictionType.TURNO_FIJO
+        if rt_tipo == RestrictionType.TURNO_FIJO and 6 in dias_semana:
+            return jsonify({
+                'status': 'error', 
+                'msg': 'No se permite asignar turnos fijos los domingos por normativa de descanso legal obligatorio.'
+            }), 400
+
     try:
+        from app.services.legal_engine import LegalEngine
+        trabajador_obj = Trabajador.query.get(worker_id)
+        
+        # VALIDACIÓN CARGA SEMANAL DINÁMICA: Sumar horas reales de los turnos seleccionados
+        if is_fixed and trabajador_obj:
+            horas_seleccionadas = 0
+            if data.get('matrix'):
+                # matrix es un dict { dia: shift_id }
+                for d_idx, s_id in data['matrix'].items():
+                    t_db = Turno.query.get(s_id)
+                    if t_db: horas_seleccionadas += t_db.duracion_hrs
+            
+            max_h = LegalEngine.max_horas_semana(trabajador_obj)
+            permite_extra = getattr(trabajador_obj, 'permite_horas_extra', False)
+            
+            if horas_seleccionadas > max_h and not permite_extra:
+                return jsonify({
+                    'status': 'error',
+                    'msg': f'La carga horaria seleccionada ({horas_seleccionadas}h) excede el límite legal de su contrato ({max_h}h).'
+                }), 400
+
         from datetime import timedelta
         
         # 1. SMART SPLIT: Buscar solapamientos y gestionar prioridades
@@ -209,8 +240,28 @@ def save_restriction():
             db.session.add(nueva_a)
 
         # 4. CREAR EL REGISTRO NUEVO (O FRAGMENTOS DEL MISMO)
+        # SGT 2.1: Si es TURNO_FIJO, segmentamos para excluir domingos físicamente del rango
+        final_segments = []
+        is_fixed = (nueva_cat == CategoriaAusencia.RESTRICCION and 
+                    (tipo_maestro.tipo_restriccion or RestrictionType.TURNO_FIJO) == RestrictionType.TURNO_FIJO)
+
+        if is_fixed:
+            for r_start, r_end in rangos_para_lo_nuevo:
+                curr_start = r_start
+                curr = r_start
+                while curr <= r_end:
+                    if curr.weekday() == 6: # Es domingo
+                        if curr > curr_start:
+                            final_segments.append((curr_start, curr - timedelta(days=1)))
+                        curr_start = curr + timedelta(days=1)
+                    curr += timedelta(days=1)
+                if curr_start <= r_end:
+                    final_segments.append((curr_start, r_end))
+        else:
+            final_segments = rangos_para_lo_nuevo
+
         last_id = None
-        for start, end in rangos_para_lo_nuevo:
+        for start, end in final_segments:
             restriccion_id = None
             if nueva_cat == CategoriaAusencia.RESTRICCION:
                 rt_tipo = tipo_maestro.tipo_restriccion or RestrictionType.TURNO_FIJO

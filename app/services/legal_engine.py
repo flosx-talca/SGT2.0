@@ -40,12 +40,11 @@ class LegalEngine:
         max_hrs = LegalEngine.max_horas_semana(trabajador)
         max_dias = LegalEngine.max_dias_semana_ley(trabajador)
         
-        if not turno or turno.duracion_hrs <= 0:
-            return 0
-            
+        duracion = turno.duracion_hrs if (turno and turno.duracion_hrs > 0) else 8.5
+        
         # Días posibles por horas / duración del turno
         # Ej: 42h / 8.5h = 4.94 -> 4 días
-        dias_por_horas = floor(max_hrs / turno.duracion_hrs)
+        dias_por_horas = floor(max_hrs / duracion)
         return min(dias_por_horas, max_dias)
 
     @staticmethod
@@ -86,10 +85,14 @@ class LegalEngine:
         # Ajustar max_dias si la semana tiene menos días (ej: fin de mes tiene 3 días)
         max_dias_periodo = min(max_dias_ley, dias_en_semana)
         
+        from math import ceil
+        permite_extra = getattr(trabajador, 'permite_horas_extra', False)
+        
         if turno and turno.duracion_hrs > 0:
-            dias_efectivos = min(floor(max_hrs / turno.duracion_hrs), max_dias_periodo)
+            calc_dias = max_hrs / turno.duracion_hrs
+            dias_efectivos = min(ceil(calc_dias) if permite_extra else floor(calc_dias), max_dias_periodo)
         else:
-            # Si no hay turno de referencia, devolvemos el máximo legal por días
+            # Si no hay turno, estimamos con 8h o usamos el máximo legal
             dias_efectivos = max_dias_periodo
 
         return {

@@ -69,10 +69,14 @@ def modal_restriccion():
     # Obtener todos los tipos de ausencia/restricción maestros
     tipos_maestros = TipoAusencia.query.filter_by(activo=True).order_by(TipoAusencia.nombre).all()
     
+    from app.services.legal_engine import LegalEngine
+    res_legal = LegalEngine.resumen_legal(trabajador, None, 7)
+    
     return render_template('modal-restriccion.html',
                            trabajador=trabajador,
                            shifts=shifts,
-                           tipos_maestros=tipos_maestros)
+                           tipos_maestros=tipos_maestros,
+                           res_legal=res_legal)
 
 
 @trabajador_bp.route('/guardar', methods=['POST'])
@@ -87,7 +91,7 @@ def guardar():
     cargo       = request.form.get('cargo', '').strip()
     email       = request.form.get('email', '').strip()
     telefono    = request.form.get('telefono', '').strip()
-    tipo_contrato = request.form.get('tipo_contrato', 'full-time').strip()
+    tipo_contrato = request.form.get('tipo_contrato', 'full_time').strip()
     horas_str   = request.form.get('horas_semanales', '').strip()
     activo      = request.form.get('activo') == 'true'
 
