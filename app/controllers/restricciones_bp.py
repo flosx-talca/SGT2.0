@@ -109,6 +109,9 @@ def save_restriction():
                 'status': 'error', 
                 'msg': 'No se permite asignar turnos fijos los domingos por normativa de descanso legal obligatorio.'
             }), 400
+    nueva_cat = tipo_maestro.categoria
+    is_fixed = (nueva_cat == CategoriaAusencia.RESTRICCION and 
+                (tipo_maestro.tipo_restriccion or RestrictionType.TURNO_FIJO) == RestrictionType.TURNO_FIJO)
 
     try:
         from app.services.legal_engine import LegalEngine
@@ -141,7 +144,6 @@ def save_restriction():
             TrabajadorAusencia.fecha_fin >= fecha_inicio
         ).all()
         
-        nueva_cat = tipo_maestro.categoria
         rangos_para_lo_nuevo = [(fecha_inicio, fecha_fin)]
         fragmentos_viejos = []
         a_eliminar = []
@@ -242,8 +244,6 @@ def save_restriction():
         # 4. CREAR EL REGISTRO NUEVO (O FRAGMENTOS DEL MISMO)
         # SGT 2.1: Si es TURNO_FIJO, segmentamos para excluir domingos físicamente del rango
         final_segments = []
-        is_fixed = (nueva_cat == CategoriaAusencia.RESTRICCION and 
-                    (tipo_maestro.tipo_restriccion or RestrictionType.TURNO_FIJO) == RestrictionType.TURNO_FIJO)
 
         if is_fixed:
             for r_start, r_end in rangos_para_lo_nuevo:

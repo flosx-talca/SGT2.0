@@ -512,7 +512,7 @@ def generar_stream():
                 
                 # Formatear respuesta final
                 dias_dict = []
-                DIAS_SEM = ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"]
+                DIAS_SEM = ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"]
                 for i, d_str in enumerate(dias_del_mes):
                     d_obj = dias_mes_objs[i]
                     dias_dict.append({'fecha': d_str, 'dia_semana': d_obj.weekday(), 'label': f"{d_obj.day:02d} {DIAS_SEM[d_obj.weekday()]}"})

@@ -435,7 +435,7 @@
 
             // --- FILAS POR DÍA ---
             dias.forEach(dia => {
-                const esDom = dia.dia_semana === 0;
+                const esDom = dia.dia_semana === 6;
                 const conts = { L: 0 };
                 LISTA_TURNOS.forEach(t => conts[t] = 0);
                 let totalDia = 0;
@@ -460,7 +460,7 @@
 
                 // Columnas de Cobertura
                 LISTA_TURNOS.forEach(t => {
-                    const isSun = dia.dia_semana === 0;
+                    const isSun = dia.dia_semana === 6;
                     const reqNormal = parseInt($('#cob_' + t).val()) || 0;
                     const reqSun = parseInt($('#cob_sun_' + t).val());
                     const req = (isSun && !isNaN(reqSun)) ? reqSun : reqNormal;
