@@ -6,6 +6,7 @@ plantillas universales y asegura el acceso del administrador.
 """
 import os
 import sys
+import json
 from datetime import datetime, time
 from werkzeug.security import generate_password_hash
 from app import create_app, db
@@ -197,15 +198,53 @@ def init_db():
                 obj.categoria = ap['categoria']
                 obj.tipo_restriccion = ap.get('tipo_restriccion')
 
-        # 8. Geografía Base
-        if not Region.query.first():
-            r1 = Region(id=1, descripcion='Metropolitana', codigo='RM')
-            db.session.add(r1)
-            db.session.flush()
-            db.session.add(Comuna(descripcion='Santiago', region_id=r1.id, codigo='13101'))
+        # 8. Geografía Base (16 Regiones de Chile)
+        print("Cargando las 16 regiones de Chile...")
+        regiones_data = [
+            {'id': 15, 'descripcion': 'Arica y Parinacota', 'codigo': 'AP'},
+            {'id': 1,  'descripcion': 'Tarapacá', 'codigo': 'TA'},
+            {'id': 2,  'descripcion': 'Antofagasta', 'codigo': 'AN'},
+            {'id': 3,  'descripcion': 'Atacama', 'codigo': 'AT'},
+            {'id': 4,  'descripcion': 'Coquimbo', 'codigo': 'CO'},
+            {'id': 5,  'descripcion': 'Valparaíso', 'codigo': 'VA'},
+            {'id': 13, 'descripcion': 'Metropolitana de Santiago', 'codigo': 'RM'},
+            {'id': 6,  'descripcion': 'Libertador General Bernardo O\'Higgins', 'codigo': 'LI'},
+            {'id': 7,  'descripcion': 'Maule', 'codigo': 'ML'},
+            {'id': 16, 'descripcion': 'Ñuble', 'codigo': 'NB'},
+            {'id': 8,  'descripcion': 'Biobío', 'codigo': 'BI'},
+            {'id': 9,  'descripcion': 'La Araucanía', 'codigo': 'AR'},
+            {'id': 14, 'descripcion': 'Los Ríos', 'codigo': 'LR'},
+            {'id': 10, 'descripcion': 'Los Lagos', 'codigo': 'LL'},
+            {'id': 11, 'descripcion': 'Aysén del General Carlos Ibáñez del Campo', 'codigo': 'AI'},
+            {'id': 12, 'descripcion': 'Magallanes y de la Antártica Chilena', 'codigo': 'MA'}
+        ]
+        
+        for rd in regiones_data:
+            if not Region.query.get(rd['id']):
+                db.session.add(Region(**rd))
+        
+        db.session.flush()
+        
+        # 9. Cargar Comunas desde JSON (346 comunas)
+        print("Cargando las 346 comunas de Chile...")
+        try:
+            path_json = os.path.join(os.path.dirname(__file__), 'app', 'resources', 'comunas_chile.json')
+            with open(path_json, 'r', encoding='utf-8') as f:
+                comunas_data = json.load(f)
+                for cd in comunas_data:
+                    if not Comuna.query.filter_by(codigo=cd['codigo']).first():
+                        # Usar cd sin el 'id' para que la BD asigne su propio autoincremental si es necesario, 
+                        # o mantenerlo si quieres IDs fijos. Aquí mantendremos la lógica de código único.
+                        db.session.add(Comuna(
+                            codigo=cd['codigo'],
+                            descripcion=cd['descripcion'],
+                            region_id=cd['region_id']
+                        ))
+        except Exception as e:
+            print(f"Advertencia: No se pudieron cargar las comunas: {e}")
 
         db.session.commit()
-        print("\n--- ¡Inicialización Exitosa! ---")
+        print("\n--- ¡Inicialización Maestra Exitosa! ---")
         print("Acceso Admin: orozasi@gmail.com / admin123")
 
 if __name__ == '__main__':
