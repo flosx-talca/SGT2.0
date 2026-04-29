@@ -160,13 +160,13 @@
                             {% for tipo in tipos_turno %}
                             <td class="text-center align-middle">
                                 {% set ns = namespace(found=false) %}
-                                {% if registro %}
-                                    {% for p in registro.preferencias %}
-                                        {% if p.dia_semana == i and p.turno == tipo.abreviacion %}
-                                            {% set ns.found = true %}
-                                        {% endif %}
-                                    {% endfor %}
-                                {% endif %}
+                                    {% if registro %}
+                                        {% for p in registro.restricciones_turno if p.fecha_fin.year == 2099 %}
+                                            {% if p.dias_semana and i in p.dias_semana and p.turno and p.turno.abreviacion == tipo.abreviacion %}
+                                                {% set ns.found = true %}
+                                            {% endif %}
+                                        {% endfor %}
+                                    {% endif %}
                                 <input class="form-check-input border-secondary-subtle" type="checkbox" 
                                        name="pref_{{ i }}[]" value="{{ tipo.abreviacion }}"
                                        {{ 'checked' if ns.found else '' }}
@@ -177,9 +177,11 @@
                             <td class="text-center align-middle">
                                 {% set ns_tipo = namespace(val='preferencia') %}
                                 {% if registro %}
-                                    {% for p in registro.preferencias %}
-                                        {% if p.dia_semana == i %}
+                                    {% for p in registro.restricciones_turno if p.fecha_fin.year == 2099 %}
+                                        {% if p.dias_semana and i in p.dias_semana %}
                                             {% set ns_tipo.val = p.tipo %}
+                                            {% if p.tipo == 'turno_fijo' %}{% set ns_tipo.val = 'fijo' %}{% endif %}
+                                            {% if p.tipo == 'turno_preferente' %}{% set ns_tipo.val = 'preferencia' %}{% endif %}
                                         {% endif %}
                                     {% endfor %}
                                 {% endif %}

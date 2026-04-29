@@ -2,7 +2,9 @@ from flask import Blueprint, render_template, request, jsonify
 from flask_login import login_required, current_user
 from app.services.context import get_empresa_activa_id
 from app.database import db
-from app.models.business import Trabajador, Empresa, Servicio, Turno, TrabajadorPreferencia, TrabajadorAusencia, TipoAusencia
+from app.models.business import Trabajador, Empresa, Servicio, Turno, TrabajadorRestriccionTurno, TrabajadorAusencia, TipoAusencia, TipoAusenciaPlantilla
+from app.models.enums import RestrictionType, CategoriaAusencia
+from datetime import date
 
 trabajador_bp = Blueprint('trabajador', __name__, url_prefix='/trabajadores')
 
@@ -97,8 +99,24 @@ def modal_restriccion():
     # Obtener turnos de la empresa
     shifts = Turno.query.filter_by(empresa_id=trabajador.empresa_id, activo=True).order_by(Turno.id).all()
     
-    # Obtener todos los tipos de ausencia/restricción maestros
-    tipos_maestros = TipoAusencia.query.filter_by(activo=True).order_by(TipoAusencia.nombre).all()
+    # 1. Obtener ausencias globales (Universo)
+    tipos_ausencia_global = TipoAusenciaPlantilla.query.filter_by(
+        categoria=CategoriaAusencia.AUSENCIA,
+        activo=True
+    ).order_by(TipoAusenciaPlantilla.nombre).all()
+
+    # 2. Obtener TODAS las ausencias de la empresa (Base + Personalizadas)
+    tipos_ausencia_empresa = TipoAusencia.query.filter_by(
+        empresa_id=trabajador.empresa_id, 
+        categoria=CategoriaAusencia.AUSENCIA,
+        activo=True
+    ).order_by(TipoAusencia.nombre).all()
+    
+    # 3. Obtener restricciones universales (Universo / Plantilla)
+    tipos_restriccion_global = TipoAusenciaPlantilla.query.filter_by(
+        categoria=CategoriaAusencia.RESTRICCION,
+        activo=True
+    ).order_by(TipoAusenciaPlantilla.nombre).all()
     
     from app.services.legal_engine import LegalEngine
     res_legal = LegalEngine.resumen_legal(trabajador, None, 7)
@@ -106,7 +124,9 @@ def modal_restriccion():
     return render_template('modal-restriccion.html',
                            trabajador=trabajador,
                            shifts=shifts,
-                           tipos_maestros=tipos_maestros,
+                           tipos_ausencia_global=tipos_ausencia_global,
+                           tipos_ausencia_empresa=tipos_ausencia_empresa,
+                           tipos_restriccion_global=tipos_restriccion_global,
                            res_legal=res_legal)
 
 
@@ -179,18 +199,41 @@ def guardar():
             db.session.flush()
             msg = f'Trabajador "{nombre} {apellido1}" creado.'
 
-        # Procesar preferencias de turno por día de semana
-        TrabajadorPreferencia.query.filter_by(trabajador_id=trabajador.id).delete()
+        # Procesar preferencias de turno (migrado a TrabajadorRestriccionTurno patrón 2099)
+        # Limpiar patrones permanentes previos para este trabajador
+        TrabajadorRestriccionTurno.query.filter_by(
+            trabajador_id=trabajador.id, 
+            fecha_fin=date(2099, 12, 31)
+        ).delete()
+        
         for i in range(7):  # 0=Lunes … 6=Domingo
             prefs  = request.form.getlist(f'pref_{i}[]')
-            tipo_i = request.form.get(f'pref_tipo_{i}', 'preferencia')
-            for p in prefs:
-                db.session.add(TrabajadorPreferencia(
-                    trabajador_id=trabajador.id, 
-                    dia_semana=i, 
-                    turno=p,
-                    tipo=tipo_i
-                ))
+            tipo_i_str = request.form.get(f'pref_tipo_{i}', 'preferencia')
+            
+            # Mapeo de tipos antiguos a nuevos tipos de RestrictionType
+            tipo_map = {
+                'fijo': RestrictionType.TURNO_FIJO,
+                'solo_turno': RestrictionType.SOLO_TURNO,
+                'preferencia': RestrictionType.TURNO_PREFERENTE
+            }
+            tipo_final = tipo_map.get(tipo_i_str, RestrictionType.TURNO_PREFERENTE)
+            naturaleza = 'hard' if tipo_final != RestrictionType.TURNO_PREFERENTE else 'soft'
+            
+            for p_abrev in prefs:
+                # Buscar el turno real por su abreviación en la empresa actual
+                t_obj = Turno.query.filter_by(abreviacion=p_abrev, empresa_id=trabajador.empresa_id).first()
+                if t_obj:
+                    db.session.add(TrabajadorRestriccionTurno(
+                        trabajador_id=trabajador.id,
+                        empresa_id=trabajador.empresa_id,
+                        tipo=tipo_final,
+                        naturaleza=naturaleza,
+                        fecha_inicio=date.today(),
+                        fecha_fin=date(2099, 12, 31),
+                        dias_semana=[i],
+                        turno_id=t_obj.id,
+                        activo=True
+                    ))
 
         # Las ausencias ahora se gestionan en ausencia_bp.py
         

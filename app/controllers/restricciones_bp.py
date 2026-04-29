@@ -74,11 +74,17 @@ def preview_restriction():
     overwrites = 0
     respects = 0
     
-    nueva_cat = data.get('categoria') # O sacarlo del tipo_id si no viene
-    if not nueva_cat:
-        tipo_id = data.get('tipo_ausencia_id')
-        if tipo_id:
-            tipo_m = TipoAusencia.query.get(tipo_id)
+    nueva_cat = data.get('categoria')
+    tipo_id_raw = data.get('tipo_ausencia_id')
+    
+    if not nueva_cat and tipo_id_raw:
+        if isinstance(tipo_id_raw, str) and tipo_id_raw.startswith('plantilla_'):
+            from app.models.business import TipoAusenciaPlantilla
+            p_id = int(tipo_id_raw.split('_')[1])
+            p_obj = TipoAusenciaPlantilla.query.get(p_id)
+            if p_obj: nueva_cat = p_obj.categoria
+        else:
+            tipo_m = TipoAusencia.query.get(tipo_id_raw)
             if tipo_m: nueva_cat = tipo_m.categoria
 
     for s in existentes:
@@ -117,11 +123,35 @@ def save_restriction():
         return jsonify({'status': 'error', 'msg': 'Sin acceso a este trabajador'}), 403
     data = request.json
     worker_id = data.get('trabajador_id')
-    tipo_id = data.get('tipo_ausencia_id')
+    tipo_id_raw = data.get('tipo_ausencia_id')
+    
+    if isinstance(tipo_id_raw, str) and tipo_id_raw.startswith('plantilla_'):
+        # Es una restricción universal/universo (pueden ser Días o Turnos)
+        from app.models.business import TipoAusenciaPlantilla
+        plantilla_id = int(tipo_id_raw.split('_')[1])
+        p_obj = TipoAusenciaPlantilla.query.get_or_404(plantilla_id)
+        
+        # Buscar el equivalente en la empresa del trabajador
+        if p_obj.categoria == CategoriaAusencia.RESTRICCION:
+            # Mapeo por tipo_restriccion técnica
+            tipo_maestro = TipoAusencia.query.filter_by(
+                empresa_id=worker.empresa_id,
+                tipo_restriccion=p_obj.tipo_restriccion
+            ).first()
+        else:
+            # Mapeo por abreviación (para Vacaciones, Licencias, etc.)
+            tipo_maestro = TipoAusencia.query.filter_by(
+                empresa_id=worker.empresa_id,
+                abreviacion=p_obj.abreviacion
+            ).first()
+        
+        if not tipo_maestro:
+            return jsonify({'status': 'error', 'msg': f'La empresa no tiene configurado el tipo {p_obj.nombre}.'}), 400
+    else:
+        tipo_maestro = TipoAusencia.query.get_or_404(tipo_id_raw)
+    
     fecha_inicio = datetime.strptime(data.get('fecha_inicio'), '%Y-%m-%d').date()
     fecha_fin = datetime.strptime(data.get('fecha_fin'), '%Y-%m-%d').date()
-    
-    tipo_maestro = TipoAusencia.query.get_or_404(tipo_id)
     
     # VALIDACIÓN DOMINGOS: No permitir TURNO_FIJO en domingos (dia 6)
     dias_semana = data.get('dias_semana', [])

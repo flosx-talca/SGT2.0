@@ -16,17 +16,25 @@
                 <select name="tipo_ausencia_id" id="res_tipo_maestro" class="form-select form-select-sm shadow-sm" onchange="actualizarUIUnificada()">
                     <option value="">-- Seleccione Tipo --</option>
                     
-                    <optgroup label="📅 Restricciones de Días (Bloqueos)">
-                        {% for t in tipos_maestros if t.categoria.value == 'ausencia' %}
-                        <option value="{{ t.id }}" data-categoria="{{ t.categoria.value }}" data-tipo-tecnico="{{ t.tipo_restriccion.value if t.tipo_restriccion else '' }}">
-                             🏖️ {{ t.nombre }}
+                    <optgroup label="📅 Restricciones de Días (Universo + Empresa)">
+                        {# 1. Globales (Plantilla) #}
+                        {% for t in tipos_ausencia_global %}
+                        <option value="plantilla_{{ t.id }}" data-categoria="ausencia">
+                             🌍 {{ t.nombre }} (Global)
+                        </option>
+                        {% endfor %}
+                        
+                        {# 2. De la Empresa #}
+                        {% for t in tipos_ausencia_empresa %}
+                        <option value="{{ t.id }}" data-categoria="ausencia">
+                             🏢 {{ t.nombre }}
                         </option>
                         {% endfor %}
                     </optgroup>
-
-                    <optgroup label="⚙️ Restricciones de Turnos">
-                        {% for t in tipos_maestros if t.categoria.value == 'restriccion' %}
-                        <option value="{{ t.id }}" data-categoria="{{ t.categoria.value }}" data-tipo-tecnico="{{ t.tipo_restriccion.value if t.tipo_restriccion else '' }}">
+                    
+                    <optgroup label="⚙️ Restricciones de Turnos (Solo Universo)">
+                        {% for t in tipos_restriccion_global %}
+                        <option value="plantilla_{{ t.id }}" data-categoria="restriccion" data-tipo-tecnico="{{ t.tipo_restriccion if t.tipo_restriccion else '' }}">
                              🔒 {{ t.nombre }}
                         </option>
                         {% endfor %}

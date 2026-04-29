@@ -148,20 +148,10 @@ class Trabajador(db.Model):
     creado_en = db.Column(db.DateTime, default=datetime.utcnow)
     actualizado_en = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
-    preferencias = db.relationship('TrabajadorPreferencia', backref='trabajador',
-                                   lazy=True, cascade="all, delete-orphan")
     ausencias = db.relationship('TrabajadorAusencia', backref='trabajador',
                                 lazy=True, cascade="all, delete-orphan")
 
 
-class TrabajadorPreferencia(db.Model):
-    __tablename__ = 'trabajador_preferencia'
-    id = db.Column(db.Integer, primary_key=True)
-    trabajador_id = db.Column(db.Integer, db.ForeignKey('trabajador.id', ondelete='CASCADE'), nullable=False)
-    dia_semana = db.Column(db.Integer, nullable=False)
-    turno = db.Column(db.String(5), nullable=False)
-    # tipo: 'preferencia', 'fijo', 'solo_turno'
-    tipo = db.Column(db.String(20), nullable=False, default='preferencia')
 
 
 class TrabajadorAusencia(db.Model):

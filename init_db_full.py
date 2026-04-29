@@ -177,12 +177,20 @@ def init_db():
             {'codigo': 'SEMANA_CORTA_UMBRAL_DIAS', 'valor': 5.0, 'categoria': 'Semanas Cortas', 'descripcion': 'Días mínimos para considerar semana completa'},
             {'codigo': 'SEMANA_CORTA_PRORRATEO', 'valor': 1.0, 'categoria': 'Semanas Cortas', 'descripcion': '1 = prorratear horas proporcionales en semana corta'},
             
-            # Solver / Optimización
+            # Solver / Optimización (Pesos SGT 2.1)
+            {'codigo': 'W_DEFICIT', 'valor': 10000000.0, 'categoria': 'Optimizacion', 'descripcion': 'Penalización por turno no cubierto (Prioridad #1)'},
+            {'codigo': 'W_EXCESO', 'valor': 100000.0, 'categoria': 'Optimizacion', 'descripcion': 'Penalización por sobre-dotación'},
+            {'codigo': 'W_EQUIDAD', 'valor': 1000000.0, 'categoria': 'Optimizacion', 'descripcion': 'Penalización por desigualdad de carga entre trabajadores'},
+            {'codigo': 'W_META', 'valor': 50000.0, 'categoria': 'Optimizacion', 'descripcion': 'Penalización por desviación de la meta mensual'},
+            {'codigo': 'W_EXCESO_HORAS', 'valor': 20000000.0, 'categoria': 'Optimizacion', 'descripcion': 'Penalización por exceso de jornada semanal (Muy alta)'},
+            {'codigo': 'W_REWARD', 'valor': 10000.0, 'categoria': 'Optimizacion', 'descripcion': 'Incentivo por asignación estándar'},
+            {'codigo': 'W_NOCHE_REWARD', 'valor': 20000.0, 'categoria': 'Optimizacion', 'descripcion': 'Incentivo por cubrir turnos nocturnos'},
             {'codigo': 'W_CAMBIO_TURNO', 'valor': 150.0, 'categoria': 'Optimizacion', 'descripcion': 'Penalización por cambio de turno entre días'},
             {'codigo': 'W_TURNO_DOMINANTE', 'valor': 80.0, 'categoria': 'Optimizacion', 'descripcion': 'Bonus por mantener un turno dominante'},
             {'codigo': 'W_NO_PREFERENTE', 'valor': 500.0, 'categoria': 'Optimizacion', 'descripcion': 'Penalización por no asignar turno preferente'},
             {'codigo': 'DURACION_TURNO_PROMEDIO', 'valor': 8.0, 'categoria': 'Optimizacion', 'descripcion': 'Duración estimada de turno para cálculos de capacidad'},
             {'codigo': 'SOLVER_TIMEOUT_SEG', 'valor': 60.0, 'categoria': 'Optimizacion', 'descripcion': 'Tiempo máximo de ejecución del motor (segundos)'},
+            {'codigo': 'MAX_HRS_SEMANA_FULL', 'valor': 42.0, 'categoria': 'Jornada', 'descripcion': 'Horas semanales máximas (Fallback)'},
         ]
         for l in legales:
             p = ParametroLegal.query.filter_by(codigo=l['codigo']).first()
@@ -210,16 +218,15 @@ def init_db():
         print("Creando plantillas de ausencias y restricciones...")
         from app.models.enums import RestrictionType
         ausencias_p = [
-            # Ausencias Físicas
+            # Ausencias Físicas (Días)
             {'nombre': 'Vacaciones', 'abreviacion': 'VAC', 'color': '#2ecc71', 'categoria': CategoriaAusencia.AUSENCIA},
             {'nombre': 'Licencia Médica', 'abreviacion': 'LIC', 'color': '#e74c3c', 'categoria': CategoriaAusencia.AUSENCIA},
             {'nombre': 'Permiso Administrativo', 'abreviacion': 'PER', 'color': '#9b59b6', 'categoria': CategoriaAusencia.AUSENCIA},
             {'nombre': 'Día Libre Fijo', 'abreviacion': 'LIB', 'color': '#95a5a6', 'categoria': CategoriaAusencia.AUSENCIA},
             
-            # Restricciones Lógicas (SGT 2.1)
+            # Restricciones Lógicas / Solver (Turnos y Reglas)
             {'nombre': 'Turno Fijo', 'abreviacion': 'TFIJ', 'color': '#f1c40f', 'categoria': CategoriaAusencia.RESTRICCION, 'tipo_restriccion': RestrictionType.TURNO_FIJO},
             {'nombre': 'Turno Preferente', 'abreviacion': 'TPRE', 'color': '#e67e22', 'categoria': CategoriaAusencia.RESTRICCION, 'tipo_restriccion': RestrictionType.TURNO_PREFERENTE},
-            {'nombre': 'Post-Noche (Libre)', 'abreviacion': 'PNOC', 'color': '#1abc9c', 'categoria': CategoriaAusencia.RESTRICCION, 'tipo_restriccion': RestrictionType.POST_NOCHE},
             {'nombre': 'Solo este Turno', 'abreviacion': 'SOLO', 'color': '#3498db', 'categoria': CategoriaAusencia.RESTRICCION, 'tipo_restriccion': RestrictionType.SOLO_TURNO},
             {'nombre': 'Excluir Turno', 'abreviacion': 'EXCL', 'color': '#34495e', 'categoria': CategoriaAusencia.RESTRICCION, 'tipo_restriccion': RestrictionType.EXCLUIR_TURNO},
         ]

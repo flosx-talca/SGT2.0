@@ -326,11 +326,39 @@ CREATE TABLE parametro_legal (
 	valor FLOAT NOT NULL, 
 	categoria VARCHAR(50) NOT NULL, 
 	descripcion VARCHAR(255), 
-	es_activo BOOLEAN NOT NULL, 
-	es_obligatorio BOOLEAN NOT NULL, 
+	es_activo BOOLEAN DEFAULT TRUE NOT NULL, 
+	es_obligatorio BOOLEAN DEFAULT TRUE NOT NULL, 
 	actualizado_en TIMESTAMP WITHOUT TIME ZONE, 
 	PRIMARY KEY (id), 
 	UNIQUE (codigo)
+);
+
+-- Structure for table: turno_plantilla
+DROP TABLE IF EXISTS turno_plantilla CASCADE;
+CREATE TABLE turno_plantilla (
+    id SERIAL PRIMARY KEY,
+    nombre VARCHAR(50) NOT NULL,
+    abreviacion VARCHAR(5) UNIQUE NOT NULL,
+    hora_inicio TIME NOT NULL,
+    hora_fin TIME NOT NULL,
+    color VARCHAR(10),
+    dotacion_diaria INTEGER DEFAULT 1,
+    es_nocturno BOOLEAN DEFAULT FALSE,
+    activo BOOLEAN DEFAULT TRUE,
+    creado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Structure for table: tipo_ausencia_plantilla
+DROP TABLE IF EXISTS tipo_ausencia_plantilla CASCADE;
+CREATE TABLE tipo_ausencia_plantilla (
+    id SERIAL PRIMARY KEY,
+    nombre VARCHAR(50) NOT NULL,
+    abreviacion VARCHAR(5) UNIQUE NOT NULL,
+    color VARCHAR(10),
+    categoria VARCHAR(20) NOT NULL,
+    tipo_restriccion VARCHAR(30),
+    activo BOOLEAN DEFAULT TRUE,
+    creado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 -- ############################################################
@@ -439,19 +467,20 @@ INSERT INTO "trabajador_restriccion_turno" ("id", "trabajador_id", "empresa_id",
 INSERT INTO "trabajador_restriccion_turno" ("id", "trabajador_id", "empresa_id", "tipo", "naturaleza", "fecha_inicio", "fecha_fin", "dias_semana", "turno_id", "turno_alternativo_id", "motivo", "activo", "creado_en") VALUES (5, 2, 1, 'excluir_turno', 'hard', '2026-04-29', '2026-04-30', '[0, 1, 2, 3, 4, 5, 6]'::jsonb, 2, NULL, '', True, '2026-04-27 22:27:38.020629');
 
 -- Dumping data for: parametro_legal
-INSERT INTO "parametro_legal" ("id", "codigo", "valor", "descripcion", "es_activo", "es_obligatorio", "actualizado_en", "categoria") VALUES (1, 'MAX_HRS_SEMANA_FULL', 42.0, 'Horas semanales máximas full-time (Ley 21.561)', True, True, '2026-04-27 20:50:25.380014', 'General');
-INSERT INTO "parametro_legal" ("id", "codigo", "valor", "descripcion", "es_activo", "es_obligatorio", "actualizado_en", "categoria") VALUES (2, 'MAX_HRS_DIA_FULL', 10.0, 'Jornada diaria máxima full-time (Art. 28 CT)', True, True, '2026-04-27 20:50:25.384467', 'General');
-INSERT INTO "parametro_legal" ("id", "codigo", "valor", "descripcion", "es_activo", "es_obligatorio", "actualizado_en", "categoria") VALUES (3, 'MIN_DIAS_SEMANA_FULL', 5.0, 'Días mínimos distribución semanal full-time (Art. 28 CT)', True, True, '2026-04-27 20:50:25.385313', 'General');
-INSERT INTO "parametro_legal" ("id", "codigo", "valor", "descripcion", "es_activo", "es_obligatorio", "actualizado_en", "categoria") VALUES (4, 'MAX_DIAS_SEMANA_FULL', 6.0, 'Días máximos distribución semanal full-time (Art. 28 CT)', True, True, '2026-04-27 20:50:25.386005', 'General');
-INSERT INTO "parametro_legal" ("id", "codigo", "valor", "descripcion", "es_activo", "es_obligatorio", "actualizado_en", "categoria") VALUES (5, 'MAX_HRS_SEMANA_PART_TIME_30', 30.0, 'Jornada parcial máxima 30h (Art. 40 bis CT)', True, True, '2026-04-27 20:50:25.386621', 'General');
-INSERT INTO "parametro_legal" ("id", "codigo", "valor", "descripcion", "es_activo", "es_obligatorio", "actualizado_en", "categoria") VALUES (6, 'MAX_HRS_SEMANA_PART_TIME_20', 20.0, 'Jornada reducida máxima 20h', True, True, '2026-04-27 20:50:25.387227', 'General');
-INSERT INTO "parametro_legal" ("id", "codigo", "valor", "descripcion", "es_activo", "es_obligatorio", "actualizado_en", "categoria") VALUES (7, 'MAX_HRS_DIA_PART_TIME', 10.0, 'Jornada diaria máxima part-time (Art. 40 bis CT)', True, True, '2026-04-27 20:50:25.387806', 'General');
-INSERT INTO "parametro_legal" ("id", "codigo", "valor", "descripcion", "es_activo", "es_obligatorio", "actualizado_en", "categoria") VALUES (8, 'MAX_DIAS_SEMANA_PART', 5.0, 'Días máximos distribución semanal part-time', True, True, '2026-04-27 20:50:25.388361', 'General');
-INSERT INTO "parametro_legal" ("id", "codigo", "valor", "descripcion", "es_activo", "es_obligatorio", "actualizado_en", "categoria") VALUES (9, 'UMBRAL_DIAS_DOMINGO_OBLIGATORIO', 5.0, 'Días/sem mínimos para que aplique compensación dominical', True, True, '2026-04-27 20:50:25.388908', 'General');
-INSERT INTO "parametro_legal" ("id", "codigo", "valor", "descripcion", "es_activo", "es_obligatorio", "actualizado_en", "categoria") VALUES (10, 'MIN_DOMINGOS_LIBRES_MES', 2.0, 'Domingos libres mínimos/mes cuando aplica', True, True, '2026-04-27 20:50:25.389481', 'General');
-INSERT INTO "parametro_legal" ("id", "codigo", "valor", "descripcion", "es_activo", "es_obligatorio", "actualizado_en", "categoria") VALUES (11, 'MAX_DIAS_CONSECUTIVOS', 6.0, 'Días consecutivos máximos de trabajo (Art. 38 CT)', True, True, '2026-04-27 20:50:25.390017', 'General');
-INSERT INTO "parametro_legal" ("id", "codigo", "valor", "descripcion", "es_activo", "es_obligatorio", "actualizado_en", "categoria") VALUES (12, 'MIN_DESCANSO_ENTRE_TURNOS_HRS', 12.0, 'Horas mínimas de descanso entre dos turnos', True, True, '2026-04-27 20:50:25.390592', 'General');
-INSERT INTO "parametro_legal" ("id", "codigo", "valor", "descripcion", "es_activo", "es_obligatorio", "actualizado_en", "categoria") VALUES (13, 'SEMANA_CORTA_UMBRAL_DIAS', 5.0, 'Días mínimos para considerar semana completa', True, True, '2026-04-27 20:50:25.391189', 'General');
-INSERT INTO "parametro_legal" ("id", "codigo", "valor", "descripcion", "es_activo", "es_obligatorio", "actualizado_en", "categoria") VALUES (14, 'SEMANA_CORTA_PRORRATEO', 1.0, '1 = prorratear horas proporcionales en semana corta', True, True, '2026-04-27 20:50:25.391679', 'General');
+INSERT INTO "parametro_legal" ("codigo", "valor", "categoria", "descripcion") VALUES ('MAX_HRS_SEMANA_FULL', 42.0, 'Jornada', 'Horas semanales máximas (Ley 21.561)');
+INSERT INTO "parametro_legal" ("codigo", "valor", "categoria", "descripcion") VALUES ('W_DEFICIT', 10000000.0, 'Optimizacion', 'Penalización por turno no cubierto');
+INSERT INTO "parametro_legal" ("codigo", "valor", "categoria", "descripcion") VALUES ('W_EXCESO_HORAS', 20000000.0, 'Optimizacion', 'Penalización por exceso de jornada semanal');
+INSERT INTO "parametro_legal" ("codigo", "valor", "categoria", "descripcion") VALUES ('W_META', 50000.0, 'Optimizacion', 'Penalización por desviación de la meta mensual');
+
+-- Dumping data for: turno_plantilla
+INSERT INTO "turno_plantilla" ("nombre", "abreviacion", "hora_inicio", "hora_fin", "color") VALUES ('Mañana', 'M', '07:00:00', '15:00:00', '#18bc9c');
+INSERT INTO "turno_plantilla" ("nombre", "abreviacion", "hora_inicio", "hora_fin", "color") VALUES ('Tarde', 'T', '15:00:00', '23:00:00', '#3498db');
+INSERT INTO "turno_plantilla" ("nombre", "abreviacion", "hora_inicio", "hora_fin", "color", "es_nocturno") VALUES ('Noche', 'N', '23:00:00', '07:00:00', '#34495e', True);
+
+-- Dumping data for: tipo_ausencia_plantilla
+INSERT INTO "tipo_ausencia_plantilla" ("nombre", "abreviacion", "color", "categoria") VALUES ('Vacaciones', 'VAC', '#2ecc71', 'ausencia');
+INSERT INTO "tipo_ausencia_plantilla" ("nombre", "abreviacion", "color", "categoria") VALUES ('Licencia Médica', 'LIC', '#e74c3c', 'ausencia');
+INSERT INTO "tipo_ausencia_plantilla" ("nombre", "abreviacion", "color", "categoria", "tipo_restriccion") VALUES ('Turno Fijo', 'TFIJ', '#f1c40f', 'restriccion', 'turno_fijo');
+INSERT INTO "tipo_ausencia_plantilla" ("nombre", "abreviacion", "color", "categoria", "tipo_restriccion") VALUES ('Solo este Turno', 'SOLO', '#3498db', 'restriccion', 'solo_turno');
 
 SET session_replication_role = 'origin'; -- Reactivar triggers/FKs

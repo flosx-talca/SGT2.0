@@ -1,6 +1,6 @@
 from datetime import date, timedelta
 import calendar as cal_module
-from app.models.business import Trabajador, TrabajadorAusencia, Turno, TrabajadorPreferencia
+from app.models.business import Trabajador, TrabajadorAusencia, Turno
 
 def calcular_capacidad_detallada(empresa_id, mes, anio, ausencias_temporales=None, exclude_ausencia_id=None):
     """
@@ -67,21 +67,28 @@ def calcular_capacidad_detallada(empresa_id, mes, anio, ausencias_temporales=Non
                         break
                 if en_temporal: continue
                 
-                # C. ¿Puede hacer este turno basado en sus preferencias permanentes?
-                # Si tiene tipo='solo_turno', solo puede hacer esos turnos
-                turnos_solo = [p.turno for p in w.preferencias if p.tipo == 'solo_turno']
+                # C. ¿Puede hacer este turno basado en sus restricciones/preferencias?
+                # Obtener restricciones activas para este día
+                restricciones_activas = [
+                    r for r in w.restricciones_turno 
+                    if r.activo and r.fecha_inicio <= d <= r.fecha_fin and (r.dias_semana is None or py_weekday in r.dias_semana)
+                ]
+
+                # C1. ¿Tiene un 'solo_turno'? (Si tiene, solo puede hacer esos turnos)
+                turnos_solo = [r.turno.abreviacion for r in restricciones_activas if r.tipo == 'solo_turno' and r.turno]
                 if turnos_solo and t.abreviacion not in turnos_solo:
                     continue
-                
-                # Si tiene tipo='preferencia' para este día de la semana
-                prefs_dia = [p.turno for p in w.preferencias if p.dia_semana == py_weekday and p.tipo == 'preferencia']
-                if prefs_dia and t.abreviacion not in prefs_dia:
+
+                # C2. ¿Tiene un 'turno_fijo' para hoy?
+                fijos_hoy = [r.turno.abreviacion for r in restricciones_activas if r.tipo == 'turno_fijo' and r.turno]
+                if fijos_hoy and t.abreviacion not in fijos_hoy:
+                    # Si tiene un fijo en OTRO turno para hoy, no está disponible para este
                     continue
 
-                # Si tiene tipo='fijo' para este día de la semana
-                fijos_dia = [p.turno for p in w.preferencias if p.dia_semana == py_weekday and p.tipo == 'fijo']
-                if fijos_dia and t.abreviacion not in fijos_dia:
-                    # Si tiene un fijo en OTRO turno para este día, no está disponible para este turno
+                # C3. ¿Tiene un 'turno_preferente' para hoy? (Opcional en capacidad, pero se mantiene lógica anterior)
+                prefs_hoy = [r.turno.abreviacion for r in restricciones_activas if r.tipo == 'turno_preferente' and r.turno]
+                if prefs_hoy and t.abreviacion not in prefs_hoy:
+                    # Si tiene preferencia en otro turno, asumimos que no está disponible para este en el cálculo de capacidad
                     continue
                 
                 # TODO: Estimación de domingos libres (HR7)
