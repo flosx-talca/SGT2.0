@@ -180,26 +180,26 @@ def init_db():
         print("Creando plantillas de ausencias y restricciones...")
         from app.models.enums import RestrictionType
         ausencias_p = [
-            {'nombre': 'Vacaciones', 'abreviacion': 'VAC', 'color': '#2ecc71', 'categoria': CategoriaAusencia.AUSENCIA, 'es_base': True},
-            {'nombre': 'Licencia Médica', 'abreviacion': 'LIC', 'color': '#e74c3c', 'categoria': CategoriaAusencia.AUSENCIA, 'es_base': True},
-            {'nombre': 'Permiso Administrativo', 'abreviacion': 'PER', 'color': '#9b59b6', 'categoria': CategoriaAusencia.AUSENCIA, 'es_base': True},
-            {'nombre': 'Día Libre Fijo', 'abreviacion': 'LIB', 'color': '#95a5a6', 'categoria': CategoriaAusencia.AUSENCIA, 'es_base': True},
-            {'nombre': 'Turno Fijo', 'abreviacion': 'TFIJ', 'color': '#f1c40f', 'categoria': CategoriaAusencia.RESTRICCION, 'tipo_restriccion': RestrictionType.TURNO_FIJO, 'es_base': True},
-            {'nombre': 'Turno Preferente', 'abreviacion': 'TPRE', 'color': '#e67e22', 'categoria': CategoriaAusencia.RESTRICCION, 'tipo_restriccion': RestrictionType.TURNO_PREFERENTE, 'es_base': True},
-            {'nombre': 'Solo este Turno', 'abreviacion': 'SOLO', 'color': '#3498db', 'categoria': CategoriaAusencia.RESTRICCION, 'tipo_restriccion': RestrictionType.SOLO_TURNO, 'es_base': True},
-            {'nombre': 'Excluir Turno', 'abreviacion': 'EXCL', 'color': '#34495e', 'categoria': CategoriaAusencia.RESTRICCION, 'tipo_restriccion': RestrictionType.EXCLUIR_TURNO, 'es_base': True},
+            {'nombre': 'Vacaciones', 'abreviacion': 'VAC', 'color': '#2ecc71', 'categoria': CategoriaAusencia.AUSENCIA},
+            {'nombre': 'Licencia Médica', 'abreviacion': 'LIC', 'color': '#e74c3c', 'categoria': CategoriaAusencia.AUSENCIA},
+            {'nombre': 'Permiso Administrativo', 'abreviacion': 'PER', 'color': '#9b59b6', 'categoria': CategoriaAusencia.AUSENCIA},
+            {'nombre': 'Día Libre Fijo', 'abreviacion': 'LIB', 'color': '#95a5a6', 'categoria': CategoriaAusencia.AUSENCIA},
+            {'nombre': 'Turno Fijo', 'abreviacion': 'TFIJ', 'color': '#f1c40f', 'categoria': CategoriaAusencia.RESTRICCION, 'tipo_restriccion': RestrictionType.TURNO_FIJO},
+            {'nombre': 'Turno Preferente', 'abreviacion': 'TPRE', 'color': '#e67e22', 'categoria': CategoriaAusencia.RESTRICCION, 'tipo_restriccion': RestrictionType.TURNO_PREFERENTE},
+            {'nombre': 'Solo este Turno', 'abreviacion': 'SOLO', 'color': '#3498db', 'categoria': CategoriaAusencia.RESTRICCION, 'tipo_restriccion': RestrictionType.SOLO_TURNO},
+            {'nombre': 'Excluir Turno', 'abreviacion': 'EXCL', 'color': '#34495e', 'categoria': CategoriaAusencia.RESTRICCION, 'tipo_restriccion': RestrictionType.EXCLUIR_TURNO},
         ]
         for ap in ausencias_p:
             obj = TipoAusenciaPlantilla.query.filter_by(abreviacion=ap['abreviacion']).first()
             if not obj:
                 db.session.add(TipoAusenciaPlantilla(**ap))
             else:
-                obj.es_base = True
+                # No asignar es_base aquí ya que no existe en el modelo de plantilla
                 obj.categoria = ap['categoria']
                 obj.tipo_restriccion = ap.get('tipo_restriccion')
 
-        # 8. Geografía Base (16 Regiones de Chile)
-        print("Cargando las 16 regiones de Chile...")
+        # 9. Geografía Base (16 Regiones y 346 Comunas)
+        print("Cargando geografía de Chile...")
         regiones_data = [
             {'id': 15, 'descripcion': 'Arica y Parinacota', 'codigo': 'AP'},
             {'id': 1,  'descripcion': 'Tarapacá', 'codigo': 'TA'},
@@ -218,30 +218,70 @@ def init_db():
             {'id': 11, 'descripcion': 'Aysén del General Carlos Ibáñez del Campo', 'codigo': 'AI'},
             {'id': 12, 'descripcion': 'Magallanes y de la Antártica Chilena', 'codigo': 'MA'}
         ]
-        
         for rd in regiones_data:
             if not Region.query.get(rd['id']):
                 db.session.add(Region(**rd))
-        
         db.session.flush()
-        
-        # 9. Cargar Comunas desde JSON (346 comunas)
-        print("Cargando las 346 comunas de Chile...")
+
         try:
             path_json = os.path.join(os.path.dirname(__file__), 'app', 'resources', 'comunas_chile.json')
-            with open(path_json, 'r', encoding='utf-8') as f:
-                comunas_data = json.load(f)
-                for cd in comunas_data:
-                    if not Comuna.query.filter_by(codigo=cd['codigo']).first():
-                        # Usar cd sin el 'id' para que la BD asigne su propio autoincremental si es necesario, 
-                        # o mantenerlo si quieres IDs fijos. Aquí mantendremos la lógica de código único.
-                        db.session.add(Comuna(
-                            codigo=cd['codigo'],
-                            descripcion=cd['descripcion'],
-                            region_id=cd['region_id']
-                        ))
+            if os.path.exists(path_json):
+                print("Cargando las 346 comunas de Chile...")
+                with open(path_json, 'r', encoding='utf-8') as f:
+                    comunas_data = json.load(f)
+                    for cd in comunas_data:
+                        if not Comuna.query.filter_by(codigo=cd['codigo']).first():
+                            db.session.add(Comuna(
+                                codigo=cd['codigo'],
+                                descripcion=cd['descripcion'],
+                                region_id=cd['region_id']
+                            ))
+            else:
+                # Fallback básico si el JSON no existe
+                if not Comuna.query.filter_by(codigo='13101').first():
+                    db.session.add(Comuna(codigo='13101', descripcion='Santiago', region_id=13))
         except Exception as e:
             print(f"Advertencia: No se pudieron cargar las comunas: {e}")
+
+        # 10. Datos de Negocio Base (Cliente, Empresa, Servicios)
+        print("Creando datos de negocio (Cliente, Empresa, Servicios)...")
+        from app.models.business import Cliente, Empresa, Servicio
+        
+        # Cliente Demo
+        cliente_demo = Cliente.query.filter_by(rut='11111111-1').first()
+        if not cliente_demo:
+            cliente_demo = Cliente(
+                rut='11111111-1', nombre='SGT', apellidos='Administrador',
+                email='soporte@sgt.cl'
+            )
+            db.session.add(cliente_demo)
+            db.session.flush()
+
+        # Servicios Maestro
+        servicios_data = ['Pista Combustible', 'Tienda Pronto', 'Administración']
+        serv_objs = []
+        for s_desc in servicios_data:
+            s_obj = Servicio.query.filter_by(descripcion=s_desc).first()
+            if not s_obj:
+                s_obj = Servicio(descripcion=s_desc)
+                db.session.add(s_obj)
+            serv_objs.append(s_obj)
+        db.session.flush()
+
+        # Empresa/Sucursal Demo
+        comuna_stgo = Comuna.query.filter_by(codigo='13101').first()
+        if comuna_stgo:
+            empresa_demo = Empresa.query.filter_by(rut='76111111-1').first()
+            if not empresa_demo:
+                empresa_demo = Empresa(
+                    rut='76111111-1', razon_social='Sucursal Demo SGT',
+                    cliente_id=cliente_demo.id, comuna_id=comuna_stgo.id,
+                    direccion='Av. Libertador Bernardo O\'Higgins 123'
+                )
+                db.session.add(empresa_demo)
+                db.session.flush()
+                # Asociar servicios a la empresa
+                empresa_demo.servicios = serv_objs
 
         db.session.commit()
         print("\n--- ¡Inicialización Maestra Exitosa! ---")
