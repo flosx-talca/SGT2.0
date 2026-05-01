@@ -354,10 +354,16 @@ function getFormData() {
     const dias = [...new Set(selected.map(s => s.dia))];
     const shiftId = selected.length > 0 ? selected[0].shiftId : null;
 
+    // Bug fix: plantilla_X IDs no se deben parsear como enteros
+    const tipoRaw = $('#res_tipo_maestro').val();
+    const tipoFinal = (typeof tipoRaw === 'string' && tipoRaw.startsWith('plantilla_'))
+                      ? tipoRaw
+                      : parseInt(tipoRaw);
+
     return {
         trabajador_id: parseInt($('#res_trabajador_id').val()),
         empresa_id: parseInt($('input[name="empresa_id"]').val()),
-        tipo_ausencia_id: parseInt($('#res_tipo_maestro').val()),
+        tipo_ausencia_id: tipoFinal,
         fecha_inicio: $('#res_fecha_inicio').val(),
         fecha_fin: $('#res_fecha_fin').val(),
         dias_semana: dias,

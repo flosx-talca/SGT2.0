@@ -124,11 +124,10 @@ def generar():
         fecha_str = f"{anio}-{str(mes).zfill(2)}-{str(i).zfill(2)}"
         dias_del_mes.append(fecha_str)
         dias_set.add(fecha_str)
-        dia_idx = calendar.weekday(anio, mes, i)
-        js_day  = 0 if dia_idx == 6 else dia_idx + 1
+        dia_idx = calendar.weekday(anio, mes, i)  # 0=Lun, 6=Dom (Python)
         dias_dict.append({
             'fecha':      fecha_str,
-            'dia_semana': js_day,
+            'dia_semana': dia_idx,   # JS render usa 6=Dom (igual que Python weekday)
             'label':      f"{str(i).zfill(2)} {dias_nombres[dia_idx]}"
         })
 

@@ -392,13 +392,16 @@
             ];
 
             const mockDias = [];
-            const DIAS_SEMANA = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
+            // Python weekday: 0=Lun, 1=Mar, ..., 6=Dom (igual que el render usa === 6 para domingo)
+            const DIAS_SEMANA = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
             for (let i = 1; i <= 31; i++) {
                 const d = new Date(2025, 4, i);
+                // Convertir getDay() (0=Dom,6=Sáb) → Python weekday (0=Lun,6=Dom)
+                const pyWeekday = (d.getDay() + 6) % 7;
                 mockDias.push({
                     fecha: `2025-05-${String(i).padStart(2, '0')}`,
-                    dia_semana: d.getDay(),
-                    label: `${String(i).padStart(2, '0')} ${DIAS_SEMANA[d.getDay()]}`
+                    dia_semana: pyWeekday,
+                    label: `${String(i).padStart(2, '0')} ${DIAS_SEMANA[pyWeekday]}`
                 });
             }
 

@@ -80,18 +80,21 @@ def preparar_restricciones(trabajadores_db, dias_del_mes, ausencias, restriccion
                 if r.dias_semana is None or curr.weekday() in r.dias_semana:
                     d_str = curr.isoformat()
                     if d_str in dias_del_mes and (t.id, d_str) not in bloqueados:
+                        # Bug fix: normalizar r.tipo a string para comparación robusta
+                        r_tipo_str = str(r.tipo.value if hasattr(r.tipo, 'value') else r.tipo)
+
                         # SGT 2.1: PROTECCIÓN DOMINGOS - Nunca permitir TURNO_FIJO en domingo
-                        if r.tipo == RestrictionType.TURNO_FIJO and curr.weekday() == 6:
+                        if r_tipo_str == RestrictionType.TURNO_FIJO.value and curr.weekday() == 6:
                             curr += timedelta(days=1)
                             continue
 
-                        if r.tipo == RestrictionType.TURNO_FIJO and r.turno:
+                        if r_tipo_str == RestrictionType.TURNO_FIJO.value and r.turno:
                             fijos[(t.id, d_str)] = r.turno.abreviacion
-                        elif r.tipo == RestrictionType.SOLO_TURNO and r.turno:
+                        elif r_tipo_str == RestrictionType.SOLO_TURNO.value and r.turno:
                             turnos_bloqueados_por_dia[(t.id, d_str)] = {r.turno.abreviacion}
-                        elif r.tipo == RestrictionType.EXCLUIR_TURNO and r.turno:
+                        elif r_tipo_str == RestrictionType.EXCLUIR_TURNO.value and r.turno:
                             restricciones_hard.append({'w': t.id, 'd': d_str, 't': r.turno.abreviacion, 'action': 'exclude'})
-                        elif r.tipo == RestrictionType.TURNO_PREFERENTE and r.turno:
+                        elif r_tipo_str == RestrictionType.TURNO_PREFERENTE.value and r.turno:
                             restricciones_soft.append({'w': t.id, 'd': d_str, 't': r.turno.abreviacion, 'type': 'preferente'})
                 curr += timedelta(days=1)
 
@@ -204,12 +207,9 @@ def build_model(trabajadores, dias_del_mes, turnos, coberturas,
                 if t_idx != t_fijo:
                     model.Add(x[w, d, t_idx] == 0)
             
-            # Soft: Preferencia por trabajar (para cumplir el deseo del usuario de que sea "fijo")
-            # Pero permitimos que el solver le de libre si es necesario por Ley (ej: 6x1)
-            worked = sum(x[w, d, t_idx] for t_idx in turnos)
-            not_worked = model.NewBoolVar(f'not_work_fixed_{w}_{d}')
-            model.Add(worked == 0).OnlyEnforceIf(not_worked)
-            fijos_penalties.append(not_worked * 1000)
+            # HARD: Forzar que el trabajador TRABAJE en t_fijo ese día
+            # (No es soft/penalty — es una obligación que no puede ignorarse)
+            model.Add(x[w, d, t_fijo] == 1)
 
     # HR2b: Preferencia por día
     if turnos_bloqueados_por_dia:
@@ -324,7 +324,7 @@ def build_model(trabajadores, dias_del_mes, turnos, coberturas,
                 
                 exce = model.NewIntVar(0, len(trabajadores), f'exc_{d}_{t}')
                 model.Add(asig - exce <= req)
-                excesses.append(exce)
+                excesses.append(exce * W_EXCESO)  # Penalización baja por sobredotación
 
     # HR10: Meta mensual y Equidad
     desviaciones_meta = []
@@ -423,10 +423,11 @@ def build_model(trabajadores, dias_del_mes, turnos, coberturas,
                     reward_list.append(x[w, d, t] * w_r)
 
     model.Minimize(
-        (sum(deficits) * W_DEFICIT) + (sum(excesses) * W_EXCESO) +
+        # deficits ya tiene W_DEFICIT multiplicado; excesses ya tiene W_EXCESO multiplicado
+        sum(deficits) + sum(excesses) +
         (sum(rango_cargas) * W_EQUIDAD) + (sum(balance_por_turno) * W_BALANCE) +
         (sum(desviaciones_meta) * W_META) + (sum(est_penalties)) +
-        (sum(pref_penalties)) + (sum(penalizaciones_frag)) + (sum(fijos_penalties)) -
+        (sum(pref_penalties)) + (sum(penalizaciones_frag)) -
         (sum(est_bonus)) - (sum(reward_list))
     )
 

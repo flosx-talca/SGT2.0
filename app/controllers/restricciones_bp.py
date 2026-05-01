@@ -323,7 +323,7 @@ def save_restriction():
                 nueva_rt = TrabajadorRestriccionTurno(
                     trabajador_id=worker_id,
                     empresa_id=data.get('empresa_id'),
-                    tipo=rt_tipo,
+                    tipo=rt_tipo.value if hasattr(rt_tipo, 'value') else rt_tipo,
                     naturaleza=rt_naturaleza,
                     fecha_inicio=start,
                     fecha_fin=end,
