@@ -12,7 +12,7 @@ restricciones_bp = Blueprint('restricciones', __name__)
 @login_required
 def get_worker_restrictions(worker_id):
     # Validar acceso al trabajador
-    worker = Trabajador.query.get_or_404(worker_id)
+    worker = db.get_or_404(Trabajador, worker_id)
     if not usuario_tiene_acceso(current_user, worker.empresa_id):
         return jsonify({'status': 'error', 'msg': 'Sin acceso a este trabajador'}), 403
     # Obtener ausencias (bloqueos de día) y restricciones técnicas ordenadas cronológicamente
@@ -55,7 +55,7 @@ def preview_restriction():
     worker_id = data.get('trabajador_id')
     
     # Validar acceso al trabajador
-    worker = Trabajador.query.get_or_404(worker_id)
+    worker = db.get_or_404(Trabajador, worker_id)
     if not usuario_tiene_acceso(current_user, worker.empresa_id):
         return jsonify({'status': 'error', 'msg': 'Sin acceso a este trabajador'}), 403
     data = request.json
@@ -81,10 +81,10 @@ def preview_restriction():
         if isinstance(tipo_id_raw, str) and tipo_id_raw.startswith('plantilla_'):
             from app.models.business import TipoAusenciaPlantilla
             p_id = int(tipo_id_raw.split('_')[1])
-            p_obj = TipoAusenciaPlantilla.query.get(p_id)
+            p_obj = db.session.get(TipoAusenciaPlantilla, p_id)
             if p_obj: nueva_cat = p_obj.categoria
         else:
-            tipo_m = TipoAusencia.query.get(tipo_id_raw)
+            tipo_m = db.session.get(TipoAusencia, tipo_id_raw)
             if tipo_m: nueva_cat = tipo_m.categoria
 
     for s in existentes:
@@ -118,7 +118,7 @@ def save_restriction():
     worker_id = data.get('trabajador_id')
 
     # Validar acceso al trabajador
-    worker = Trabajador.query.get_or_404(worker_id)
+    worker = db.get_or_404(Trabajador, worker_id)
     if not usuario_tiene_acceso(current_user, worker.empresa_id):
         return jsonify({'status': 'error', 'msg': 'Sin acceso a este trabajador'}), 403
     data = request.json
@@ -129,7 +129,7 @@ def save_restriction():
         # Es una restricción universal/universo (pueden ser Días o Turnos)
         from app.models.business import TipoAusenciaPlantilla
         plantilla_id = int(tipo_id_raw.split('_')[1])
-        p_obj = TipoAusenciaPlantilla.query.get_or_404(plantilla_id)
+        p_obj = db.get_or_404(TipoAusenciaPlantilla, plantilla_id)
         
         # Buscar el equivalente en la empresa del trabajador
         if p_obj.categoria == CategoriaAusencia.RESTRICCION:
@@ -148,7 +148,7 @@ def save_restriction():
         if not tipo_maestro:
             return jsonify({'status': 'error', 'msg': f'La empresa no tiene configurado el tipo {p_obj.nombre}.'}), 400
     else:
-        tipo_maestro = TipoAusencia.query.get_or_404(tipo_id_raw)
+        tipo_maestro = db.get_or_404(TipoAusencia, tipo_id_raw)
     
     fecha_inicio = datetime.strptime(data.get('fecha_inicio'), '%Y-%m-%d').date()
     fecha_fin = datetime.strptime(data.get('fecha_fin'), '%Y-%m-%d').date()
@@ -168,7 +168,7 @@ def save_restriction():
 
     try:
         from app.services.legal_engine import LegalEngine
-        trabajador_obj = Trabajador.query.get(worker_id)
+        trabajador_obj = db.session.get(Trabajador, worker_id)
         
         # VALIDACIÓN CARGA SEMANAL DINÁMICA: Sumar horas reales de los turnos seleccionados
         if is_fixed and trabajador_obj:
@@ -176,7 +176,7 @@ def save_restriction():
             if data.get('matrix'):
                 # matrix es un dict { dia: shift_id }
                 for d_idx, s_id in data['matrix'].items():
-                    t_db = Turno.query.get(s_id)
+                    t_db = db.session.get(Turno, s_id)
                     if t_db: horas_seleccionadas += t_db.duracion_hrs
             
             max_h = LegalEngine.max_horas_semana(trabajador_obj)
@@ -360,7 +360,7 @@ def save_restriction():
 @login_required
 def delete_restriction(id):
     # Aquí el ID es el de TrabajadorAusencia (el registro unificado)
-    a = TrabajadorAusencia.query.get_or_404(id)
+    a = db.get_or_404(TrabajadorAusencia, id)
     
     # Validar acceso al trabajador dueño de la ausencia
     if not usuario_tiene_acceso(current_user, a.trabajador.empresa_id):

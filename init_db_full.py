@@ -219,7 +219,7 @@ def init_db():
             {'id': 12, 'descripcion': 'Magallanes y de la Antártica Chilena', 'codigo': 'MA'}
         ]
         for rd in regiones_data:
-            if not Region.query.get(rd['id']):
+            if not db.session.get(Region, rd['id']):
                 db.session.add(Region(**rd))
         db.session.flush()
 
