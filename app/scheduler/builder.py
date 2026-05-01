@@ -266,16 +266,34 @@ def build_model(trabajadores, dias_del_mes, turnos, coberturas,
             model.Add(sum(x[w, d, t] for d in s_strs for t in turnos) <= res['max_dias_semana'])
 
         if domingos:
-            # SGT 2.1: Regla robusta de domingos (HARD)
-            # Forzamos la regla para cualquier trabajador con jornada completa (>= 30h)
-            aplica = res_w.get('aplica_domingo', False) or (w_obj.horas_semanales >= 30)
+            # [HR7] Domingos libres obligatorios (Art. 38 inc. 4° CT)
+            # Aplica si: empresa en régimen exceptuado AND jornada > 20h/semana (UMBRAL_HRS_DOMINGO_OBLIGATORIO)
+            aplica = res_w.get('aplica_domingo', False)
             if aplica:
                 min_libres = res_w.get('min_domingos_mes', 2) or 2
-                max_asig_dom = max(0, len(domingos) - min_libres)
                 
-                # REGLA HARD: No se puede trabajar más de (Total - MinLibres) domingos
-                asig_dom = sum(x[w, d, t] for d in domingos for t in turnos)
+                # SGT 2.1 (INC-04a): Descontar domingos bloqueados por ausencia.
+                # Los domingos con ausencia NO cuentan como "otorgados" según jurisprudencia DT.
+                domingos_disponibles = [
+                    d for d in domingos
+                    if (w, d) not in bloqueados
+                ]
+                max_asig_dom = max(0, len(domingos_disponibles) - min_libres)
+                
+                # HARD: No puede trabajar más de (domingos_disponibles - min_libres) domingos
+                asig_dom = sum(x[w, d, t] for d in domingos_disponibles for t in turnos)
                 model.Add(asig_dom <= max_asig_dom)
+
+        # [HR11] Máximo 3 domingos consecutivos trabajados (Art. 38 inc. 5° CT)
+        # Solo aplica a trabajadores con HR7 activo (régimen exceptuado + jornada > 20h)
+        if res_w.get('aplica_domingo', False):
+            domingos_todos = sorted(domingos)
+            max_dom_consec = ConfigManager.get_int('MAX_DOMINGOS_CONSECUTIVOS', 3)
+            for i in range(len(domingos_todos) - max_dom_consec):
+                ventana = domingos_todos[i : i + max_dom_consec + 1]
+                model.Add(
+                    sum(x[w, d, t] for d in ventana for t in turnos) <= max_dom_consec
+                )
 
         for i in range(N - max_consec):
             vent = dias_del_mes[i : i + max_consec + 1]

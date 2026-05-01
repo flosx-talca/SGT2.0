@@ -216,12 +216,29 @@ y muéstrame el diff de los comentarios afectados.
 
 Implementar en este orden estricto y esperar confirmación entre pasos:
 
-1. ✅ Paso 1 → corrección criterio (legal_engine.py)
-2. ✅ Paso 2 → corrección parámetro (config_manager + seed BD)
-3. ✅ Paso 3 → corrección conteo domingos (builder.py)
-4. ✅ Paso 4 → nueva restricción HR11 (builder.py)
-5. ✅ Paso 5 → pre-validación dominical (scheduling_service.py)
-6. ✅ Paso 6 → comentarios (builder.py)
+1. ✅ Paso 1 → corrección criterio (legal_engine.py) — **COMPLETADO 30-04-2026**
+   - Criterio actualizado: `horas_semanales > 20 AND empresa.regimen_exceptuado`
+   - Campo `regimen_exceptuado` agregado al modelo `Empresa` (default=True)
+   - Migración Alembic: `a1b2c3d4e5f7_add_regimen_exceptuado_to_empresa.py`
+   - Switch visible en el mantenedor de Empresas (modal-empresa.html)
+2. ✅ Paso 2 → corrección parámetro (config_manager + seed BD) — **COMPLETADO 30-04-2026**
+   - `UMBRAL_DIAS_DOMINGO_OBLIGATORIO` → `UMBRAL_HRS_DOMINGO_OBLIGATORIO`, valor 5.0 → 20.0
+   - UPDATE ejecutado vía migración Alembic (atómico con Paso 1)
+3. ✅ Paso 3 → corrección conteo domingos (builder.py) — **COMPLETADO 30-04-2026**
+   - Los domingos bloqueados por ausencia ya no cuentan como "libres otorgados"
+   - Se filtra `domingos_disponibles` = `domingos` - `bloqueados` antes de aplicar HR7
+4. ✅ Paso 4 → nueva restricción HR11 (builder.py) — **COMPLETADO 30-04-2026**
+   - Restricción HARD: máx. 3 domingos consecutivos trabajados (Art. 38 inc. 5° CT)
+   - Parámetro `MAX_DOMINGOS_CONSECUTIVOS` con fallback=3 (sin necesidad de valor en BD)
+5. ✅ Paso 5 → pre-validación dominical (scheduling_service.py) — **COMPLETADO 30-04-2026**
+   - `SchedulingService.validar_domingos_factibles()` ejecutada antes del Solver
+   - Retorna alertas CRITICO/INFO sin bloquear el flujo si hay disponibilidad
+6. ✅ Paso 6 → comentarios (builder.py) — **COMPLETADO 30-04-2026**
+   - Referencias a `>= 30h` y `UMBRAL_DIAS_DOMINGO_OBLIGATORIO` actualizadas
+
+> **Tests ejecutados y aprobados**: TEST-01, TEST-02, TEST-03 del criterio HR7.
+> **Pendiente futuro**: Agregar campos `contrato_exclusivo_fds` y `plazo_contrato_dias`
+> al modelo Trabajador para cubrir las excepciones adicionales del Art. 38 inc. 4°.
 
 Después de cada paso, ejecutar los tests existentes en `tests/scheduler/`
 y confirmar que no hay regresiones antes de continuar.

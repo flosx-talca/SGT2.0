@@ -31,6 +31,8 @@ class Empresa(db.Model):
     cliente_id = db.Column(db.Integer, db.ForeignKey('cliente.id', ondelete='RESTRICT'), nullable=False)
     comuna_id = db.Column(db.Integer, db.ForeignKey('comuna.id', ondelete='RESTRICT'), nullable=False)
     direccion = db.Column(db.String(255), nullable=False)
+    regimen_exceptuado = db.Column(db.Boolean, default=True, nullable=False, server_default='true',
+                                   doc='Art. 38 N°2/N°7 CT — Empresa en régimen excepcional (comercio, servicios al público, etc.). Activa la regla HR7 de 2 domingos libres/mes.')
     activo = db.Column(db.Boolean, default=True)
     creado_en = db.Column(db.DateTime, default=datetime.utcnow)
     actualizado_en = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)

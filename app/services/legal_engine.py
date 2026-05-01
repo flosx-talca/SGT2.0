@@ -48,14 +48,30 @@ class LegalEngine:
         return min(dias_por_horas, max_dias)
 
     @staticmethod
-    def aplica_domingo_obligatorio(trabajador, turno) -> bool:
-        """Verifica si al trabajador le corresponden 2 domingos libres al mes."""
-        umbral = ConfigManager.get_int("UMBRAL_DIAS_DOMINGO_OBLIGATORIO", 5)
-        return LegalEngine.dias_efectivos_semana(trabajador, turno) >= umbral
+    def aplica_domingo_obligatorio(trabajador) -> bool:
+        """
+        Determina si al trabajador le corresponden 2 domingos libres/mes (HR7).
+
+        Criterio legal (Art. 38 inc. 4° CT):
+        - La empresa debe estar en régimen exceptuado (Art. 38 N°2 o N°7)
+        - La jornada ordinaria del trabajador debe ser SUPERIOR a 20 horas/semana
+        - El trabajador no debe tener contrato exclusivo fines de semana
+          (los atributos opcionales se leen con getattr y default seguro)
+        """
+        umbral = ConfigManager.get('UMBRAL_HRS_DOMINGO_OBLIGATORIO', 20.0)
+        # Verificar régimen exceptuado de la empresa (si no tiene el atributo, asume True)
+        regimen_excep = getattr(getattr(trabajador, 'empresa', None), 'regimen_exceptuado', True)
+        # Excepción: contrato exclusivo para fines de semana (campo futuro)
+        excl_fds = getattr(trabajador, 'contrato_exclusivo_fds', False)
+        return (
+            regimen_excep
+            and float(trabajador.horas_semanales) > float(umbral)
+            and not excl_fds
+        )
 
     @staticmethod
-    def min_domingos_libres_mes(trabajador, turno) -> int:
-        if LegalEngine.aplica_domingo_obligatorio(trabajador, turno):
+    def min_domingos_libres_mes(trabajador) -> int:
+        if LegalEngine.aplica_domingo_obligatorio(trabajador):
             return ConfigManager.get_int("MIN_DOMINGOS_LIBRES_MES", 2)
         return 0
 
@@ -98,8 +114,8 @@ class LegalEngine:
         return {
             "max_horas_semana": max_hrs,
             "max_dias_semana": dias_efectivos,
-            "aplica_domingo": LegalEngine.aplica_domingo_obligatorio(trabajador, turno),
-            "min_domingos_mes": LegalEngine.min_domingos_libres_mes(trabajador, turno),
+            "aplica_domingo": LegalEngine.aplica_domingo_obligatorio(trabajador),
+            "min_domingos_mes": LegalEngine.min_domingos_libres_mes(trabajador),
             "max_dias_consecutivos": ConfigManager.get_int("MAX_DIAS_CONSECUTIVOS", 6),
             "min_descanso_entre_turnos": ConfigManager.get_int("MIN_DESCANSO_ENTRE_TURNOS_HRS", 12),
         }

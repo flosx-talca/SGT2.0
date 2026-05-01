@@ -40,7 +40,7 @@ def modal():
     registro_id = request.form.get('id', None)
     registro = None
     if registro_id and registro_id != '0':
-        registro = Empresa.query.get_or_404(int(registro_id))
+        registro = db.get_or_404(Empresa, int(registro_id))
     
     clientes = Cliente.query.filter_by(activo=True).order_by(Cliente.nombre).all()
     comunas = Comuna.query.filter_by(activo=True).order_by(Comuna.descripcion).all()
@@ -60,13 +60,14 @@ def guardar():
     comuna_id = request.form.get('comuna_id', '').strip()
     direccion = request.form.get('direccion', '').strip()
     activo = request.form.get('activo') == 'true'
+    regimen_exceptuado = request.form.get('regimen_exceptuado') == 'true'
 
     if not rut or not razon_social or not cliente_id or not comuna_id:
         return jsonify({'ok': False, 'msg': 'Faltan campos obligatorios (*).'}), 400
 
     try:
         if eid and eid != '0':
-            empresa = Empresa.query.get_or_404(int(eid))
+            empresa = db.get_or_404(Empresa, int(eid))
             dup = Empresa.query.filter(Empresa.rut == rut, Empresa.id != empresa.id).first()
             if dup:
                 return jsonify({'ok': False, 'msg': f'El RUT {rut} ya pertenece a otra empresa.'}), 409
@@ -77,6 +78,7 @@ def guardar():
             empresa.comuna_id = int(comuna_id)
             empresa.direccion = direccion
             empresa.activo = activo
+            empresa.regimen_exceptuado = regimen_exceptuado
             msg = f'Empresa "{razon_social}" actualizada.'
         else:
             if Empresa.query.filter_by(rut=rut).first():
@@ -88,7 +90,8 @@ def guardar():
                 cliente_id=int(cliente_id),
                 comuna_id=int(comuna_id),
                 direccion=direccion,
-                activo=activo
+                activo=activo,
+                regimen_exceptuado=regimen_exceptuado
             )
             db.session.add(empresa)
             db.session.flush() # Para obtener el ID
@@ -107,7 +110,7 @@ def guardar():
 @empresa_bp.route('/eliminar', methods=['POST'])
 def eliminar():
     eid = request.form.get('id', '').strip()
-    empresa = Empresa.query.get_or_404(int(eid))
+    empresa = db.get_or_404(Empresa, int(eid))
     empresa.activo = False
     db.session.commit()
     return jsonify({'ok': True, 'msg': 'Empresa desactivada.'})

@@ -3,6 +3,7 @@ from app.database import db
 from app.models.business import Trabajador, Turno, TrabajadorAusencia, TrabajadorRestriccionTurno
 from app.scheduler.builder import build_model
 from app.services.config_manager import ConfigManager
+from app.services.legal_engine import LegalEngine
 
 class SchedulingService:
     @staticmethod
@@ -87,6 +88,19 @@ class SchedulingService:
         # 4. Dotación (Cobertura)
         coberturas = {d: {t.id: t.dotacion_diaria for t in turnos} for d in dias_del_mes}
 
+        # 4b. Pre-validación dominical (INC-04b): Detectar INFEASIBLE silencioso antes del Solver
+        alertas_dominicales = SchedulingService.validar_domingos_factibles(
+            trabajadores, dias_del_mes, set(bloqueados), coberturas
+        )
+        if alertas_dominicales:
+            alertas_criticas = [a for a in alertas_dominicales if a['nivel'] == 'CRITICO']
+            if alertas_criticas:
+                return {
+                    'status': 'warning',
+                    'alertas': alertas_criticas,
+                    'message': f'{len(alertas_criticas)} trabajador(es) con HR7 activo no tienen domingos disponibles suficientes. El cuadrante puede ser INFEASIBLE.'
+                }
+
         # 5. Ejecutar Solver
         try:
             model, x = build_model(
@@ -147,4 +161,59 @@ class SchedulingService:
                         "requeridos": t.dotacion_diaria,
                         "faltantes": t.dotacion_diaria - len(disponibles_dia)
                     })
+        return alertas
+
+    @staticmethod
+    def validar_domingos_factibles(trabajadores, dias_del_mes, bloqueados_set, coberturas) -> list:
+        """
+        [INC-04b] Pre-validación dominical antes del Solver.
+
+        Detecta si algún trabajador afecto a HR7 tiene 0 domingos trabajables
+        pero hay demanda dominical. Esto causaría INFEASIBLE silencioso en el Solver.
+        """
+        from datetime import datetime as _dt
+        alertas = []
+        min_libres = ConfigManager.get_int('MIN_DOMINGOS_LIBRES_MES', 2)
+        domingos_mes = [d for d in dias_del_mes
+                        if _dt.strptime(d, '%Y-%m-%d').weekday() == 6]
+
+        if not domingos_mes:
+            return []
+
+        hay_demanda_dominical = any(
+            sum(coberturas.get(d, {}).values()) > 0
+            for d in domingos_mes
+        )
+
+        for w in trabajadores:
+            if not LegalEngine.aplica_domingo_obligatorio(w):
+                continue
+
+            dom_disponibles = [
+                d for d in domingos_mes
+                if (w.id, d) not in bloqueados_set
+            ]
+            max_trabajables = max(0, len(dom_disponibles) - min_libres)
+
+            if max_trabajables == 0 and hay_demanda_dominical:
+                alertas.append({
+                    'nivel': 'CRITICO',
+                    'trabajador_id': w.id,
+                    'nombre': f'{w.nombre} {w.apellido1}',
+                    'mensaje': (
+                        f'Solo tiene {len(dom_disponibles)} domingo(s) disponible(s) '
+                        f'y debe librar {min_libres}. No puede cubrir ningún domingo. '
+                        f'Revisar ausencias o reasignar dotación dominical.'
+                    )
+                })
+            elif len(dom_disponibles) < min_libres:
+                alertas.append({
+                    'nivel': 'INFO',
+                    'trabajador_id': w.id,
+                    'nombre': f'{w.nombre} {w.apellido1}',
+                    'mensaje': (
+                        f'Solo tiene {len(dom_disponibles)} domingo(s) disponible(s), '
+                        f'menos que el mínimo legal de {min_libres} domingos libres.'
+                    )
+                })
         return alertas

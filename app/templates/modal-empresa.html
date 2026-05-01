@@ -66,11 +66,28 @@
             </div>
 
             <div class="col-md-12 mt-3">
-                <div class="form-check form-switch">
-                    <input class="form-check-input" type="checkbox" id="activo_empresa" 
-                           {% if registro is none or registro.activo %}checked{% endif %}
-                           {% if modo == 'Visualizar' %}disabled{% endif %}>
-                    <label class="form-check-label small fw-bold text-muted" for="activo_empresa">Empresa Activa</label>
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" id="activo_empresa" 
+                                   {% if registro is none or registro.activo %}checked{% endif %}
+                                   {% if modo == 'Visualizar' %}disabled{% endif %}>
+                            <label class="form-check-label small fw-bold text-muted" for="activo_empresa">Empresa Activa</label>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" id="regimen_exceptuado_empresa" 
+                                   {% if registro is none or registro.regimen_exceptuado %}checked{% endif %}
+                                   {% if modo == 'Visualizar' %}disabled{% endif %}>
+                            <label class="form-check-label small fw-bold text-muted" for="regimen_exceptuado_empresa">
+                                Régimen Exceptuado (Art. 38 CT)
+                                <i class="fa fa-question-circle text-primary ms-1" 
+                                   title="Activa la regla HR7: 2 domingos libres/mes para trabajadores con jornada superior a 20h/semana. Aplica a comercio, retail y servicios al público."
+                                   data-bs-toggle="tooltip"></i>
+                            </label>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -95,6 +112,7 @@ function guardarEmpresa() {
     const comuna_id = $('#comuna_id_empresa').val();
     const direccion = $('#direccion_empresa').val().trim();
     const activo = $('#activo_empresa').is(':checked');
+    const regimen_exceptuado = $('#regimen_exceptuado_empresa').is(':checked');
 
     if (!rut || !razon_social || !cliente_id || !comuna_id) {
         toastr.warning('Faltan campos obligatorios (*).');
@@ -112,7 +130,8 @@ function guardarEmpresa() {
         cliente_id: cliente_id,
         comuna_id: comuna_id,
         direccion: direccion,
-        activo: activo ? 'true' : 'false'
+        activo: activo ? 'true' : 'false',
+        regimen_exceptuado: regimen_exceptuado ? 'true' : 'false'
     })
     .done(function(res) {
         if (res.ok) {
