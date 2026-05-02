@@ -566,6 +566,14 @@ def publicar():
 @planificacion_bp.route('/editar/<int:cabecera_id>')
 @login_required
 def editar(cabecera_id):
+    return _render_plan_db(cabecera_id, modo='editar')
+
+@planificacion_bp.route('/ver/<int:cabecera_id>')
+@login_required
+def ver(cabecera_id):
+    return _render_plan_db(cabecera_id, modo='ver')
+
+def _render_plan_db(cabecera_id, modo='ver'):
     from app.models.scheduling import CuadranteCabecera
     from app.models.business import Empresa, Servicio, Turno, Trabajador, TipoAusencia
     cabecera = CuadranteCabecera.query.get_or_404(cabecera_id)
@@ -607,10 +615,15 @@ def editar(cabecera_id):
         f_str = a.fecha.strftime('%Y-%m-%d')
         if f_str not in celdas:
             celdas[f_str] = {}
-        if a.es_libre:
-            celdas[f_str][a.trabajador_id] = 'L'
-        elif a.turno:
-            celdas[f_str][a.trabajador_id] = a.turno.abreviacion
+        
+        abr = 'L'
+        if not a.es_libre and a.turno:
+            abr = a.turno.abreviacion
+            
+        celdas[f_str][a.trabajador_id] = {
+            'abr': abr,
+            'origen': a.origen
+        }
             
     trabajadores = Trabajador.query.filter_by(empresa_id=empresa_id, servicio_id=cabecera.servicio_id, activo=True).all()
     t_dicts = [{'id': t.id, 'nombre': f"{t.nombre} {t.apellido1}"} for t in trabajadores]
@@ -646,6 +659,6 @@ def editar(cabecera_id):
                            current_month=cabecera.mes,
                            feriados_dict=feriados_dict,
                            empresa_activa=empresa_activa,
-                           modo='editar',
+                           modo=modo,
                            cabecera_id=cabecera_id,
                            preloaded_data=json.dumps(preloaded_data))

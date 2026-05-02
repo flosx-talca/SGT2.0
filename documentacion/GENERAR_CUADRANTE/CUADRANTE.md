@@ -18,21 +18,20 @@ Este documento detalla el progreso actual en el rediseño y acoplamiento del mot
 ### 3. Edición Manual y Auditoría (Modo Edición)
 - **Recarga de Estado (`GET /planificacion/editar/<id>`)**: Creación del endpoint para la reconstitución del Cuadrante. Lee los datos previamente persistidos y renderiza el generador simulado (`simulacion.html`) bajo un contexto de modo "Edición" (sin opciones de re-generar).
 - **Asignación en Caliente (`PUT /cuadrante/asignacion`)**: Endpoint API adaptado para modificar celdas individuales basado en claves naturales (Fecha + ID Trabajador) sin depender de IDs subyacentes escondidos.
-- **Micro-interacciones UI JS**: Se implementó una lógica de reemplazo donde, al clickear sobre una celda ya guardada, se invoca un `select` autogenerado con los turnos vigentes, enviando un PUT por AJAX, validando y guardando un registro de Auditoría.
+- **Micro-interacciones UI JS**: Se implementó el `turno_picker` con botones de colores. Al clickear sobre una celda ya guardada en modo edición, se envía un PUT por AJAX, validando y guardando un registro de Auditoría.
+- **Auditoría Integral**: Los cambios manuales realizados antes del primer guardado (en simulación) ahora también generan registros de auditoría y persisten la marca "U" correctamente.
+- **Visualización Estricta (Modo Lectura)**: Implementado el endpoint `GET /planificacion/ver/<id>`. En este modo, la interacción está bloqueada mediante una capa de interfaz que deshabilita eventos JS, se ocultan botones de generación/edición y se notifica al usuario que es solo lectura.
 - **Dashboard en Tiempo Real**: Reemplazado el "mockup" estático del Dashboard con HTMX, que carga de manera asíncrona la lista de "Últimas Planificaciones" de la BD.
 
 ---
 
 ## 🟡 Lo Pendiente (Próximos Pasos)
 
-### 1. Visualización Estricta (Modo Lectura)
-- **Implementar `GET /planificacion/ver/<id>`**: Aunque actualmente tenemos el modo editar, el dashboard posee un botón de visualización con el ícono del ojo (👁️). Debemos instanciar la misma plantilla `simulacion.html` con `modo='ver'` para bloquear completamente cualquier interacción en el JS, impidiendo cambios y quitando los cursores en forma de puntero.
-
-### 2. Exportación de Datos (PDF / Excel)
+### 1. Exportación de Datos (PDF / Excel)
 - **Reportes Legales**: El usuario necesitará exportar su planificación en un formato válido ante la Dirección del Trabajo (DT).
 - **Implementación sugerida**: Desarrollar un endpoint `/cuadrante/exportar/<id>` que reconstruya el cuadrante usando Pandas o ReportLab (u otra librería) para generar un documento listo para la firma de los trabajadores.
 
-### 3. Estados de Flujo del Cuadrante (Publicación)
+### 2. Estados de Flujo del Cuadrante (Publicación)
 - El estado actual en base de datos es `"guardado"`. El sistema debe definir el comportamiento frente a un "Cuadrante Publicado" (cuando el estado cambia de `guardado` a `publicado`).
 - **Bloqueo**: Una vez publicado, la lógica de negocio posiblemente deba prevenir modificaciones arbitrarias o, si se permite, requerir autorizaciones adicionales de Super-Admin.
 

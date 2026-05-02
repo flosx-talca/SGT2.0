@@ -151,9 +151,6 @@
                         <button class="btn btn-outline-info btn-sm shadow-sm" onclick="abrirVerificadorCapacidad()">
                             <i class="fa fa-chart-pie me-1"></i> Capacidad
                         </button>
-                        <button class="btn btn-outline-secondary btn-sm shadow-sm" onclick="SGT.mostrarMock()" id="btn_cargar">
-                            <i class="fa fa-sync-alt me-1"></i> Cargar
-                        </button>
                         <button class="btn btn-primary btn-sm shadow-sm px-3" onclick="SGT.generarCuadrante()" id="btn_generar">
                             <i class="fa fa-magic me-1"></i> Generar con IA
                         </button>
@@ -223,6 +220,7 @@
                 <i class="fa fa-file-excel me-1"></i> Exportar Excel
             </button>
         </div>
+        <div id="warning-existente" class="text-danger small fw-bold me-3" style="display:none;"></div>
         <button class="btn btn-success shadow-sm" onclick="guardarCuadrante()" id="btn-guardar-cuadrante">
             <i class="fa fa-save me-1"></i> Guardar Cuadrante
         </button>
@@ -310,6 +308,8 @@
 
     // --- Lógica Global de Simulación (v4 - Streaming Progress) ---
     window.SGT = {
+        modo: '{{ modo|default("simulacion") }}',
+        cabeceraId: '{{ cabecera_id|default("") }}',
         cuadranteData: null,
         eventSource: null,
 
@@ -318,6 +318,10 @@
             const anio = document.getElementById('sel_anio').value;
             const suc = document.getElementById('sel_sucursal').value;
             
+            // Limpiar estado de edición previo si existía
+            window.SGT.cabeceraId = null;
+            window.SGT.modo = 'simulacion';
+            $('#estado_badge').html('');
             // Preparar Modal
             $('#modalIA').modal('show');
             $('#ai-console').html('<div class="console-line info">Estableciendo conexión con SGT AI Engine...</div>');
@@ -459,19 +463,33 @@
                 }
 
                 let celdas_html = trabajadores.map(t => {
-                    const raw = (celdas[dia.fecha] !== undefined) ? celdas[dia.fecha][t.id] : undefined;
-                    const tAbr = (raw !== undefined && raw !== null && raw !== '') ? raw : 'L';
-                    const sinResolver = (raw === '' || raw === undefined || raw === null);
+                    const cellData = (celdas[dia.fecha] !== undefined) ? celdas[dia.fecha][t.id] : undefined;
+                    
+                    // Manejar tanto string (simulación) como objeto (edición)
+                    let tAbr = 'L';
+                    let esManual = false;
+                    
+                    if (typeof cellData === 'object' && cellData !== null) {
+                        tAbr = cellData.abr || 'L';
+                        esManual = (cellData.origen === 'manual');
+                    } else if (typeof cellData === 'string') {
+                        tAbr = cellData || 'L';
+                    }
+                    
+                    const sinResolver = (cellData === '' || cellData === undefined || cellData === null);
                     
                     if (conts[tAbr] !== undefined) conts[tAbr]++;
                     if (LISTA_TURNOS.includes(tAbr)) totalDia++;
                     
-                    const color = typeof getColorTurno === 'function' ? getColorTurno(tAbr) : '#adb5bd';
+                    const color = typeof SGT.getColorTurno === 'function' ? SGT.getColorTurno(tAbr) : (typeof getColorTurno === 'function' ? getColorTurno(tAbr) : '#adb5bd');
                     const estiloExtra = sinResolver ? 'border: 1.5px dashed #fd7e14 !important;' : '';
+                    
+                    const markerHtml = esManual ? '<span class="manual-marker" style="position:absolute; bottom:1px; right:2px; font-size:0.55rem; font-weight:bold; color:#777; opacity:0.8;">U</span>' : '';
                     
                     return `<td class="celda-turno text-center p-0 position-relative" onclick="SGT.abrirPicker(this)" data-fecha="${dia.fecha}" data-wid="${t.id}" style="${estiloExtra} position: relative; height: 45px; vertical-align: middle;">
                         <div class="d-flex align-items-center justify-content-center h-100 w-100">
                             <span class="badge-turno ${tAbr === 'L' ? 'libre' : ''}" style="${(tAbr !== 'L' && !sinResolver) ? 'background-color:' + color : ''};">${sinResolver ? '' : tAbr}</span>
+                            ${markerHtml}
                         </div>
                     </td>`;
                 }).join('');
@@ -506,12 +524,19 @@
             trabajadores.forEach(t => {
                 let sumT = 0, sumL = 0, sumD = 0;
                 dias.forEach(dia => {
-                    const raw = (celdas[dia.fecha] && celdas[dia.fecha][t.id]) || 'L';
-                    const isSun = dia.dia_semana === 6; // Python weekday() 6 is Sunday
-                    if (raw === 'L') {
+                    const cellData = (celdas[dia.fecha] && celdas[dia.fecha][t.id]) || 'L';
+                    let abr = 'L';
+                    if (typeof cellData === 'object' && cellData !== null) {
+                        abr = cellData.abr || 'L';
+                    } else {
+                        abr = cellData;
+                    }
+                    
+                    const isSun = dia.dia_semana === 6;
+                    if (abr === 'L') {
                         sumL++;
                         if (isSun) sumD++;
-                    } else if (LISTA_TURNOS.includes(raw)) {
+                    } else if (LISTA_TURNOS.includes(abr)) {
                         sumT++;
                     }
                 });
@@ -535,7 +560,20 @@
             }
 
             const badge = document.getElementById('estado_badge');
-            if (badge) badge.innerHTML = '<span class="badge bg-warning text-dark">Simulación</span>';
+            if (badge) {
+                const estado = SGT.cuadranteData.estado || 'simulacion';
+                if (estado === 'guardado') {
+                    if (SGT.modo === 'editar') {
+                        badge.innerHTML = '<span class="sim-badge-estado badge bg-warning text-dark shadow-sm"><i class="fa fa-edit me-1"></i> Modo Edición Activo</span>';
+                    } else {
+                        badge.innerHTML = '<span class="sim-badge-estado badge bg-success shadow-sm"><i class="fa fa-check-circle me-1"></i> Guardado (Lectura)</span>';
+                    }
+                } else if (estado === 'publicado') {
+                    badge.innerHTML = '<span class="sim-badge-estado badge bg-info text-white shadow-sm"><i class="fa fa-globe me-1"></i> Publicado</span>';
+                } else {
+                    badge.innerHTML = '<span class="badge bg-primary shadow-sm">Simulación en curso</span>';
+                }
+            }
 
             // --- Calcular métricas de cobertura REALES (Suma de brechas diarias/turno) ---
             let total_necesarios = 0;
@@ -549,7 +587,14 @@
                 LISTA_TURNOS.forEach(t => conts[t] = 0);
                 
                 trabajadores.forEach(t => {
-                    const tAbr = (celdas[dia.fecha] && celdas[dia.fecha][t.id]) || 'L';
+                    const cellData = (celdas[dia.fecha] && celdas[dia.fecha][t.id]) || 'L';
+                    let tAbr = 'L';
+                    if (typeof cellData === 'object' && cellData !== null) {
+                        tAbr = cellData.abr || 'L';
+                    } else {
+                        tAbr = cellData;
+                    }
+                    
                     if (conts[tAbr] !== undefined) conts[tAbr]++;
                     if (LISTA_TURNOS.includes(tAbr)) total_cubiertos++;
                 });
@@ -580,9 +625,48 @@
 
             console.log("SGT: [7] Finalización exitosa del renderizado.");
             toastr.success('Cuadrante renderizado correctamente');
+            
+            // Verificar si ya existe en BD para advertir sobreescritura
+            this.verificarExistenciaCuadrante();
+        },
+
+        verificarExistenciaCuadrante: function() {
+            const mes = $('#sel_mes').val();
+            const anio = $('#sel_anio').val();
+            const suc = $('#sel_sucursal').val();
+            const emp = {{ empresa_activa.id if empresa_activa else 'null' }};
+            
+            if(!mes || !anio || !suc || !emp) return;
+            
+            $.get('/cuadrante/verificar', {
+                mes: mes,
+                anio: anio,
+                empresa_id: emp,
+                servicio_id: suc
+            }, function(res) {
+                // Si ya estamos en un modo persistido (ver/editar), no queremos advertencias ni cambios de botón
+                if (SGT.modo !== 'simulacion') return;
+
+                const btn = $('#btn-guardar-cuadrante');
+                const warning = $('#warning-existente');
+                
+                if (res.existe) { 
+                    btn.removeClass('btn-success').addClass('btn-danger');
+                    btn.html('<i class="fa fa-exclamation-triangle me-1"></i> Sobreescribir Cuadrante');
+                    warning.html('<i class="fa fa-info-circle"></i> Ya existe una planificación guardada para este período. Al guardar, se reemplazará la anterior.').show();
+                } else {
+                    btn.removeClass('btn-danger').addClass('btn-success');
+                    btn.html('<i class="fa fa-save me-1"></i> Guardar Cuadrante');
+                    warning.hide();
+                }
+            });
         },
 
         abrirPicker: function (celda) {
+            if (this.modo === 'ver') {
+                toastr.info('Modo lectura: Para editar, regresa al dashboard y selecciona el ícono del lápiz.');
+                return;
+            }
             const rect = celda.getBoundingClientRect();
             const picker = $('#turno_picker');
             window.celdaActiva = celda;
@@ -621,7 +705,9 @@
         // Actualizar datos locales
         if (!SGT.cuadranteData) SGT.cuadranteData = { celdas: {} };
         if (!SGT.cuadranteData.celdas[fecha]) SGT.cuadranteData.celdas[fecha] = {};
-        SGT.cuadranteData.celdas[fecha][wid] = abr;
+        
+        // Guardamos como objeto para distinguir que fue manual
+        SGT.cuadranteData.celdas[fecha][wid] = { abr: abr, origen: 'manual' };
 
         actualizarContadoresFila(celdaActiva);
         cerrarPicker();
@@ -717,7 +803,14 @@
             LISTA_TURNOS.forEach(t => conts[t] = 0);
             
             trabajadores.forEach(t => {
-                const tAbr = (celdas[dia.fecha] && celdas[dia.fecha][t.id]) || 'L';
+                const cellData = (celdas[dia.fecha] && celdas[dia.fecha][t.id]) || 'L';
+                let tAbr = 'L';
+                if (typeof cellData === 'object' && cellData !== null) {
+                    tAbr = cellData.abr || 'L';
+                } else {
+                    tAbr = cellData;
+                }
+                
                 if (conts[tAbr] !== undefined) conts[tAbr]++;
                 if (LISTA_TURNOS.includes(tAbr)) total_cubiertos++;
             });
@@ -747,7 +840,7 @@
     }
 
     function guardarCambiosCelda(fecha, wid, abr) {
-        if (window.CABECERA_ID) {
+        if (SGT.modo === 'editar' && SGT.cabeceraId) {
             // Modo Edición Real (Persistido)
             const es_libre = (abr === 'L' || abr === 'V');
             const turno_id = es_libre ? null : TURNOS_MAP_ABR_ID[abr];
@@ -757,7 +850,7 @@
                 type: 'PUT',
                 contentType: 'application/json',
                 data: JSON.stringify({
-                    cabecera_id: window.CABECERA_ID,
+                    cabecera_id: SGT.cabeceraId,
                     trabajador_id: wid,
                     fecha: fecha,
                     turno_id: turno_id,
@@ -766,6 +859,13 @@
                 }),
                 success: function(res) {
                     toastr.success('Celda actualizada y auditada en BD.');
+                    // Actualizar data local para que las métricas sean correctas
+                    if (!SGT.cuadranteData.celdas[fecha]) SGT.cuadranteData.celdas[fecha] = {};
+                    SGT.cuadranteData.celdas[fecha][wid] = { abr: abr, origen: 'manual' };
+                    
+                    // Refrescar contadores visuales sin recargar todo
+                    actualizarContadoresFila(window.celdaActiva);
+                    actualizarMetricasGlobales();
                 },
                 error: function(err) {
                     toastr.error('Error al persistir el cambio.');
@@ -815,17 +915,28 @@
         if (!SGT.cuadranteData || !SGT.cuadranteData.trabajadores) return [];
         SGT.cuadranteData.trabajadores.forEach(trab => {
             SGT.cuadranteData.dias.forEach(dia => {
-                const abr = SGT.cuadranteData.celdas[dia.fecha] ? SGT.cuadranteData.celdas[dia.fecha][trab.id] : null;
+                const cellData = SGT.cuadranteData.celdas[dia.fecha] ? SGT.cuadranteData.celdas[dia.fecha][trab.id] : null;
+                
+                let abr = 'L';
+                let origen = 'solver'; // Origen por defecto del Solver
+                
+                if (typeof cellData === 'object' && cellData !== null) {
+                    abr = cellData.abr || 'L';
+                    origen = cellData.origen || 'manual';
+                } else if (typeof cellData === 'string') {
+                    abr = cellData;
+                }
+
                 const es_libre = (!abr || abr === 'L');
                 const turno_id = es_libre ? null : TURNOS_MAP_ABR_ID[abr];
                 
-                // Horas asignadas es opcional, el modelo por defecto da 0, podemos ignorarlo o calcularlo
                 asignaciones.push({
                     trabajador_id: trab.id,
                     fecha: dia.fecha,
                     turno_id: turno_id,
                     es_libre: es_libre,
-                    horas_asignadas: 0 // Si tuvieras duración la pones aquí
+                    horas_asignadas: 0,
+                    origen: origen
                 });
             });
         });
@@ -863,16 +974,12 @@
                         $('#estado_badge').html('<span class="sim-badge-estado badge bg-success">Guardado</span>');
                         $('#btn-guardar-cuadrante').prop('disabled', true);
                         if (SGT.cuadranteData) SGT.cuadranteData.estado = 'guardado';
-                        window.CABECERA_ID = res.cabecera_id;
+                        SGT.cabeceraId = res.cabecera_id;
                         
-                        // Una vez guardado, adjuntar IDs de asignación a las celdas (simulado recargando o inyectando data)
-                        // Para simplificar, asumimos que si está guardado, al hacer clic, editamos usando un PUT que requiere asigId.
-                        // Dado que aquí devolvimos el cabecera_id pero no los asig_id exactos,
-                        // lo ideal es recargar la vista del cuadrante desde el backend.
-                        // Ojo: En este caso como es una Single Page / AJAX, la implementación requiere los asignacion_id.
-                        // Pero el backend de edición requiere asig_id. Por ahora, recargamos la página apuntando al modo editar.
+                        // Una vez guardado, redirigimos a la vista de "Ver" (Lectura)
+                        // Para que el usuario tenga que ir al dashboard si quiere editar de nuevo
                         setTimeout(() => {
-                            window.location.href = '/planificacion/editar/' + res.cabecera_id;
+                            window.location.href = '/planificacion/ver/' + res.cabecera_id;
                         }, 1500);
                     } else {
                         toastr.error(res.message || 'Error desconocido');
@@ -931,11 +1038,11 @@
         }
     });
 
-    {% if modo == 'editar' %}
+    {% if modo in ['editar', 'ver'] %}
     $(document).ready(function() {
-        console.log("Iniciando en modo edición...");
+        console.log("Iniciando en modo {{ modo }}...");
         SGT.cuadranteData = {{ preloaded_data | safe }};
-        window.CABECERA_ID = {{ cabecera_id }};
+        SGT.cabeceraId = {{ cabecera_id }};
         
         // Bloquear UI superior
         $('#sel_mes').val({{ current_month }}).prop('disabled', true);
@@ -944,9 +1051,12 @@
         
         // Renderizar y activar modo
         SGT.renderCuadrante();
-        $('#estado_badge').html('<span class="sim-badge-estado badge bg-success">Guardado</span>');
-        $('#btn-guardar-cuadrante').prop('disabled', true);
         
+        // Bloquear acciones de guardado/generación/carga
+        $('#btn_generar').hide();
+        $('#btn_cargar').hide();
+        $('#btn-guardar-cuadrante').hide();
+        $('#warning-existente').hide();
     });
     {% endif %}
 </script>

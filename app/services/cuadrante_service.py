@@ -29,11 +29,11 @@ def clasificar_dia(fecha, feriados_dict: dict) -> dict:
 
 
 def guardar_cuadrante(empresa_id, servicio_id,
-                      mes, anio, asignaciones: list) -> CuadranteCabecera:
+                      mes, anio, asignaciones: list, ip: str = None) -> CuadranteCabecera:
     """
     Persiste el cuadrante generado por el Solver.
     asignaciones: lista de dicts con keys:
-        trabajador_id, fecha, turno_id, es_libre, horas_asignadas
+        trabajador_id, fecha, turno_id, es_libre, horas_asignadas, origen
     """
     # Precargar feriados del mes
     from datetime import date
@@ -78,20 +78,36 @@ def guardar_cuadrante(empresa_id, servicio_id,
     from datetime import datetime as dt
     for a in asignaciones:
         fecha_str = a['fecha']
-        # Convertir "2026-05-01" a objeto date
         fecha_obj = dt.strptime(fecha_str, '%Y-%m-%d').date()
         
         flags = clasificar_dia(fecha_obj, feriados_dict)
-        db.session.add(CuadranteAsignacion(
+        origen = a.get('origen', 'solver')
+        
+        asignacion = CuadranteAsignacion(
             cabecera_id=cabecera.id,
             trabajador_id=a['trabajador_id'],
             fecha=fecha_obj,
             turno_id=a.get('turno_id'),
             es_libre=a.get('es_libre', False),
             horas_asignadas=a.get('horas_asignadas', 0),
-            origen='solver',
+            origen=origen,
             **flags
-        ))
+        )
+        db.session.add(asignacion)
+        
+        if origen == 'manual':
+            db.session.flush() # obtener asignacion.id
+            db.session.add(CuadranteAuditoria(
+                asignacion_id=asignacion.id,
+                cabecera_id=cabecera.id,
+                user_id=current_user.id,
+                turno_anterior_id=None,
+                turno_nuevo_id=a.get('turno_id'),
+                era_libre_antes=None,
+                es_libre_ahora=a.get('es_libre', False),
+                ip_address=ip,
+                motivo='Ajuste manual antes de guardar'
+            ))
 
     db.session.commit()
     return cabecera

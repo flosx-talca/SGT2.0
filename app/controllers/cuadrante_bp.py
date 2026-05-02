@@ -12,12 +12,14 @@ cuadrante_bp = Blueprint('cuadrante', __name__, url_prefix='/cuadrante')
 def guardar():
     """Guarda el cuadrante generado por el Solver."""
     data = request.get_json()
+    ip = request.headers.get('X-Forwarded-For', request.remote_addr)
     cabecera = guardar_cuadrante(
         empresa_id=data['empresa_id'],
         servicio_id=data.get('servicio_id'),
         mes=data['mes'],
         anio=data['anio'],
-        asignaciones=data['asignaciones']
+        asignaciones=data['asignaciones'],
+        ip=ip
     )
     return jsonify({"ok": True, "cabecera_id": cabecera.id})
 
@@ -67,3 +69,30 @@ def lista():
         cabeceras=cabeceras,
         is_htmx=is_htmx
     )
+@cuadrante_bp.route('/verificar', methods=['GET'])
+@login_required
+def verificar_existencia():
+    """Verifica si ya existe un cuadrante para el período y servicio."""
+    mes = request.args.get('mes', type=int)
+    anio = request.args.get('anio', type=int)
+    empresa_id = request.args.get('empresa_id', type=int)
+    servicio_id = request.args.get('servicio_id', type=int)
+
+    if not mes or not anio or not servicio_id:
+        return jsonify({"existe": False, "error": "Faltan parámetros"}), 400
+
+    query = select(CuadranteCabecera).where(
+        CuadranteCabecera.servicio_id == servicio_id,
+        CuadranteCabecera.mes == mes,
+        CuadranteCabecera.anio == anio
+    )
+    
+    if empresa_id:
+        query = query.where(CuadranteCabecera.empresa_id == empresa_id)
+
+    existente = db.session.execute(query).scalar_one_or_none()
+
+    return jsonify({
+        "existe": existente is not None,
+        "cabecera_id": existente.id if existente else None
+    })
