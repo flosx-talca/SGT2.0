@@ -1,0 +1,36 @@
+{% for t in turnos %}
+<tr>
+    <td>
+        <div class="d-flex align-items-center">
+            <div class="rounded-circle me-2" style="width: 15px; height: 15px; background-color: {{ t.color }}; border: 2px solid white; box-shadow: 0 2px 4px rgba(0,0,0,0.1);"></div>
+            <span class="fw-bold text-dark">{{ t.nombre }}</span>
+        </div>
+    </td>
+    <td class="text-center">
+        <span class="badge bg-light text-dark border px-3">{{ t.abreviacion }}</span>
+    </td>
+    <td class="text-center fw-bold text-secondary small">
+        <i class="fa fa-clock me-1 text-muted"></i> 
+        {{ t.hora_inicio.strftime('%H:%M') }} - {{ t.hora_fin.strftime('%H:%M') }}
+        {% if t.es_nocturno %}
+            <span class="text-primary ms-1" title="Cruza medianoche"><i class="fa fa-moon"></i></span>
+        {% endif %}
+    </td>
+    <td class="text-center">
+        <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-3">{{ t.dotacion_diaria }}</span>
+    </td>
+    <td class="text-center">
+        {% if t.activo %}
+            <span class="badge bg-success-subtle text-success border border-success-subtle px-3 small">Activo</span>
+        {% else %}
+            <span class="badge bg-danger-subtle text-danger border border-danger-subtle px-3 small">Inactivo</span>
+        {% endif %}
+    </td>
+    <td class="text-center">
+        <button class="btn btn-sm btn-outline-primary shadow-sm" 
+                onclick="Modal('Editar Plantilla de Turno', {{ t.id }}, '{{ url_for('plantilla.modal_turno') }}')">
+            <i class="fa fa-edit"></i>
+        </button>
+    </td>
+</tr>
+{% endfor %}

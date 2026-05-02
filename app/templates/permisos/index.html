@@ -1,0 +1,71 @@
+{% extends "_partial.html" if is_htmx else "layout.html" %}
+
+{% block title %}Gestión de Permisos{% endblock %}
+{% block header %}Configuración de Seguridad{% endblock %}
+{% block page_title %}Permisos de Roles{% endblock %}
+
+{% block actions %}
+<!-- Aquí podríamos agregar un botón para crear nuevos roles si fuera necesario -->
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="card shadow-sm border-0">
+            <div class="card-header bg-white py-3 border-bottom">
+                <h5 class="mb-0 fw-bold text-dark">
+                    <i class="fa fa-shield-alt me-2 text-primary"></i>Roles del Sistema
+                </h5>
+            </div>
+            <div class="card-body">
+                <p class="text-muted small mb-4">
+                    Seleccione un rol para configurar sus permisos de acceso a los módulos y menús del sistema.
+                </p>
+                <table id="tabla_roles" class="table table-hover align-middle w-100">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Rol</th>
+                            <th class="text-center">Menús Asignados</th>
+                            <th class="text-center">Estado</th>
+                            <th class="text-center">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tbody-roles">
+                        {% include 'permisos/partials/rol_rows.html' %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+var dtRoles;
+
+function initDataTable() {
+    dtRoles = $('#tabla_roles').DataTable({
+        responsive: true,
+        order: [[0, 'asc']],
+        language: { url: '/static/i18n/es-ES.json' },
+        columnDefs: [ { targets: [1, 2, 3], orderable: false, searchable: false } ]
+    });
+}
+
+$(document).ready(function() {
+    initDataTable();
+});
+
+function refreshTablaRoles() {
+    $('#fondo').addClass('visible');
+    $.get("{{ url_for('permisos.tabla') }}", function(html) {
+        if (dtRoles) dtRoles.destroy();
+        $('#tbody-roles').html(html);
+        initDataTable();
+    }).always(function() {
+        $('#fondo').removeClass('visible');
+    });
+}
+</script>
+{% endblock %}

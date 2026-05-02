@@ -118,6 +118,9 @@ def create_app():
     from .controllers.restricciones_bp import restricciones_bp
     from .controllers.parametro_legal_bp import parametro_legal_bp
     from .controllers.cuadrante_bp import cuadrante_bp
+    from .controllers.permisos_bp import permisos_bp
+    from .controllers.plantillas_bp import plantillas_bp
+    from .controllers.auditoria_bp import auditoria_bp
 
     app.register_blueprint(auth_bp)
     app.register_blueprint(main_bp)
@@ -140,6 +143,9 @@ def create_app():
     app.register_blueprint(restricciones_bp)
     app.register_blueprint(parametro_legal_bp)
     app.register_blueprint(cuadrante_bp)
+    app.register_blueprint(permisos_bp)
+    app.register_blueprint(plantillas_bp)
+    app.register_blueprint(auditoria_bp)
 
     with app.app_context():
         from app.models.core import Feriado

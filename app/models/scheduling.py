@@ -112,6 +112,7 @@ class CuadranteAuditoria(db.Model):
     usuario           = db.relationship('Usuario', foreign_keys=[user_id])
     turno_anterior    = db.relationship('Turno', foreign_keys=[turno_anterior_id])
     turno_nuevo       = db.relationship('Turno', foreign_keys=[turno_nuevo_id])
+    asignacion        = db.relationship('CuadranteAsignacion', foreign_keys=[asignacion_id])
 
     __table_args__ = (
         db.Index('idx_aud_asignacion', 'asignacion_id'),

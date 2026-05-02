@@ -1,0 +1,32 @@
+{% for r in roles %}
+<tr>
+    <td>
+        <div class="d-flex align-items-center">
+            <div class="avatar-sm bg-primary-subtle text-primary rounded-circle d-flex align-items-center justify-content-center me-3" style="width: 35px; height: 35px;">
+                <i class="fa fa-user-tag shadow-sm"></i>
+            </div>
+            <div>
+                <span class="fw-bold text-dark">{{ r.descripcion }}</span>
+            </div>
+        </div>
+    </td>
+    <td class="text-center">
+        <span class="badge bg-info-subtle text-info border border-info-subtle px-3">
+            {{ r.menus|length }} Módulos
+        </span>
+    </td>
+    <td class="text-center">
+        {% if r.activo %}
+            <span class="badge bg-success-subtle text-success border border-success-subtle px-3">Activo</span>
+        {% else %}
+            <span class="badge bg-danger-subtle text-danger border border-danger-subtle px-3">Inactivo</span>
+        {% endif %}
+    </td>
+    <td class="text-center">
+        <button class="btn btn-sm btn-outline-primary shadow-sm" 
+                onclick="Modal('Gestionar Permisos', {{ r.id }}, '{{ url_for('permisos.modal') }}')">
+            <i class="fa fa-key me-1"></i> Configurar
+        </button>
+    </td>
+</tr>
+{% endfor %}

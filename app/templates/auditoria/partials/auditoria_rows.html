@@ -1,0 +1,42 @@
+{% for a in registros %}
+<tr>
+    <td class="text-muted small fw-bold">
+        {{ a.fecha_cambio.strftime('%d/%m/%Y %H:%M') }}
+    </td>
+    <td>
+        <div class="d-flex align-items-center">
+            <div class="avatar-xs bg-light rounded-circle d-flex align-items-center justify-content-center me-2" style="width: 25px; height: 25px;">
+                <i class="fa fa-user text-muted" style="font-size: 0.7rem;"></i>
+            </div>
+            <span class="fw-bold">{{ a.usuario.nombre }}</span>
+        </div>
+    </td>
+    <td>
+        <div class="fw-bold text-dark">{{ a.asignacion.trabajador.nombre }} {{ a.asignacion.trabajador.apellido1 }}</div>
+        <div class="text-muted x-small"><i class="fa fa-calendar-day me-1"></i>Día: {{ a.asignacion.fecha.strftime('%d/%m/%Y') }}</div>
+    </td>
+    <td class="text-center">
+        <div class="d-flex align-items-center justify-content-center">
+            {% if a.era_libre_antes %}
+                <span class="badge bg-light text-muted border">LIBRE</span>
+            {% elif a.turno_anterior %}
+                <span class="badge" style="background-color: {{ a.turno_anterior.color }};">{{ a.turno_anterior.abreviacion }}</span>
+            {% else %}
+                <span class="badge bg-light text-muted border">N/A</span>
+            {% endif %}
+            
+            <i class="fa fa-long-arrow-alt-right mx-2 text-primary"></i>
+            
+            {% if a.es_libre_ahora %}
+                <span class="badge bg-light text-muted border">LIBRE</span>
+            {% elif a.turno_nuevo %}
+                <span class="badge shadow-sm" style="background-color: {{ a.turno_nuevo.color }};">{{ a.turno_nuevo.abreviacion }}</span>
+            {% endif %}
+        </div>
+    </td>
+    <td>
+        <div class="text-dark small fw-bold">{{ a.motivo }}</div>
+        <div class="text-muted x-small"><i class="fa fa-network-wired me-1"></i>IP: {{ a.ip_address if a.ip_address else 'Interna' }}</div>
+    </td>
+</tr>
+{% endfor %}

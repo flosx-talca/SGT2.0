@@ -1,0 +1,77 @@
+{% extends "_partial.html" if is_htmx else "layout.html" %}
+
+{% block title %}Auditoría de Cambios{% endblock %}
+{% block header %}Reportes y Fiscalización{% endblock %}
+{% block page_title %}Bitácora de Modificaciones Manuales{% endblock %}
+
+{% block actions %}
+<button class="btn btn-outline-secondary shadow-sm" onclick="refreshTablaAuditoria()">
+    <i class="fa fa-sync-alt me-1"></i> Actualizar
+</button>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="card shadow-sm border-0">
+            <div class="card-header bg-white py-3 border-bottom d-flex justify-content-between align-items-center">
+                <h5 class="mb-0 fw-bold text-dark">
+                    <i class="fa fa-history me-2 text-primary"></i>Historial de Ajustes Manuales
+                </h5>
+                <span class="badge bg-light text-muted border px-3">Últimos 200 registros</span>
+            </div>
+            <div class="card-body">
+                <p class="text-muted small mb-4">
+                    Esta bitácora registra todos los cambios realizados manualmente sobre los cuadrantes después de su generación automática.
+                </p>
+                <div class="table-responsive">
+                    <table id="tabla_auditoria" class="table table-hover align-middle w-100" style="font-size: 0.9rem;">
+                        <thead class="table-light text-muted small">
+                            <tr>
+                                <th>Fecha Cambio</th>
+                                <th>Usuario</th>
+                                <th>Trabajador / Fecha Cuadrante</th>
+                                <th class="text-center">Cambio (Antes > Después)</th>
+                                <th>Motivo / IP</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tbody-auditoria">
+                            {% include 'auditoria/partials/auditoria_rows.html' %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+var dtAuditoria;
+
+function initDataTable() {
+    dtAuditoria = $('#tabla_auditoria').DataTable({
+        responsive: true,
+        order: [[0, 'desc']],
+        language: { url: '/static/i18n/es-ES.json' },
+        pageLength: 25
+    });
+}
+
+$(document).ready(function() {
+    initDataTable();
+});
+
+function refreshTablaAuditoria() {
+    $('#fondo').addClass('visible');
+    $.get("{{ url_for('auditoria.tabla') }}", function(html) {
+        if (dtAuditoria) dtAuditoria.destroy();
+        $('#tbody-auditoria').html(html);
+        initDataTable();
+    }).always(function() {
+        $('#fondo').removeClass('visible');
+    });
+}
+</script>
+{% endblock %}

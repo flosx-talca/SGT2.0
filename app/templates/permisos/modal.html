@@ -1,0 +1,113 @@
+<div class="modal-header bg-primary text-white">
+    <h5 class="modal-title fw-bold">
+        <i class="fa fa-key me-2"></i>Permisos: {{ rol.descripcion }}
+    </h5>
+    <button type="button" class="btn-close btn-close-white" onclick="CerrarModal()"></button>
+</div>
+
+<div class="modal-body p-4">
+    <form id="form_permisos">
+        <input type="hidden" name="rol_id" value="{{ rol.id }}">
+        
+        <p class="small text-muted mb-3">
+            Active los módulos a los que este rol tendrá acceso y defina sus privilegios de gestión.
+        </p>
+
+        <div class="table-responsive border rounded">
+            <table class="table table-sm table-hover align-middle mb-0" style="font-size: 0.85rem;">
+                <thead class="table-light">
+                    <tr>
+                        <th class="ps-3" style="width: 40%;">Módulo / Menú</th>
+                        <th class="text-center">Acceso</th>
+                        <th class="text-center">Crear</th>
+                        <th class="text-center">Editar</th>
+                        <th class="text-center">Eliminar</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for m in menus %}
+                        {% set p = permisos.get(m.id) %}
+                        <tr class="{{ 'table-primary-subtle' if p else '' }}">
+                            <td class="ps-3">
+                                <div class="d-flex align-items-center">
+                                    <i class="{{ m.icono if m.icono else 'fa fa-circle' }} me-2 text-muted" style="width: 20px;"></i>
+                                    <span class="fw-bold">{{ m.nombre }}</span>
+                                </div>
+                                <div class="text-muted x-small ms-4">{{ m.descripcion if m.descripcion else '' }}</div>
+                            </td>
+                            <td class="text-center">
+                                <div class="form-check form-switch d-inline-block">
+                                    <input class="form-check-input" type="checkbox" name="menu_ids[]" value="{{ m.id }}"
+                                           {{ 'checked' if p else '' }} onchange="togglePermisosRow(this, {{ m.id }})">
+                                </div>
+                            </td>
+                            <td class="text-center">
+                                <input class="form-check-input p-check-{{ m.id }}" type="checkbox" name="p_crear_{{ m.id }}"
+                                       {{ 'checked' if p and p.puede_crear else '' }} {{ 'disabled' if not p else '' }}>
+                            </td>
+                            <td class="text-center">
+                                <input class="form-check-input p-check-{{ m.id }}" type="checkbox" name="p_editar_{{ m.id }}"
+                                       {{ 'checked' if p and p.puede_editar else '' }} {{ 'disabled' if not p else '' }}>
+                            </td>
+                            <td class="text-center">
+                                <input class="form-check-input p-check-{{ m.id }}" type="checkbox" name="p_eliminar_{{ m.id }}"
+                                       {{ 'checked' if p and p.puede_eliminar else '' }} {{ 'disabled' if not p else '' }}>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </form>
+</div>
+
+<div class="modal-footer bg-light">
+    <button type="button" class="btn btn-secondary" onclick="CerrarModal()">Cancelar</button>
+    <button type="button" id="btnGuardarPermisos" class="btn btn-primary px-4 shadow-sm" onclick="guardarPermisos()">
+        <i class="fa fa-save me-1"></i> Guardar Cambios
+    </button>
+</div>
+
+<script>
+function togglePermisosRow(cb, menuId) {
+    const row = $(cb).closest('tr');
+    const subChecks = $(`.p-check-${menuId}`);
+    
+    if (cb.checked) {
+        row.addClass('table-primary-subtle');
+        subChecks.prop('disabled', false);
+    } else {
+        row.removeClass('table-primary-subtle');
+        subChecks.prop('disabled', true).prop('checked', false);
+    }
+}
+
+function guardarPermisos() {
+    const $btn = $('#btnGuardarPermisos');
+    const originalHtml = $btn.html();
+    
+    $btn.prop('disabled', true).html('<i class="fa fa-spinner fa-spin me-1"></i> Guardando...');
+    $('#fondo').addClass('visible');
+
+    const formData = $('#form_permisos').serialize();
+
+    $.post("{{ url_for('permisos.guardar') }}", formData)
+    .done(function(res) {
+        if (res.ok) {
+            toastr.success(res.msg);
+            CerrarModal();
+            refreshTablaRoles();
+        } else {
+            toastr.error(res.msg);
+            $btn.prop('disabled', false).html(originalHtml);
+        }
+    })
+    .fail(function(xhr) {
+        toastr.error('Error de comunicación con el servidor.');
+        $btn.prop('disabled', false).html(originalHtml);
+    })
+    .always(function() {
+        $('#fondo').removeClass('visible');
+    });
+}
+</script>

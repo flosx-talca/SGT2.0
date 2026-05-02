@@ -13,7 +13,7 @@
         </div>
     </td>
     <td>
-        <span class="badge bg-info-subtle text-info border border-info">
+        <span class="badge bg-info-subtle text-info border border-info px-2">
             {{ r.rol.descripcion }}
         </span>
     </td>
@@ -27,22 +27,22 @@
     <td>
         <span class="badge bg-{{ 'success' if r.activo else 'danger' }}-subtle 
                          text-{{ 'success' if r.activo else 'danger' }} 
-                         border border-{{ 'success' if r.activo else 'danger' }}">
+                         border border-{{ 'success' if r.activo else 'danger' }} px-2">
             {{ 'Activo' if r.activo else 'Inactivo' }}
         </span>
     </td>
     <td class="text-center">
-        <div class="btn-group btn-group-sm">
-            <button class="btn btn-outline-info" title="Ver"
-                onclick="Modal('Visualizar', {{ r.id }}, '{{ url_for('usuario.modal') }}')">
-                <i class="fa fa-eye"></i>
+        <div class="btn-group shadow-sm">
+            <button class="btn btn-sm btn-outline-info" title="Asignar Empresas"
+                    onclick="Modal('Asignar Empresas', {{ r.id }}, '{{ url_for('usuario.modal_empresas') }}')">
+                <i class="fa fa-building"></i>
             </button>
-            <button class="btn btn-outline-warning" title="Editar"
-                onclick="Modal('Editar', {{ r.id }}, '{{ url_for('usuario.modal') }}')">
+            <button class="btn btn-sm btn-outline-primary" title="Editar"
+                    onclick="Modal('Editar', {{ r.id }}, '{{ url_for('usuario.modal') }}')">
                 <i class="fa fa-edit"></i>
             </button>
-            <button class="btn btn-outline-danger" title="Desactivar"
-                onclick="eliminarUsuario({{ r.id }}, '{{ r.nombre }}')">
+            <button class="btn btn-sm btn-outline-danger" title="Desactivar"
+                    onclick="eliminarUsuario({{ r.id }}, '{{ r.nombre }}')">
                 <i class="fa fa-ban"></i>
             </button>
         </div>

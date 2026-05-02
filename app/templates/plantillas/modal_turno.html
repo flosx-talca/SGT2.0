@@ -1,0 +1,85 @@
+<div class="modal-header bg-primary text-white">
+    <h5 class="modal-title fw-bold">
+        {% if modo == 'Agregar' %}Nueva Plantilla de Turno{% else %}Editar Plantilla de Turno{% endif %}
+    </h5>
+    <button type="button" class="btn-close btn-close-white" onclick="CerrarModal()"></button>
+</div>
+
+<div class="modal-body p-4">
+    <form id="form_plantilla_turno">
+        <input type="hidden" name="id" value="{{ registro.id if registro else 0 }}">
+        
+        <div class="row g-3">
+            <div class="col-md-8">
+                <label class="form-label small fw-bold text-muted">Nombre del Turno</label>
+                <input type="text" class="form-control form-control-sm" name="nombre" value="{{ registro.nombre if registro else '' }}" placeholder="Ej: Mañana, Tarde, Noche">
+            </div>
+            <div class="col-md-4">
+                <label class="form-label small fw-bold text-muted">Abreviación</label>
+                <input type="text" class="form-control form-control-sm" name="abreviacion" value="{{ registro.abreviacion if registro else '' }}" placeholder="M" maxlength="5">
+            </div>
+
+            <div class="col-md-6">
+                <label class="form-label small fw-bold text-muted">Hora Inicio</label>
+                <input type="time" class="form-control form-control-sm" name="hora_inicio" value="{{ registro.hora_inicio.strftime('%H:%M') if registro else '08:00' }}">
+            </div>
+            <div class="col-md-6">
+                <label class="form-label small fw-bold text-muted">Hora Fin</label>
+                <input type="time" class="form-control form-control-sm" name="hora_fin" value="{{ registro.hora_fin.strftime('%H:%M') if registro else '16:00' }}">
+            </div>
+
+            <div class="col-md-6">
+                <label class="form-label small fw-bold text-muted">Color Visual</label>
+                <input type="color" class="form-control form-control-color w-100" name="color" value="{{ registro.color if registro else '#18bc9c' }}">
+            </div>
+            <div class="col-md-6">
+                <label class="form-label small fw-bold text-muted">Dotación Diaria</label>
+                <input type="number" class="form-control form-control-sm" name="dotacion_diaria" value="{{ registro.dotacion_diaria if registro else 1 }}" min="1">
+            </div>
+
+            <div class="col-12 mt-3">
+                <div class="form-check form-switch">
+                    <input class="form-check-input" type="checkbox" id="activo_turno" {% if registro is none or registro.activo %}checked{% endif %}>
+                    <label class="form-check-label fw-bold text-muted" for="activo_turno">Plantilla Activa</label>
+                </div>
+            </div>
+        </div>
+    </form>
+</div>
+
+<div class="modal-footer bg-light border-top-0">
+    <button type="button" class="btn btn-secondary" onclick="CerrarModal()">Cancelar</button>
+    <button type="button" id="btnGuardarPlantillaTurno" class="btn btn-primary px-4 shadow-sm" onclick="guardarPlantillaTurno()">
+        <i class="fa fa-save me-1"></i> Guardar Plantilla
+    </button>
+</div>
+
+<script>
+function guardarPlantillaTurno() {
+    const $btn = $('#btnGuardarPlantillaTurno');
+    const originalHtml = $btn.html();
+    $btn.prop('disabled', true).html('<i class="fa fa-spinner fa-spin me-1"></i> Guardando...');
+    $('#fondo').addClass('visible');
+
+    const formData = $('#form_plantilla_turno').serialize();
+    const activo = $('#activo_turno').is(':checked') ? 'true' : 'false';
+    const finalData = formData + '&activo=' + activo;
+
+    $.post("{{ url_for('plantilla.guardar_turno') }}", finalData)
+    .done(function(res) {
+        if (res.ok) {
+            toastr.success(res.msg);
+            CerrarModal();
+            refreshTablaTurnos();
+        } else {
+            toastr.error(res.msg);
+            $btn.prop('disabled', false).html(originalHtml);
+        }
+    })
+    .fail(function() {
+        toastr.error('Error de servidor.');
+        $btn.prop('disabled', false).html(originalHtml);
+    })
+    .always(function() { $('#fondo').removeClass('visible'); });
+}
+</script>

@@ -1,0 +1,123 @@
+{% extends "_partial.html" if is_htmx else "layout.html" %}
+
+{% block title %}Plantillas Base{% endblock %}
+{% block header %}Configuración del Sistema{% endblock %}
+{% block page_title %}Plantillas Maestras{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="card shadow-sm border-0">
+            <div class="card-header bg-white py-3 border-bottom">
+                <ul class="nav nav-tabs card-header-tabs" id="plantillasTabs" role="tablist">
+                    <li class="nav-item">
+                        <button class="nav-link active fw-bold" id="turnos-tab" data-bs-toggle="tab" data-bs-target="#turnos" type="button" role="tab">
+                            <i class="fa fa-clock me-2 text-primary"></i>Plantillas de Turnos
+                        </button>
+                    </li>
+                    <li class="nav-item">
+                        <button class="nav-link fw-bold" id="ausencias-tab" data-bs-toggle="tab" data-bs-target="#ausencias" type="button" role="tab">
+                            <i class="fa fa-calendar-times me-2 text-danger"></i>Plantillas de Ausencias
+                        </button>
+                    </li>
+                </ul>
+            </div>
+            <div class="card-body">
+                <div class="tab-content" id="plantillasTabsContent">
+                    
+                    <!-- TAB TURNOS -->
+                    <div class="tab-pane fade show active" id="turnos" role="tabpanel">
+                        <div class="d-flex justify-content-between align-items-center mb-4 mt-2">
+                            <p class="text-muted small mb-0">Defina los turnos estándar que se crearán automáticamente para cada nueva empresa.</p>
+                            <button class="btn btn-primary btn-sm shadow-sm" onclick="Modal('Agregar Plantilla de Turno', 0, '{{ url_for('plantilla.modal_turno') }}')">
+                                <i class="fa fa-plus me-1"></i> Nueva Plantilla Turno
+                            </button>
+                        </div>
+                        <table id="tabla_plantilla_turnos" class="table table-hover align-middle w-100">
+                            <thead class="table-light text-muted small">
+                                <tr>
+                                    <th>Turno</th>
+                                    <th class="text-center">Abreviación</th>
+                                    <th class="text-center">Horario</th>
+                                    <th class="text-center">Dotación</th>
+                                    <th class="text-center">Estado</th>
+                                    <th class="text-center">Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tbody-plantilla-turnos">
+                                {% include 'plantillas/partials/turno_rows.html' %}
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- TAB AUSENCIAS -->
+                    <div class="tab-pane fade" id="ausencias" role="tabpanel">
+                        <div class="d-flex justify-content-between align-items-center mb-4 mt-2">
+                            <p class="text-muted small mb-0">Defina los tipos de ausencia estándar (Vacaciones, Licencias, etc.) para nuevas empresas.</p>
+                            <button class="btn btn-danger btn-sm shadow-sm" onclick="Modal('Agregar Plantilla de Ausencia', 0, '{{ url_for('plantilla.modal_ausencia') }}')">
+                                <i class="fa fa-plus me-1"></i> Nueva Plantilla Ausencia
+                            </button>
+                        </div>
+                        <table id="tabla_plantilla_ausencias" class="table table-hover align-middle w-100">
+                            <thead class="table-light text-muted small">
+                                <tr>
+                                    <th>Ausencia</th>
+                                    <th class="text-center">Abreviación</th>
+                                    <th class="text-center">Categoría</th>
+                                    <th class="text-center">Estado</th>
+                                    <th class="text-center">Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tbody-plantilla-ausencias">
+                                {% include 'plantillas/partials/ausencia_rows.html' %}
+                            </tbody>
+                        </table>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+var dtTurnos, dtAusencias;
+
+function initDataTables() {
+    dtTurnos = $('#tabla_plantilla_turnos').DataTable({
+        responsive: true,
+        order: [[0, 'asc']],
+        language: { url: '/static/i18n/es-ES.json' }
+    });
+    dtAusencias = $('#tabla_plantilla_ausencias').DataTable({
+        responsive: true,
+        order: [[0, 'asc']],
+        language: { url: '/static/i18n/es-ES.json' }
+    });
+}
+
+$(document).ready(function() {
+    initDataTables();
+});
+
+function refreshTablaTurnos() {
+    $('#fondo').addClass('visible');
+    $.get("{{ url_for('plantilla.tabla_turnos') }}", function(html) {
+        if (dtTurnos) dtTurnos.destroy();
+        $('#tbody-plantilla-turnos').html(html);
+        dtTurnos = $('#tabla_plantilla_turnos').DataTable({ responsive: true, order: [[0, 'asc']], language: { url: '/static/i18n/es-ES.json' } });
+    }).always(function() { $('#fondo').removeClass('visible'); });
+}
+
+function refreshTablaAusencias() {
+    $('#fondo').addClass('visible');
+    $.get("{{ url_for('plantilla.tabla_ausencias') }}", function(html) {
+        if (dtAusencias) dtAusencias.destroy();
+        $('#tbody-plantilla-ausencias').html(html);
+        dtAusencias = $('#tabla_plantilla_ausencias').DataTable({ responsive: true, order: [[0, 'asc']], language: { url: '/static/i18n/es-ES.json' } });
+    }).always(function() { $('#fondo').removeClass('visible'); });
+}
+</script>
+{% endblock %}

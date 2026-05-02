@@ -67,10 +67,17 @@ def editar_asignacion():
 @login_required
 def lista():
     """Retorna las últimas planificaciones para el DataTable del dashboard."""
+    from app.services.context import get_empresas_usuario
+    
+    # 1. Obtener empresas permitidas
+    empresas = get_empresas_usuario()
+    ids_permitidos = [e.id for e in empresas]
+    
+    # 2. Consultar cabeceras filtradas
+    query = select(CuadranteCabecera).where(CuadranteCabecera.empresa_id.in_(ids_permitidos))
+    
     cabeceras = db.session.execute(
-        select(CuadranteCabecera)
-        .order_by(desc(CuadranteCabecera.guardado_en))
-        .limit(50)
+        query.order_by(desc(CuadranteCabecera.guardado_en)).limit(50)
     ).scalars().all()
 
     return render_template(

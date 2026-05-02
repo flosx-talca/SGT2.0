@@ -1,0 +1,31 @@
+{% for a in ausencias %}
+<tr>
+    <td>
+        <div class="d-flex align-items-center">
+            <div class="rounded-circle me-2" style="width: 15px; height: 15px; background-color: {{ a.color }}; border: 2px solid white; box-shadow: 0 2px 4px rgba(0,0,0,0.1);"></div>
+            <span class="fw-bold text-dark">{{ a.nombre }}</span>
+        </div>
+    </td>
+    <td class="text-center">
+        <span class="badge bg-light text-dark border px-3">{{ a.abreviacion }}</span>
+    </td>
+    <td class="text-center">
+        <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle px-3 small text-capitalize">
+            {{ a.categoria.value }}
+        </span>
+    </td>
+    <td class="text-center">
+        {% if a.activo %}
+            <span class="badge bg-success-subtle text-success border border-success-subtle px-3 small">Activo</span>
+        {% else %}
+            <span class="badge bg-danger-subtle text-danger border border-danger-subtle px-3 small">Inactivo</span>
+        {% endif %}
+    </td>
+    <td class="text-center">
+        <button class="btn btn-sm btn-outline-primary shadow-sm" 
+                onclick="Modal('Editar Plantilla de Ausencia', {{ a.id }}, '{{ url_for('plantilla.modal_ausencia') }}')">
+            <i class="fa fa-edit"></i>
+        </button>
+    </td>
+</tr>
+{% endfor %}
