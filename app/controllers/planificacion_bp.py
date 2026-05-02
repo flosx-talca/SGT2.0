@@ -410,6 +410,9 @@ def generar_stream():
 
             # 2. Carga de Datos (Filtrado por Empresa y Servicio)
             yield f"event: log\ndata: {json.dumps({'msg': 'Cargando dotación y contratos...', 'progress': 15, 'status': 'Cargando datos...'})}\n\n"
+            
+            _, num_days = calendar.monthrange(anio, mes)
+            
             emp_id_stream = get_empresa_activa_id()
             trabajadores_db = Trabajador.query.filter_by(
                 empresa_id=emp_id_stream,
@@ -420,7 +423,20 @@ def generar_stream():
                 yield f"event: error_sgt\ndata: {json.dumps({'message': 'No hay trabajadores activos.'})}\n\n"
                 return
 
-            t_dicts = [{'id': t.id, 'nombre': f"{t.nombre} {t.apellido1}"} for t in trabajadores_db]
+            t_dicts = []
+            import math
+            for t in trabajadores_db:
+                # Meta espejo del builder
+                max_dias_semana = 6
+                if t.tipo_contrato.name == 'PART_TIME':
+                    max_dias_semana = min(6, math.ceil(t.horas_semanales / 7.5))
+                
+                meta_m = math.floor((num_days / 7.0) * max_dias_semana)
+                t_dicts.append({
+                    'id': t.id, 
+                    'nombre': f"{t.nombre} {t.apellido1}",
+                    'meta_mensual': meta_m
+                })
             turnos_db = Turno.query.filter_by(empresa_id=trabajadores_db[0].empresa_id, activo=True).all()
             
             # 3. Construcción del Modelo
@@ -436,7 +452,6 @@ def generar_stream():
             yield f"event: log\ndata: {json.dumps({'msg': 'Buscando la mejor combinación de turnos...', 'progress': 50, 'status': 'Optimizando...'})}\n\n"
             
             # --- LÓGICA DE DÍAS Y RESTRICCIONES ---
-            _, num_days = calendar.monthrange(anio, mes)
             dias_mes_objs = [datetime(anio, mes, d).date() for d in range(1, num_days + 1)]
             dias_del_mes = [d.isoformat() for d in dias_mes_objs]
             
@@ -626,7 +641,26 @@ def _render_plan_db(cabecera_id, modo='ver'):
         }
             
     trabajadores = Trabajador.query.filter_by(empresa_id=empresa_id, servicio_id=cabecera.servicio_id, activo=True).all()
-    t_dicts = [{'id': t.id, 'nombre': f"{t.nombre} {t.apellido1}"} for t in trabajadores]
+    t_dicts = []
+    import math
+    for t in trabajadores:
+        # Lógica espejo del builder.py para cálculo de meta
+        # max_dias_semana depende del tipo de contrato (FULL=6, PART=variable pero usualmente usamos 6 como base legal max)
+        max_dias_semana = 6 
+        if t.tipo_contrato.name == 'PART_TIME':
+            # Si es part-time, la meta es proporcional a sus horas (ej 30h / 8h turno = 3.75 -> 4 días)
+            max_dias_semana = min(6, math.ceil(t.horas_semanales / 7.5))
+            
+        # Días disponibles en el mes (restando bloqueos/ausencias grabadas)
+        # Por simplicidad en el render, usamos el total de días del mes como base, 
+        # el builder es más fino pero esto da una meta teórica correcta.
+        meta_m = math.floor((last_day / 7.0) * max_dias_semana)
+        
+        t_dicts.append({
+            'id': t.id, 
+            'nombre': f"{t.nombre} {t.apellido1}",
+            'meta_mensual': meta_m
+        })
     
     dias_dict = []
     dias_nombres = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom']
@@ -639,7 +673,7 @@ def _render_plan_db(cabecera_id, modo='ver'):
             'label': f"{str(i).zfill(2)} {dias_nombres[dia_idx]}"
         })
         
-    turnos_info = [{'abreviacion': t.abreviacion, 'nombre': t.nombre, 'color': t.color} for t in turnos]
+    turnos_info = [{'abreviacion': t.abreviacion, 'nombre': t.nombre, 'color': t.color, 'duracion': float(t.duracion_hrs)} for t in turnos]
 
     import json
     preloaded_data = {

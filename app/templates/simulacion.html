@@ -182,8 +182,8 @@
                         <h4 class="mb-0 fw-bold" id="metrica_def">0</h4>
                     </div>
                     <div class="col-3">
-                        <small class="text-muted text-uppercase fw-bold" style="font-size: 0.65rem;">Superávit</small>
-                        <h4 class="mb-0 text-info fw-bold" id="metrica_sup">0</h4>
+                        <small class="text-muted text-uppercase fw-bold" style="font-size: 0.65rem;">Capacidad Disp.</small>
+                        <h4 class="mb-0 text-info fw-bold" id="metrica_sup" title="Turnos que aún se pueden asignar según contrato">0</h4>
                     </div>
                 </div>
             </div>
@@ -216,14 +216,22 @@
             <button class="btn btn-outline-danger btn-sm" onclick="descartarCuadrante()">
                 <i class="fa fa-trash me-1"></i> Descartar
             </button>
-            <button class="btn btn-outline-success btn-sm" onclick="exportarExcel()">
-                <i class="fa fa-file-excel me-1"></i> Exportar Excel
+            <button class="btn btn-outline-success btn-sm shadow-sm" onclick="SGT.exportarExcel()" id="btn-excel" style="display:none;">
+                <i class="fa fa-file-excel me-1"></i> Exportar a XLS
+            </button>
+            <button class="btn btn-outline-danger btn-sm shadow-sm" onclick="SGT.exportarPDF()" id="btn-pdf" style="display:none;">
+                <i class="fa fa-file-pdf me-1"></i> Exportar a PDF
             </button>
         </div>
         <div id="warning-existente" class="text-danger small fw-bold me-3" style="display:none;"></div>
-        <button class="btn btn-success shadow-sm" onclick="guardarCuadrante()" id="btn-guardar-cuadrante">
-            <i class="fa fa-save me-1"></i> Guardar Cuadrante
-        </button>
+        <div class="d-flex gap-2">
+            <button class="btn btn-success btn-sm shadow-sm" onclick="guardarCuadrante()" id="btn-guardar-cuadrante">
+                <i class="fa fa-save me-1"></i> Guardar Cuadrante
+            </button>
+            <button class="btn btn-info btn-sm text-white shadow-sm" onclick="SGT.publicarCuadrante()" id="btn-publicar-cuadrante" style="display:none;">
+                <i class="fa fa-paper-plane me-1"></i> Publicar Cuadrante
+            </button>
+        </div>
     </div>
 </div>
 
@@ -310,6 +318,12 @@
     window.SGT = {
         modo: '{{ modo|default("simulacion") }}',
         cabeceraId: '{{ cabecera_id|default("") }}',
+        DURACIONES_MAP: {
+            {% for t in turnos %}
+            "{{ t.abreviacion }}": {{ t.duracion_hrs|default(0) if t.duracion_hrs else 8 }},
+            {% endfor %}
+            "L": 0, "V": 0
+        },
         cuadranteData: null,
         eventSource: null,
 
@@ -522,18 +536,15 @@
             html += `<tfoot class="bg-light">`;
             let resumen_row = `<tr><td class="fw-bold">TOTALES</td>`;
             trabajadores.forEach(t => {
-                let sumT = 0, sumL = 0, sumD = 0;
+                let sumT = 0, sumL = 0, sumD = 0, sumH = 0;
                 dias.forEach(dia => {
                     const cellData = (celdas[dia.fecha] && celdas[dia.fecha][t.id]) || 'L';
-                    let abr = 'L';
-                    if (typeof cellData === 'object' && cellData !== null) {
-                        abr = cellData.abr || 'L';
-                    } else {
-                        abr = cellData;
-                    }
+                    let abr = (typeof cellData === 'object' && cellData !== null) ? cellData.abr : cellData;
                     
                     const isSun = dia.dia_semana === 6;
-                    if (abr === 'L') {
+                    const dur = this.DURACIONES_MAP[abr] || 0;
+                    sumH += dur;
+                    if (abr === 'L' || abr === 'V') {
                         sumL++;
                         if (isSun) sumD++;
                     } else if (LISTA_TURNOS.includes(abr)) {
@@ -541,7 +552,10 @@
                     }
                 });
                 const nombreCorto = t.nombre.split(' ')[0];
-                resumen_row += `<td class="text-center fw-bold resumen-w" data-wid="${t.id}" style="font-size: 0.75rem;"><div class="small text-muted" style="font-size: 0.6rem;">${nombreCorto}</div>${sumT}/${sumL}/${sumD}</td>`;
+                resumen_row += `<td class="text-center fw-bold resumen-w" data-wid="${t.id}" style="font-size: 0.7rem;">
+                    <div class="small text-muted" style="font-size: 0.55rem;">${nombreCorto}</div>
+                    ${sumH}h<br>(${sumT}/${sumL}/${sumD})
+                </td>`;
             });
             html += resumen_row;
             html += `</tfoot></table>`;
@@ -575,52 +589,22 @@
                 }
             }
 
-            // --- Calcular métricas de cobertura REALES (Suma de brechas diarias/turno) ---
-            let total_necesarios = 0;
-            let total_cubiertos = 0;
-            let suma_deficits = 0;
-            let suma_superavits = 0;
+            const btnPublicar = document.getElementById('btn-publicar-cuadrante');
+            const btnExcel = document.getElementById('btn-excel');
+            const btnPDF = document.getElementById('btn-pdf');
 
-            dias.forEach(dia => {
-                const isSun = dia.dia_semana === 6; // Python 6=Dom
-                const conts = { L: 0 };
-                LISTA_TURNOS.forEach(t => conts[t] = 0);
-                
-                trabajadores.forEach(t => {
-                    const cellData = (celdas[dia.fecha] && celdas[dia.fecha][t.id]) || 'L';
-                    let tAbr = 'L';
-                    if (typeof cellData === 'object' && cellData !== null) {
-                        tAbr = cellData.abr || 'L';
-                    } else {
-                        tAbr = cellData;
-                    }
-                    
-                    if (conts[tAbr] !== undefined) conts[tAbr]++;
-                    if (LISTA_TURNOS.includes(tAbr)) total_cubiertos++;
-                });
-
-                LISTA_TURNOS.forEach(t => {
-                    const reqNormal = parseInt($('#cob_' + t).val()) || 0;
-                    const reqSun = parseInt($('#cob_sun_' + t).val());
-                    const req = (isSun && !isNaN(reqSun)) ? reqSun : reqNormal;
-                    
-                    total_necesarios += req;
-                    const count = conts[t];
-                    if (count < req) suma_deficits += (req - count);
-                    if (count > req) suma_superavits += (count - req);
-                });
-            });
-
-            $('#metrica_req').text(total_necesarios);
-            $('#metrica_cub').text(total_cubiertos);
-            $('#metrica_sup').text(suma_superavits);
-            const defEl = $('#metrica_def');
-            defEl.text(suma_deficits);
-            if (suma_deficits > 0) {
-                defEl.addClass('text-danger');
-            } else {
-                defEl.removeClass('text-danger').addClass('text-muted');
+            if (btnPublicar) {
+                btnPublicar.style.display = (this.cuadranteData.estado === 'guardado' && this.modo === 'editar') ? 'inline-block' : 'none';
             }
+            if (btnExcel) {
+                btnExcel.style.display = (this.cabeceraId) ? 'inline-block' : 'none';
+            }
+            if (btnPDF) {
+                btnPDF.style.display = (this.cabeceraId) ? 'inline-block' : 'none';
+            }
+            if (this.cuadranteData.estado === 'publicado') this.modo = 'ver';
+
+            this.actualizarMetricasGlobales();
             $('#panel_metricas').slideDown();
 
             console.log("SGT: [7] Finalización exitosa del renderizado.");
@@ -671,6 +655,131 @@
             const picker = $('#turno_picker');
             window.celdaActiva = celda;
             picker.css({ position: 'fixed', top: rect.bottom + 5, left: rect.left, zIndex: 9999 }).fadeIn();
+        },
+
+        actualizarMetricasGlobales: function() {
+            let reqT = 0, cubT = 0, defT = 0, supT = 0;
+            if (!this.cuadranteData) return;
+            const { dias, trabajadores, celdas } = this.cuadranteData;
+
+            dias.forEach(dia => {
+                const isSun = dia.dia_semana === 6;
+                const conts = {};
+                LISTA_TURNOS.forEach(t => conts[t.trim()] = 0);
+                
+                trabajadores.forEach(trab => {
+                    const cellData = (celdas[dia.fecha] && celdas[dia.fecha][trab.id]) || 'L';
+                    let tAbr = (typeof cellData === 'object' && cellData !== null) ? (cellData.abr || 'L') : (cellData || 'L');
+                    tAbr = tAbr.trim();
+
+                    if (conts[tAbr] !== undefined) {
+                        conts[tAbr]++;
+                        cubT++;
+                    }
+                });
+
+                LISTA_TURNOS.forEach(t => {
+                    const tClean = t.trim();
+                    const reqNormal = parseInt($(`#cob_${tClean}`).val()) || 0;
+                    const reqSun = parseInt($(`#cob_sun_${tClean}`).val());
+                    const req = (isSun && !isNaN(reqSun)) ? reqSun : reqNormal;
+                    
+                    reqT += req;
+                    const count = conts[tClean] || 0;
+                    if (count < req) defT += (req - count);
+                });
+            });
+
+            // Nueva lógica de Superávit (Capacidad Disponible)
+            // Congruente con Builder: Meta Total - Turnos Asignados
+            let metaTotal = trabajadores.reduce((acc, t) => acc + (t.meta_mensual || 0), 0);
+            supT = Math.max(0, metaTotal - cubT);
+
+            $('#metrica_req').text(reqT);
+            $('#metrica_cub').text(cubT);
+            $('#metrica_sup').text(supT);
+            const defEl = $('#metrica_def');
+            defEl.text(defT).toggleClass('text-danger', defT > 0).toggleClass('text-muted', defT === 0);
+        },
+
+        actualizarContadoresFila: function(celda) {
+            if (!celda) return;
+            const fila = $(celda).closest('tr');
+            const wid = celda.dataset.wid;
+            const fecha = celda.dataset.fecha;
+            const contadores = { L: 0 };
+            LISTA_TURNOS.forEach(t => contadores[t] = 0);
+            let totalDia = 0;
+            
+            fila.find('.celda-turno').each(function () {
+                const abr = $(this).find('.badge-turno').text().trim();
+                if (abr === 'L' || abr === 'V') { contadores.L++; }
+                else if (LISTA_TURNOS.includes(abr)) { contadores[abr]++; totalDia++; }
+            });
+
+            LISTA_TURNOS.forEach(t => {
+                const cobCell = fila.find(`.cob-val[data-turno="${t}"]`);
+                if (cobCell.length) {
+                    const isSun = fila.find('.col-fecha').hasClass('domingo');
+                    const req = (isSun && !isNaN(parseInt($(`#cob_sun_${t}`).val()))) ? parseInt($(`#cob_sun_${t}`).val()) : (parseInt($(`#cob_${t}`).val()) || 0);
+                    const count = contadores[t];
+                    cobCell.html(count < req ? `<span class="badge bg-danger rounded-pill"><i class="fa fa-exclamation-circle"></i> ${count}</span>` : count);
+                }
+            });
+            fila.find('.cob-val-l').text(contadores.L);
+            fila.find('.total-dia').text(totalDia + contadores.L);
+
+            // Totales Trabajador
+            let sumT = 0, sumL = 0, sumD = 0, sumH = 0;
+            $(`.celda-turno[data-wid="${wid}"]`).each(function() {
+                const row = $(this).closest('tr');
+                const isSun = row.find('.col-fecha').hasClass('domingo');
+                const abr = $(this).find('.badge-turno').text().trim() || 'L';
+                sumH += (SGT.DURACIONES_MAP[abr] || 0);
+                if (abr === 'L' || abr === 'V') { sumL++; if (isSun) sumD++; }
+                else if (LISTA_TURNOS.includes(abr)) { sumT++; }
+            });
+
+            const footerCell = $(`tfoot td.resumen-w[data-wid="${wid}"]`).first();
+            if (footerCell.length) {
+                const nombreDiv = footerCell.find('div.text-muted').prop('outerHTML') || "";
+                footerCell.html(`${nombreDiv}${sumH}h<br>(${sumT}/${sumL}/${sumD})`);
+            }
+            this.actualizarMetricasGlobales();
+        },
+
+        publicarCuadrante: function() {
+            Swal.fire({
+                title: '¿Publicar Cuadrante?',
+                text: 'Será INMUTABLE y no podrá ser editado. ¿Estás seguro?',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonText: 'Sí, Publicar',
+                confirmButtonColor: '#3498db'
+            }).then(result => {
+                if (result.isConfirmed) {
+                    $.ajax({
+                        url: '/cuadrante/publicar',
+                        type: 'POST',
+                        contentType: 'application/json',
+                        data: JSON.stringify({ cabecera_id: this.cabeceraId }),
+                        success: () => {
+                            toastr.success('Publicado');
+                            window.location.reload();
+                        }
+                    });
+                }
+            });
+        },
+
+        exportarExcel: function() {
+            if (!this.cabeceraId) return;
+            window.location.href = `/cuadrante/exportar/excel/${this.cabeceraId}`;
+        },
+
+        exportarPDF: function() {
+            if (!this.cabeceraId) return;
+            window.location.href = `/cuadrante/exportar/pdf/${this.cabeceraId}`;
         }
     };
 
@@ -709,135 +818,12 @@
         // Guardamos como objeto para distinguir que fue manual
         SGT.cuadranteData.celdas[fecha][wid] = { abr: abr, origen: 'manual' };
 
-        actualizarContadoresFila(celdaActiva);
+        SGT.actualizarContadoresFila(celdaActiva);
         cerrarPicker();
         guardarCambiosCelda(fecha, wid, abr);
     }
 
-    function actualizarContadoresFila(celda) {
-        if (!celda) return;
-        const fila = $(celda).closest('tr');
-        const wid = celda.dataset.wid;
-        const fecha = celda.dataset.fecha;
 
-        // 1. Recalcular Cobertura de la Fila (Día)
-        const contadores = { L: 0 };
-        if (typeof LISTA_TURNOS !== 'undefined') {
-            LISTA_TURNOS.forEach(t => contadores[t] = 0);
-        }
-        let totalDia = 0;
-        
-        fila.find('.celda-turno').each(function () {
-            const abr = $(this).find('.badge-turno').text().trim();
-            if (abr === 'L') {
-                contadores.L++;
-            } else if (typeof LISTA_TURNOS !== 'undefined' && LISTA_TURNOS.includes(abr)) {
-                if (contadores[abr] !== undefined) contadores[abr]++;
-                totalDia++;
-            }
-        });
-
-        // Actualizar celdas de cobertura (Derecha)
-        if (typeof LISTA_TURNOS !== 'undefined') {
-            LISTA_TURNOS.forEach(t => {
-                const cobCell = fila.find(`.cob-val[data-turno="${t}"]`);
-                if (cobCell.length) {
-                    const count = contadores[t] || 0;
-                    const isSun = fila.find('.col-fecha').hasClass('domingo');
-                    const reqNormal = parseInt($(`#cob_${t}`).val()) || 0;
-                    const reqSun = parseInt($(`#cob_sun_${t}`).val());
-                    const r = (isSun && !isNaN(reqSun)) ? reqSun : reqNormal;
-
-                    if (count < r) {
-                        cobCell.html(`<span class="badge bg-danger shadow-sm px-2 rounded-pill"><i class="fa fa-exclamation-circle"></i> ${count}</span>`);
-                    } else {
-                        cobCell.html(count);
-                    }
-                }
-            });
-        }
-        fila.find('.cob-val-l').text(contadores.L);
-        fila.find('.total-dia').text(totalDia + contadores.L);
-
-        // 2. Recalcular Totales del Trabajador (Última Fila)
-        let sumT = 0, sumL = 0, sumD = 0;
-        const workerId = String(wid);
-        
-        $(`.celda-turno[data-wid="${workerId}"]`).each(function() {
-            const row = $(this).closest('tr');
-            const isSun = row.find('.col-fecha').hasClass('domingo');
-            const abr = $(this).find('.badge-turno').text().trim() || 'L';
-            
-            if (abr === 'L') {
-                sumL++;
-                if (isSun) sumD++;
-            } else if (typeof LISTA_TURNOS !== 'undefined' && LISTA_TURNOS.includes(abr)) {
-                sumT++;
-            }
-        });
-
-        const footerCell = $(`tfoot td.resumen-w[data-wid="${workerId}"], tfoot .resumen-w[data-wid="${workerId}"]`).first();
-        if (footerCell.length) {
-            const nombreDiv = footerCell.find('div.text-muted').prop('outerHTML') || "";
-            footerCell.html(`${nombreDiv}${sumT}/${sumL}/${sumD}`);
-        }
-
-        // 3. Recalcular Métricas Globales
-        if (typeof actualizarMetricasGlobales === 'function') {
-            actualizarMetricasGlobales();
-        }
-    }
-
-    function actualizarMetricasGlobales() {
-        let total_necesarios = 0;
-        let total_cubiertos = 0;
-        let suma_deficits = 0;
-        let suma_superavits = 0;
-
-        if (!SGT.cuadranteData || !SGT.cuadranteData.dias) return;
-        const { dias, trabajadores, celdas } = SGT.cuadranteData;
-
-        dias.forEach(dia => {
-            const isSun = dia.dia_semana === 6;
-            const conts = { L: 0 };
-            LISTA_TURNOS.forEach(t => conts[t] = 0);
-            
-            trabajadores.forEach(t => {
-                const cellData = (celdas[dia.fecha] && celdas[dia.fecha][t.id]) || 'L';
-                let tAbr = 'L';
-                if (typeof cellData === 'object' && cellData !== null) {
-                    tAbr = cellData.abr || 'L';
-                } else {
-                    tAbr = cellData;
-                }
-                
-                if (conts[tAbr] !== undefined) conts[tAbr]++;
-                if (LISTA_TURNOS.includes(tAbr)) total_cubiertos++;
-            });
-
-            LISTA_TURNOS.forEach(t => {
-                const reqNormal = parseInt($('#cob_' + t).val()) || 0;
-                const reqSun = parseInt($('#cob_sun_' + t).val());
-                const req = (isSun && !isNaN(reqSun)) ? reqSun : reqNormal;
-                
-                total_necesarios += req;
-                const count = conts[t];
-                if (count < req) suma_deficits += (req - count);
-                if (count > req) suma_superavits += (count - req);
-            });
-        });
-
-        $('#metrica_req').text(total_necesarios);
-        $('#metrica_cub').text(total_cubiertos);
-        $('#metrica_sup').text(suma_superavits);
-        const defEl = $('#metrica_def');
-        defEl.text(suma_deficits);
-        if (suma_deficits > 0) {
-            defEl.addClass('text-danger').removeClass('text-muted');
-        } else {
-            defEl.removeClass('text-danger').addClass('text-muted');
-        }
-    }
 
     function guardarCambiosCelda(fecha, wid, abr) {
         if (SGT.modo === 'editar' && SGT.cabeceraId) {
@@ -864,8 +850,8 @@
                     SGT.cuadranteData.celdas[fecha][wid] = { abr: abr, origen: 'manual' };
                     
                     // Refrescar contadores visuales sin recargar todo
-                    actualizarContadoresFila(window.celdaActiva);
-                    actualizarMetricasGlobales();
+                    SGT.actualizarContadoresFila(window.celdaActiva);
+                    SGT.actualizarMetricasGlobales();
                 },
                 error: function(err) {
                     toastr.error('Error al persistir el cambio.');
@@ -1007,12 +993,7 @@
     // Escuchar cambios en los inputs de cobertura para actualizar badges rojos en vivo
     $(document).on('change', '.cobertura-input', function () {
         console.log("Cambio en cobertura detectado, refrescando tabla...");
-        $('.cuadrante-table tbody tr').each(function () {
-            // Solo filas de días, no la de totales
-            if (!$(this).hasClass('fila-total')) {
-                actualizarContadoresFila($(this).find('.celda-turno').first());
-            }
-        });
+        SGT.actualizarMetricasGlobales();
     });
 
     // --- Verificador de Capacidad ---

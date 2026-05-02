@@ -29,15 +29,22 @@ Este documento detalla el progreso actual en el rediseño y acoplamiento del mot
 
 ### 1. Exportación de Datos (PDF / Excel)
 - **Reportes Legales**: El usuario necesitará exportar su planificación en un formato válido ante la Dirección del Trabajo (DT).
-- **Implementación sugerida**: Desarrollar un endpoint `/cuadrante/exportar/<id>` que reconstruya el cuadrante usando Pandas o ReportLab (u otra librería) para generar un documento listo para la firma de los trabajadores.
+### 1. Generación de Reportes (COMPLETADO ✅)
+- **Estado**: Finalizado. Implementados motores de exportación para Excel (openpyxl) y PDF (ReportLab).
+- **Características**:
+    - **Excel**: Diseño vertical con marcado de feriados, colores de turnos y totales mensuales por trabajador.
+    - **PDF Premium**: Medidas exactas (15.4cm de ancho), nombres horizontales, bordes de sección gruesos y nombres de archivos dinámicos (`Empresa_Servicio_Periodo`).
+    - **Ajuste**: Todo el mes (31 días) garantizado en una sola página tamaño Carta.
 
-### 2. Estados de Flujo del Cuadrante (Publicación)
-- El estado actual en base de datos es `"guardado"`. El sistema debe definir el comportamiento frente a un "Cuadrante Publicado" (cuando el estado cambia de `guardado` a `publicado`).
-- **Bloqueo**: Una vez publicado, la lógica de negocio posiblemente deba prevenir modificaciones arbitrarias o, si se permite, requerir autorizaciones adicionales de Super-Admin.
+### 2. Estados de Flujo del Cuadrante (IMPLEMENTADO ✅)
+- **Funcionalidad**: Los botones de acción en la UI ahora responden al estado del cuadrante.
+- **Bloqueo**: Al estar en estado `"publicado"`, el sistema bloquea el picker de turnos y muestra un aviso de "Modo Lectura".
+- **Publicación**: Botón de "Publicar Cuadrante" funcional que vuelve inmutable la planificación.
 
-### 4. Recálculo Reactivo Local de Métricas
-- Actualmente, al realizar una **edición manual** post-guardado, las insignias de déficit/superávit en la columna derecha de la tabla (`<td class="cob-val">`) y los totales (eje inferior de horas) no se actualizan en el acto en el HTML.
-- **Acción requerida**: Desarrollar la re-evaluación algorítmica vía JS post-AJAX para que los números inferiores y laterales cuadren inmediatamente.
+### 4. Recálculo Reactivo Local de Métricas (COMPLETADO ✅)
+- **Logro**: Implementada la función `SGT.actualizarContadoresFila()` en JS.
+- **Efecto**: Al realizar una edición manual post-guardado, el sistema recalcula en tiempo real las horas del trabajador, la dotación diaria (defecto/superávit) y las métricas globales del dashboard sin recargar la página.
 
-### 5. Validaciones de Edición Manual
-- Si un usuario cambia manualmente un turno 'Libre' a un turno de 'Noche', el sistema debería evaluar si este acto **viola una regla dura** (como falta de descanso post-noche) y arrojar un ToastR de advertencia o impedir la acción según decida el equipo funcional.
+### 5. Validaciones de Edición Manual (PENDIENTE ⏳)
+- **Objetivo**: Integrar las reglas de la DT (Dirección del Trabajo) en el picker manual.
+- **Acción futura**: Si un usuario cambia manualmente un turno 'Libre' a un turno de 'Noche', el sistema deberá evaluar si este acto viola una regla dura y arrojar una advertencia (ToastR).

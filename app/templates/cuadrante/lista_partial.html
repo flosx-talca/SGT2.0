@@ -1,57 +1,61 @@
-{% extends "_partial.html" if is_htmx else "layout.html" %}
-{% block title %}Últimas Planificaciones{% endblock %}
-
-{% block content %}
-<div class="card">
-  <div class="card-body">
-    <table id="tbl-planificaciones" class="table table-hover dt-table">
-      <thead>
-        <tr>
-          <th>Empresa</th>
-          <th>Servicio</th>
-          <th>Período</th>
-          <th>Estado</th>
-          <th>Asig. Manuales</th>
-          <th>Guardado por</th>
-          <th>Fecha</th>
-          <th>Acciones</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for c in cabeceras %}
-        <tr>
-          <td>{{ c.empresa.razon_social }}</td>
-          <td>{{ c.servicio.descripcion if c.servicio else '—' }}</td>
-          <td>{{ c.periodo }}</td>
-          <td>
-            <span class="badge bg-{{ 'success' if c.estado == 'guardado' else 'secondary' }}">
-              {{ c.estado|capitalize }}
+<div class="table-responsive">
+  <table id="tbl-planificaciones" class="table table-hover align-middle dt-table">
+    <thead class="table-light">
+      <tr>
+        <th>Empresa</th>
+        <th>Servicio</th>
+        <th>Período</th>
+        <th>Estado</th>
+        <th>Asig. Manuales</th>
+        <th>Guardado por</th>
+        <th>Fecha</th>
+        <th>Acciones</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for c in cabeceras %}
+      <tr>
+        <td>{{ c.empresa.razon_social }}</td>
+        <td class="fw-bold">{{ c.servicio.descripcion if c.servicio else '—' }}</td>
+        <td>{{ c.periodo }}</td>
+        <td>
+          <span class="badge bg-{{ 'success' if c.estado == 'publicado' else 'info' }}">
+            {{ c.estado|capitalize }}
+          </span>
+        </td>
+        <td class="text-center">
+          {% if c.total_manuales > 0 %}
+            <span class="badge bg-warning text-dark" title="Cambios realizados a mano">
+                <i class="fas fa-edit me-1"></i> {{ c.total_manuales }}
             </span>
-          </td>
-          <td>
-            {% if c.total_manuales > 0 %}
-              <span class="badge bg-warning text-dark">✏️ {{ c.total_manuales }}</span>
-            {% else %}
-              <span class="text-muted">—</span>
-            {% endif %}
-          </td>
-          <td>{{ c.guardado_por.nombre if c.guardado_por else '—' }}</td>
-          <td>{{ c.guardado_en.strftime('%d/%m/%Y %H:%M') if c.guardado_en else '—' }}</td>
-          <td>
-            <!-- Actions to be implemented later by user -->
-            <a href="/planificacion/ver/{{ c.id }}"
-               class="btn btn-sm btn-outline-primary">
-               <i class="fas fa-eye"></i>
+          {% else %}
+            <span class="text-muted small">—</span>
+          {% endif %}
+        </td>
+        <td>{{ c.guardado_por.nombre if c.guardado_por else '—' }}</td>
+        <td class="small">{{ c.guardado_en.strftime('%d/%m/%Y %H:%M') if c.guardado_en else '—' }}</td>
+        <td>
+          <div class="btn-group btn-group-sm">
+            <a href="/planificacion/ver/{{ c.id }}" class="btn btn-outline-primary" title="Ver">
+              <i class="fas fa-eye"></i>
             </a>
-            <a href="/planificacion/editar/{{ c.id }}"
-               class="btn btn-sm btn-outline-warning">
-               <i class="fas fa-edit"></i>
+            <a href="/planificacion/editar/{{ c.id }}" class="btn btn-outline-warning" title="Editar">
+              <i class="fas fa-edit"></i>
             </a>
-          </td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
-  </div>
+            <a href="/cuadrante/exportar/excel/{{ c.id }}" class="btn btn-outline-success btn-sm" title="Exportar a XLS" hx-boost="false" target="_blank">
+              <i class="fas fa-file-excel"></i>
+            </a>
+            <a href="/cuadrante/exportar/pdf/{{ c.id }}" class="btn btn-outline-danger btn-sm" title="Exportar a PDF" hx-boost="false" target="_blank">
+              <i class="fas fa-file-pdf"></i>
+            </a>
+          </div>
+        </td>
+      </tr>
+      {% else %}
+      <tr>
+        <td colspan="8" class="text-center text-muted py-4">No hay planificaciones guardadas.</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
 </div>
-{% endblock %}

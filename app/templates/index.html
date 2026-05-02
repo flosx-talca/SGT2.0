@@ -182,7 +182,7 @@
                     <h5 class="mb-0 fw-bold text-dark"><i class="fa fa-list me-2 text-primary"></i>Últimas
                         Planificaciones</h5>
                 </div>
-                <div class="card-body" hx-get="/cuadrante/lista" hx-trigger="load" hx-swap="innerHTML">
+                <div id="cuadrante-lista-container" class="card-body" hx-get="/cuadrante/lista" hx-trigger="load" hx-swap="innerHTML">
                     <div class="text-center p-3">
                         <div class="spinner-border spinner-border-sm text-primary" role="status"></div>
                         <span class="text-muted ms-2">Cargando planificaciones...</span>
