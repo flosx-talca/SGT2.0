@@ -313,7 +313,7 @@ def exportar_pdf(cabecera_id):
     trabajadores_db = Trabajador.query.filter_by(empresa_id=cabecera.empresa_id, servicio_id=cabecera.servicio_id, activo=True).all()
     turnos_db = Turno.query.filter_by(empresa_id=cabecera.empresa_id, activo=True).all()
     
-    t_nombres = {t.id: f"{t.nombre} {t.apellido1[:1]}." for t in trabajadores_db}
+    t_nombres = {t.id: f"{t.nombre[0]}. {t.apellido1}" for t in trabajadores_db}
     turnos_map = {t.id: t.abreviacion for t in turnos_db}
     colores_map = {t.abreviacion: t.color for t in turnos_db if t.color}
     duraciones_map = {t.id: t.duracion_hrs for t in turnos_db}
@@ -326,8 +326,10 @@ def exportar_pdf(cabecera_id):
     # 3. Preparar Matriz para ReportLab
     dias_nombres = ["Lun", "Mar", "Mie", "Jue", "Vie", "Sab", "Dom"]
     
-    # Cabecera Horizontal (Nombres de turno recortados)
-    header = ['Día'] + [t_nombres[t.id] for t in trabajadores_db] + [t.nombre[:8] for t in turnos_db]
+    # Cabecera con Nombres Verticales para Trabajadores y Turnos
+    header = ['Día'] + \
+             [VerticalText(t_nombres[t.id], font_size=7) for t in trabajadores_db] + \
+             [VerticalText(f"Total {t.nombre}", font_size=7) for t in turnos_db]
     table_data = [header]
     row_styles = []
     
@@ -367,7 +369,7 @@ def exportar_pdf(cabecera_id):
 
     # 4. Generar PDF con Medidas Exactas (15.4cm = 436.5pts)
     buffer = io.BytesIO()
-    doc = SimpleDocTemplate(buffer, pagesize=landscape(letter), 
+    doc = SimpleDocTemplate(buffer, pagesize=letter, 
                             topMargin=15, bottomMargin=15, leftMargin=15, rightMargin=15,
                             title=f"Cuadrante_{cabecera.periodo}",
                             author=cabecera.empresa.razon_social)
@@ -375,9 +377,9 @@ def exportar_pdf(cabecera_id):
     
     title_text = f"<b>Cuadrante Turnos {cabecera.empresa.razon_social} - {cabecera.servicio.descripcion} ({cabecera.periodo})</b>"
     t_title = styles['Normal']
-    t_title.alignment = 1; t_title.fontSize = 10
+    t_title.alignment = 1; t_title.fontSize = 12
     elements.append(Paragraph(title_text, t_title))
-    elements.append(Spacer(1, 10))
+    elements.append(Spacer(1, 20))
     
     # Cálculos para 15.4 cm exactos
     total_w_pts = 436.5 
