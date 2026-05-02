@@ -290,6 +290,15 @@
                 $('body').removeClass('modal-open').css('padding-right', '');
             });
 
+            // ── Escucha de eventos personalizados desde el servidor (vía HX-Trigger) ──
+            document.body.addEventListener('mostrarToast', function(evt) {
+                const data = evt.detail;
+                if (data.type === 'success') toastr.success(data.msg);
+                else if (data.type === 'warning') toastr.warning(data.msg);
+                else if (data.type === 'info') toastr.info(data.msg);
+                else toastr.error(data.msg);
+            });
+
             // Fallback para links no-HTMX (navegación completa)
             $(document).on('click', 'a:not([hx-get])', function(e) {
                 let href = $(this).attr('href');

@@ -11,8 +11,10 @@ from app.scheduler.conflict import get_conflict_report
 from flask_login import login_required, current_user
 from app.services.context import get_empresa_activa_id, usuario_tiene_acceso
 from ortools.sat.python import cp_model
+import logging
 
 planificacion_bp = Blueprint('planificacion', __name__, url_prefix='/planificacion')
+logger = logging.getLogger(__name__)
 
 
 def _calcular_horas_turno(hora_inicio, hora_fin):
@@ -49,8 +51,18 @@ def generar():
         return jsonify({'status': 'error',
                         'message': 'Faltan parámetros básicos (mes, anio, sucursal).'}), 400
 
-    # ── Trabajadores del servicio (Filtrado estricto por Empresa y Servicio) ────
+    # 1. Validaciones de Integridad
+    from app.models.business import ParametroLegal
+    
+    # Verificar Parámetros Legales Globales
+    params_count = ParametroLegal.query.filter_by(es_activo=True).count()
+    if params_count == 0:
+        return jsonify({'status': 'error', 
+                        'message': 'No se encontraron Parámetros Legales configurados en el sistema.'}), 400
+
     empresa_id_activa = get_empresa_activa_id()
+    
+    # Verificar Trabajadores
     trabajadores_db = Trabajador.query.filter_by(
         empresa_id=empresa_id_activa,
         servicio_id=servicio_id, 
@@ -58,7 +70,13 @@ def generar():
     ).all()
     if not trabajadores_db:
         return jsonify({'status': 'error',
-                        'message': 'No hay trabajadores activos en este servicio.'}), 400
+                        'message': 'No hay trabajadores activos en este servicio. Por favor, asigne personal antes de generar.'}), 400
+
+    # Verificar Turnos
+    turnos_db = Turno.query.filter_by(empresa_id=empresa_id_activa, activo=True).all()
+    if not turnos_db:
+        return jsonify({'status': 'error',
+                        'message': 'La empresa no tiene turnos configurados o activos.'}), 400
 
     t_ids   = [t.id for t in trabajadores_db]
     t_dicts = [{'id': t.id, 'nombre': f"{t.nombre} {t.apellido1}"}
@@ -72,11 +90,6 @@ def generar():
         return jsonify({'status': 'error', 'message': 'Sin acceso a esta empresa.'}), 403
 
     # ── Turnos de la empresa (no todos del sistema) ───────────────────────────
-    turnos_db = Turno.query.filter_by(empresa_id=empresa_id, activo=True).all()
-    if not turnos_db:
-        return jsonify({'status': 'error',
-                        'message': 'No hay turnos activos configurados para esta empresa.'}), 400
-
     # Abreviaciones únicas manteniendo el orden de BD
     vistas = set()
     turnos_ordenados = []
@@ -256,13 +269,11 @@ def generar():
         from ortools.sat.python import cp_model as _cp
         import math as _math
         _STATUS = ['UNKNOWN','MODEL_INVALID','FEASIBLE','INFEASIBLE','OPTIMAL']
-        print(f"\n{'='*60}")
-        print(f"[SGT] STATUS: {_STATUS[status]}")
-        print(f"[SGT] Trabajadores: {len(t_ids)} | Turnos: {turnos}")
-        print(f"[SGT] Bloqueados: {len(bloqueados)} | Fijos: {len(fijos)}")
-        print(f"[SGT] reglas_bd: {reglas_bd}")
-        print(f"[SGT] turnos_meta: {turnos_meta}")
-        print(f"\n[SGT] META POR TRABAJADOR:")
+        logger.info(f"--- SOLVER STATUS: {_STATUS[status]} ---")
+        logger.info(f"Trabajadores: {len(t_ids)} | Turnos: {turnos}")
+        logger.info(f"Bloqueados: {len(bloqueados)} | Fijos: {len(fijos)}")
+        logger.info(f"Reglas: {reglas_bd}")
+        
         _min_dom = reglas_bd.get('min_free_sundays', 1)
         for w, meta in trabajadores_meta.items():
             h    = meta.get('horas_semanales', 42) or 42
@@ -276,29 +287,10 @@ def generar():
             disp     = num_days - bloq - dom_lib
             raw      = disp / 7 * (h / dur)
             meta_cal = _math.ceil(raw) if ext else _math.floor(raw)
-            tope_sem = _math.ceil(h / dur)
-            if ext and h % dur == 0:
-                tope_sem += 1
-            print(f"  Worker {w}: {h}h dur={dur} extra={ext} "
-                  f"bloq={bloq} dom_lib={dom_lib} disp={disp} "
-                  f"raw={raw:.2f} meta={meta_cal} tope_sem={tope_sem}")
-        print(f"\n[SGT] FIJOS:")
-        _dias_sem = ['Lun','Mar','Mié','Jue','Vie','Sáb','Dom']
-        _fijos_por_w = {}
-        for (w, d), t in fijos.items():
-            wd = _dias_sem[calendar.weekday(int(d[:4]),int(d[5:7]),int(d[8:10]))]
-            es_dom = calendar.weekday(int(d[:4]),int(d[5:7]),int(d[8:10])) == 6
-            marca = " ← DOMINGO ⚠️" if es_dom else ""
-            print(f"  Worker {w}: {d} ({wd}) → {t}{marca}")
-            _fijos_por_w[w] = _fijos_por_w.get(w, 0) + 1
+            logger.info(f"  Worker {w}: {h}h dur={dur} meta={meta_cal}")
+
         if fijos:
-            print(f"  Fijos por worker: {_fijos_por_w}")
-        print(f"\n[SGT] DOTACIÓN (primeros 7 días):")
-        for d in dias_del_mes[:7]:
-            cob = coberturas_por_dia[d]
-            zeros = [t for t,v in cob.items() if v == 0]
-            print(f"  {d}: {cob}" + (f" ← turnos bloqueados: {zeros}" if zeros else ""))
-        print(f"{'='*60}\n")
+            logger.info(f"Fijos por worker: {len(fijos)} registros.")
 
         # UNKNOWN = timeout → error bloqueante, no hay nada que mostrar
         if status == cp_model.UNKNOWN:

@@ -67,11 +67,18 @@ def editar_asignacion():
 @login_required
 def lista():
     """Retorna las últimas planificaciones para el DataTable del dashboard."""
-    from app.services.context import get_empresas_usuario
+    from app.services.context import get_empresas_usuario, get_empresa_activa_id
     
-    # 1. Obtener empresas permitidas
-    empresas = get_empresas_usuario()
-    ids_permitidos = [e.id for e in empresas]
+    # 1. Determinar el filtro de empresa
+    id_activa = get_empresa_activa_id()
+    
+    if id_activa:
+        # Si hay una empresa seleccionada, mostrar solo esa
+        ids_permitidos = [id_activa]
+    else:
+        # Si no hay (ej: Super Admin sin selección), mostrar todas las que puede ver
+        empresas = get_empresas_usuario()
+        ids_permitidos = [e.id for e in empresas]
     
     # 2. Consultar cabeceras filtradas
     query = select(CuadranteCabecera).where(CuadranteCabecera.empresa_id.in_(ids_permitidos))

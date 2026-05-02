@@ -1,0 +1,6 @@
+2026-05-02 13:48:58,528 INFO: SGT 2.1 - Sistema de Logs Iniciado [in /home/orozas/developer/SGT/SGT2.0/app/__init__.py:34]
+2026-05-02 13:48:59,874 INFO: [FeriadoScheduler] Scheduler iniciado. Job programado para el día 1 de cada mes a las 02:00. [in /home/orozas/developer/SGT/SGT2.0/app/scheduler/feriado_scheduler.py:38]
+2026-05-02 13:49:01,236 INFO: SGT 2.1 - Sistema de Logs Iniciado [in /home/orozas/developer/SGT/SGT2.0/app/__init__.py:34]
+2026-05-02 13:49:02,420 INFO: [FeriadoScheduler] Scheduler iniciado. Job programado para el día 1 de cada mes a las 02:00. [in /home/orozas/developer/SGT/SGT2.0/app/scheduler/feriado_scheduler.py:38]
+2026-05-02 13:53:04,265 INFO: SGT 2.1 - Sistema de Logs Iniciado [in /home/orozas/developer/SGT/SGT2.0/app/__init__.py:34]
+2026-05-02 13:53:05,955 INFO: [FeriadoScheduler] Scheduler iniciado. Job programado para el día 1 de cada mes a las 02:00. [in /home/orozas/developer/SGT/SGT2.0/app/scheduler/feriado_scheduler.py:38]

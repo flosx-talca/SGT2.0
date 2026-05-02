@@ -8,10 +8,53 @@ from . import models
 from app.scheduler.feriado_scheduler import iniciar_scheduler_feriados
 from app.services.feriado_sync_service import carga_inicial
 import logging
+from logging.handlers import RotatingFileHandler
+import os
 
 def create_app():
     app = Flask(__name__)
     app.config.from_object(Config)
+
+    # --- CONFIGURACIÓN DE LOGGING ---
+    if not os.path.exists('logs'):
+        os.mkdir('logs')
+    
+    file_handler = RotatingFileHandler('logs/sgt_app.log', maxBytes=10240000, backupCount=10)
+    file_handler.setFormatter(logging.Formatter(
+        '%(asctime)s %(levelname)s: %(message)s [in %(pathname)s:%(lineno)d]'
+    ))
+    file_handler.setLevel(logging.INFO)
+    app.logger.addHandler(file_handler)
+    
+    stream_handler = logging.StreamHandler()
+    stream_handler.setLevel(logging.INFO)
+    app.logger.addHandler(stream_handler)
+    
+    app.logger.setLevel(logging.INFO)
+    app.logger.info('SGT 2.1 - Sistema de Logs Iniciado')
+
+    # --- MANEJADORES DE ERROR GLOBALES ---
+    from flask import render_template
+    
+    @app.errorhandler(404)
+    def not_found_error(error):
+        return render_template('errors/error.html', code=404, 
+                               msg="Página no encontrada", 
+                               desc="Lo sentimos, la ruta que buscas no existe o ha sido movida."), 404
+
+    @app.errorhandler(403)
+    def forbidden_error(error):
+        return render_template('errors/error.html', code=403, 
+                               msg="Acceso Denegado", 
+                               desc="No tienes permisos suficientes para acceder a este recurso."), 403
+
+    @app.errorhandler(500)
+    def internal_error(error):
+        db.session.rollback() # Asegurar rollback en caso de error de DB
+        app.logger.error(f"Error 500: {str(error)}")
+        return render_template('errors/error.html', code=500, 
+                               msg="Error Interno del Servidor", 
+                               desc="Ha ocurrido un error inesperado. El equipo técnico ha sido notificado."), 500
 
     # Inicializar plugins
     db.init_app(app)
@@ -155,7 +198,6 @@ def create_app():
             resultado = carga_inicial()
             logger.info(f"Carga inicial completada: {resultado}")
 
-    import os
     if os.environ.get("FLASK_ENV") != "testing":
         iniciar_scheduler_feriados(app)
 

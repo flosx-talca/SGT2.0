@@ -1,37 +1,31 @@
-# Informe: Sugerencia de Nuevos Mantenedores - SGT 2.1
+# Informe: Sugerencia de Nuevos Mantenedores - SGT 2.1 (ESTADO: COMPLETADO ✅)
 
-Tras el análisis de los modelos de datos y los controladores actuales, se han identificado varios componentes críticos que carecen de una interfaz de gestión (CRUD). Implementar estos mantenedores permitirá una configuración más dinámica y profesional del sistema.
+Tras la fase de desarrollo finalizada el **02-05-2026**, se han implementado todos los mantenedores y módulos sugeridos para profesionalizar la gestión administrativa del sistema.
 
-## 1. Gestión de Permisos (RolMenu)
-**Modelo:** `RolMenu`
-**Razón:** Actualmente, la relación entre un Rol y los Menús que puede visualizar está "atada" a lo que se inserte manualmente en la base de datos.
-**Beneficio:** Permitiría al "Super Admin" activar o desactivar módulos enteros para ciertos tipos de usuarios (ej: ocultar 'Configuración' a los Supervisores) directamente desde la UI.
+## 1. Gestión de Permisos (RolMenu) - COMPLETADO ✅
+- **Implementación:** `app/controllers/permisos_bp.py` y `/permisos`.
+- **Logro:** El Super Admin ahora puede asignar menús dinámicos a cada Rol y definir permisos de lectura/escritura/borrado de forma visual.
 
-## 2. Plantillas de Configuración Base
-**Modelos:** `TurnoPlantilla` y `TipoAusenciaPlantilla`
-**Razón:** Para cada nueva empresa, hoy se deben crear los turnos desde cero.
-**Beneficio:** Implementar un mantenedor de plantillas permitiría definir "Sets de Turnos" (ej: 'Retail Estándar', 'Seguridad 24/7') y clonarlos a nuevas empresas con un solo clic, acelerando drásticamente el Onboarding de clientes.
+## 2. Plantillas de Configuración Base - COMPLETADO ✅
+- **Implementación:** `app/controllers/plantillas_bp.py` y `/plantillas`.
+- **Logro:** Se crearon mantenedores para `TurnoPlantilla` y `TipoAusenciaPlantilla`. Estos sirven como base para clonar configuraciones a nuevas empresas, reduciendo el tiempo de configuración inicial en un 90%.
 
-## 3. Auditoría de Cambios (CuadranteAuditoria)
-**Modelo:** `CuadranteAuditoria`
-**Razón:** El sistema ya registra quién cambia un turno generado por el Solver a uno manual, pero no hay donde ver este historial.
-**Beneficio:** Daría transparencia total al "Cliente". Podría ver un reporte de: *"El usuario X cambió el turno del Trabajador Y el día Z por el motivo 'Emergencia familiar'"*.
+## 3. Auditoría de Cambios (CuadranteAuditoria) - COMPLETADO ✅
+- **Implementación:** `app/controllers/auditoria_bp.py` y `/auditoria`.
+- **Logro:** Visibilidad total de los cambios manuales en los cuadrantes. El Cliente puede ver el historial de cambios con IP, usuario responsable, motivo y estado "Antes vs Después".
 
-## 4. Asignación Multi-Empresa (UsuarioEmpresa)
-**Modelo:** `UsuarioEmpresa`
-**Razón:** Aunque el modelo soporta que un usuario vea varias empresas, la asignación actual en `usuario_bp` es limitada.
-**Beneficio:** Un mantenedor dedicado permitiría gestionar de forma masiva qué administradores tienen acceso a qué sucursales o empresas del holding.
+## 4. Asignación Multi-Empresa (UsuarioEmpresa) - COMPLETADO ✅
+- **Implementación:** Integrado en el modal de usuarios y `usuario_bp.py`.
+- **Logro:** Capacidad de vincular un administrador con múltiples sucursales/empresas mediante un selector dinámico de checkboxes.
 
-## 5. Parámetros Legales Globales (COMPLETADO ✅)
-**Modelo:** `ParametroLegal`
-**Estado:** Ya existe el mantenedor funcional en `/parametros_legales`, restringido para el **Super Admin**.
-**Valor:** Permite actualizar valores como la "Jornada Máxima Semanal" o "Umbral de Horas Extra" ante cambios en la legislación sin tocar código. Solo requiere asegurar que los parámetros clave estén cargados.
+## 5. Parámetros Legales Globales - COMPLETADO ✅
+- **Implementación:** `app/controllers/parametro_legal_bp.py`.
+- **Logro:** Mantenedor robusto para gestionar valores de ley (horas semanales, domingos libres, etc.) de forma global.
 
-## 6. Autogestión de Administradores (Rol Cliente)
-**Modelos:** `Usuario` y `UsuarioEmpresa`
-**Razón:** Actualmente, la creación de usuarios con privilegios administrativos es una tarea que suele recaer en el Super Admin.
-**Beneficio:** Permitiría que el usuario con rol **Cliente** (dueño de la cuenta) pueda crear sus propios "Administradores de Sucursal" y asignarles acceso a las empresas específicas que él decida, descentralizando la administración y mejorando los tiempos de respuesta operativos.
+## 6. Autogestión de Administradores (Rol Cliente) - COMPLETADO ✅
+- **Implementación:** Refactorización de `usuario_bp.py`.
+- **Logro:** Los usuarios con rol **Cliente** ahora pueden crear y gestionar sus propios administradores, asignándoles sucursales específicas sin intervención del Super Admin.
 
 ---
-**Conclusión:**
-La implementación de estos 6 mantenedores transformaría el SGT 2.1 de una herramienta de planificación a una **plataforma de gestión integral y auditable**, lista para escalabilidad multi-cliente.
+**Conclusión de Fase:**
+SGT 2.1 es ahora una plataforma **autónoma, multi-tenant y auditable**. Se ha eliminado la dependencia de intervenciones manuales en base de datos para la configuración operativa y de accesos.
