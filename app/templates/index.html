@@ -182,50 +182,11 @@
                     <h5 class="mb-0 fw-bold text-dark"><i class="fa fa-list me-2 text-primary"></i>Últimas
                         Planificaciones</h5>
                 </div>
-                <div class="card-body">
-                    <table id="tabla_home" class="table table-hover dt-responsive nowrap align-middle"
-                        style="width:100%">
-                        <thead class="table-light">
-                            <tr>
-                                <th>ID</th>
-                                <th>Sucursal</th>
-                                <th>Periodo</th>
-                                <th>Estado</th>
-                                <th>Última Modif.</th>
-                                <th class="text-end">Acciones</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr>
-                                <td>101</td>
-                                <td class="fw-bold">Bencinera Norte</td>
-                                <td>Mayo 2025</td>
-                                <td><span class="badge bg-success-subtle text-success">Publicado</span></td>
-                                <td>2025-04-18 10:30</td>
-                                <td class="text-end">
-                                    <button class="btn btn-sm btn-outline-info"
-                                        onclick="Modal('Visualizar', 101, '#')"><i class="fa fa-eye"></i></button>
-                                    <button class="btn btn-sm btn-outline-warning"
-                                        onclick="Modal('Editar', 101, '#')"><i class="fa fa-edit"></i></button>
-                                    <button class="btn btn-sm btn-outline-danger"><i class="fa fa-trash"></i></button>
-                                </td>
-                            </tr>
-                            <tr>
-                                <td>102</td>
-                                <td class="fw-bold">Pronto Sur</td>
-                                <td>Mayo 2025</td>
-                                <td><span class="badge bg-warning-subtle text-warning">Borrador</span></td>
-                                <td>2025-04-19 09:15</td>
-                                <td class="text-end">
-                                    <button class="btn btn-sm btn-outline-info"
-                                        onclick="Modal('Visualizar', 102, '#')"><i class="fa fa-eye"></i></button>
-                                    <button class="btn btn-sm btn-outline-warning"
-                                        onclick="Modal('Editar', 102, '#')"><i class="fa fa-edit"></i></button>
-                                    <button class="btn btn-sm btn-outline-danger"><i class="fa fa-trash"></i></button>
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
+                <div class="card-body" hx-get="/cuadrante/lista" hx-trigger="load" hx-swap="innerHTML">
+                    <div class="text-center p-3">
+                        <div class="spinner-border spinner-border-sm text-primary" role="status"></div>
+                        <span class="text-muted ms-2">Cargando planificaciones...</span>
+                    </div>
                 </div>
             </div>
         </div>

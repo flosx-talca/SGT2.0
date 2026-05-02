@@ -67,7 +67,7 @@ Reglas:
   eliminarlo antes de insertar el nuevo (reemplazar, no duplicar)
 - La función `clasificar_dia` debe estar en este mismo archivo
 
-Muéstrame el archivo completo antes de continuar.
+
 
 ---
 
@@ -81,7 +81,7 @@ Implementa el Blueprint `cuadrante_bp` con 3 endpoints:
 
 Todos los endpoints requieren `@login_required`.
 
-Muéstrame el archivo completo antes de continuar.
+
 
 ---
 
@@ -93,7 +93,6 @@ from app.controllers.cuadrante_bp import cuadrante_bp
 app.register_blueprint(cuadrante_bp)
 ```
 
-Muéstrame solo el diff antes de continuar.
 
 ---
 
@@ -109,8 +108,7 @@ Haz exactamente estos 3 cambios:
    en un `<select>` de turnos al hacer clic en una celda post-guardado.
    Cada cambio hace `PUT /cuadrante/asignacion/{id}` y muestra `✏️` en la celda.
 
-Antes de modificar el template, muéstrame el fragmento actual del botón
-y del tooltip para confirmar los selectores CSS/IDs exactos.
+
 
 ---
 
@@ -123,7 +121,7 @@ Crea el template siguiendo exactamente el mismo patrón de `trabajadores.html`:
 - Badge `✏️ N` en columna "Asig. Manuales" si `c.total_manuales > 0`
 - Botones de acción: Ver (`fa-eye`) y Editar (`fa-edit`)
 
-Muéstrame el archivo completo antes de continuar.
+
 
 ---
 
@@ -143,7 +141,7 @@ reemplaza el contenido estático actual por la carga HTMX del partial:
 </div>
 ```
 
-Muéstrame el diff del dashboard antes de continuar.
+
 
 ---
 

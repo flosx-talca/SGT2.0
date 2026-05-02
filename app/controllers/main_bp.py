@@ -56,13 +56,16 @@ def planificacion():
         } for f in feriados_del_mes
     }
     
+    empresa_activa = Empresa.query.get(empresa_id) if empresa_id else Empresa.query.first()
+    
     return render_template('simulacion.html', 
                            servicios=servicios, 
                            turnos=turnos, 
                            tipos_ausencia=tipos_ausencia, 
                            current_year=now.year, 
                            current_month=now.month,
-                           feriados_dict=feriados_dict)
+                           feriados_dict=feriados_dict,
+                           empresa_activa=empresa_activa)
 
 @main_bp.route('/simulacion')
 @login_required

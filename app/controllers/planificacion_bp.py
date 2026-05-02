@@ -562,3 +562,90 @@ def update_celda():
 @planificacion_bp.route('/publicar', methods=['POST'])
 def publicar():
     return jsonify({'status': 'ok', 'message': 'El cuadrante ha sido publicado.'})
+
+@planificacion_bp.route('/editar/<int:cabecera_id>')
+@login_required
+def editar(cabecera_id):
+    from app.models.scheduling import CuadranteCabecera
+    from app.models.business import Empresa, Servicio, Turno, Trabajador, TipoAusencia
+    cabecera = CuadranteCabecera.query.get_or_404(cabecera_id)
+    empresa_id = cabecera.empresa_id
+    
+    # Validar que el usuario tiene acceso a esta empresa
+    if not usuario_tiene_acceso(current_user, empresa_id):
+        return jsonify({'status': 'error', 'message': 'Sin acceso a esta empresa.'}), 403
+
+    servicios = Servicio.query.join(Servicio.empresas_asociadas).filter(Empresa.id == empresa_id, Servicio.activo == True).all()
+    turnos = Turno.query.filter_by(empresa_id=empresa_id, activo=True).all()
+    tipos_ausencia = TipoAusencia.query.filter_by(empresa_id=empresa_id, activo=True).all()
+    
+    # Feriados del mes guardado
+    import calendar
+    from app.models.core import Feriado
+    _, last_day = calendar.monthrange(cabecera.anio, cabecera.mes)
+    start_date = datetime(cabecera.anio, cabecera.mes, 1).date()
+    end_date = datetime(cabecera.anio, cabecera.mes, last_day).date()
+    feriados_del_mes = Feriado.query.filter(Feriado.fecha >= start_date, Feriado.fecha <= end_date, Feriado.activo == True).all()
+    feriados_dict = {
+        f.fecha.strftime('%Y-%m-%d'): {
+            'es_irrenunciable': f.es_irrenunciable,
+            'es_regional': f.es_regional,
+            'tipo_display': f.tipo_display,
+            'badge_config': f.badge_config
+        } for f in feriados_del_mes
+    }
+    
+    empresa_activa = Empresa.query.get(empresa_id)
+    
+    # Cargar Asignaciones
+    from sqlalchemy.orm import joinedload
+    from app.models.scheduling import CuadranteAsignacion
+    asignaciones = cabecera.asignaciones.options(joinedload(CuadranteAsignacion.turno), joinedload(CuadranteAsignacion.trabajador)).all()
+    
+    celdas = {}
+    for a in asignaciones:
+        f_str = a.fecha.strftime('%Y-%m-%d')
+        if f_str not in celdas:
+            celdas[f_str] = {}
+        if a.es_libre:
+            celdas[f_str][a.trabajador_id] = 'L'
+        elif a.turno:
+            celdas[f_str][a.trabajador_id] = a.turno.abreviacion
+            
+    trabajadores = Trabajador.query.filter_by(empresa_id=empresa_id, servicio_id=cabecera.servicio_id, activo=True).all()
+    t_dicts = [{'id': t.id, 'nombre': f"{t.nombre} {t.apellido1}"} for t in trabajadores]
+    
+    dias_dict = []
+    dias_nombres = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom']
+    for i in range(1, last_day + 1):
+        fecha_str = f"{cabecera.anio}-{str(cabecera.mes).zfill(2)}-{str(i).zfill(2)}"
+        dia_idx = calendar.weekday(cabecera.anio, cabecera.mes, i)
+        dias_dict.append({
+            'fecha': fecha_str,
+            'dia_semana': dia_idx,
+            'label': f"{str(i).zfill(2)} {dias_nombres[dia_idx]}"
+        })
+        
+    turnos_info = [{'abreviacion': t.abreviacion, 'nombre': t.nombre, 'color': t.color} for t in turnos]
+
+    import json
+    preloaded_data = {
+        'dias': dias_dict,
+        'trabajadores': t_dicts,
+        'celdas': celdas,
+        'turnos': turnos_info,
+        'estado': cabecera.estado,
+        'metricas': {'necesarios': 0}
+    }
+
+    return render_template('simulacion.html', 
+                           servicios=servicios, 
+                           turnos=turnos, 
+                           tipos_ausencia=tipos_ausencia, 
+                           current_year=cabecera.anio, 
+                           current_month=cabecera.mes,
+                           feriados_dict=feriados_dict,
+                           empresa_activa=empresa_activa,
+                           modo='editar',
+                           cabecera_id=cabecera_id,
+                           preloaded_data=json.dumps(preloaded_data))

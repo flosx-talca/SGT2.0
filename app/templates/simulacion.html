@@ -207,14 +207,7 @@
                 {% endif %}
             </div>
             <!-- Tabla (se inyecta por JS) -->
-            <div id="leyenda_feriados" class="d-flex gap-2 mb-2 flex-wrap px-3 pt-2" style="display:none !important;">
-                <span class="badge" style="background:#e74c3c">🔴 F. Irrenunciable</span>
-                <span class="badge" style="background:#c0392b">🔴 F. Irrenunciable + Dom</span>
-                <span class="badge" style="background:#f39c12">🟡 Feriado Nacional</span>
-                <span class="badge" style="background:#8e44ad">🟣 Feriado Regional</span>
-                <span class="badge" style="background:#e67e22">🟠 Feriado + Domingo</span>
-                <span class="badge" style="background:#3498db">🔵 Domingo</span>
-            </div>
+
             <div id="cuadrante_tabla" class="cuadrante-wrapper" style="display:none;"></div>
         </div>
     </div>
@@ -230,8 +223,8 @@
                 <i class="fa fa-file-excel me-1"></i> Exportar Excel
             </button>
         </div>
-        <button class="btn btn-success shadow-sm" onclick="publicarCuadrante()" id="btn_publicar">
-            <i class="fa fa-check-circle me-1"></i> Publicar Cuadrante
+        <button class="btn btn-success shadow-sm" onclick="guardarCuadrante()" id="btn-guardar-cuadrante">
+            <i class="fa fa-save me-1"></i> Guardar Cuadrante
         </button>
     </div>
 </div>
@@ -483,7 +476,8 @@
                     </td>`;
                 }).join('');
 
-                html += `<tr><td class="col-fecha ${esDom ? 'domingo' : ''}" style="white-space: nowrap;">${dia.label}${badgeHtml}</td>${celdas_html}`;
+                const bgFechaStyle = (esDom || feriado) ? 'background-color: #ffe4e4 !important; color: #c0392b !important; font-weight: 600;' : '';
+                html += `<tr><td class="col-fecha ${esDom ? 'domingo' : ''}" style="white-space: nowrap; ${bgFechaStyle}">${dia.label}${badgeHtml}</td>${celdas_html}`;
 
                 // Columnas de Cobertura
                 LISTA_TURNOS.forEach(t => {
@@ -533,9 +527,6 @@
 
             const emptyState = document.getElementById('estado_vacio');
             if (emptyState) emptyState.style.display = 'none';
-
-            const leyendaFeriados = document.getElementById('leyenda_feriados');
-            if (leyendaFeriados) leyendaFeriados.style.setProperty('display', 'flex', 'important');
 
             const footer = document.getElementById('footer_acciones');
             if (footer) {
@@ -756,56 +747,143 @@
     }
 
     function guardarCambiosCelda(fecha, wid, abr) {
-        const mes = $('#sel_mes').val();
-        const anio = $('#sel_anio').val();
-        const suc = $('#sel_sucursal').val();
-        $.ajax({
-            url: '/planificacion/celda',
-            type: 'POST',
-            contentType: 'application/json',
-            data: JSON.stringify({ fecha, trabajador_id: wid, turno: abr, mes, anio, sucursal_id: suc }),
-            success: function (res) {
-                if (res.status !== 'ok') toastr.warning('No se pudo guardar el cambio');
-            },
-            error: function () { toastr.error('Error al guardar cambio de celda'); }
-        });
+        if (window.CABECERA_ID) {
+            // Modo Edición Real (Persistido)
+            const es_libre = (abr === 'L' || abr === 'V');
+            const turno_id = es_libre ? null : TURNOS_MAP_ABR_ID[abr];
+            
+            $.ajax({
+                url: '/cuadrante/asignacion',
+                type: 'PUT',
+                contentType: 'application/json',
+                data: JSON.stringify({
+                    cabecera_id: window.CABECERA_ID,
+                    trabajador_id: wid,
+                    fecha: fecha,
+                    turno_id: turno_id,
+                    es_libre: es_libre,
+                    motivo: 'Cambio manual via Picker'
+                }),
+                success: function(res) {
+                    toastr.success('Celda actualizada y auditada en BD.');
+                },
+                error: function(err) {
+                    toastr.error('Error al persistir el cambio.');
+                    // En caso de error podríamos revertir visualmente, 
+                    // pero para simplificar dejamos que el usuario recargue
+                }
+            });
+        } else {
+            // Modo Simulación en memoria (MocKup)
+            const mes = $('#sel_mes').val();
+            const anio = $('#sel_anio').val();
+            const suc = $('#sel_sucursal').val();
+            $.ajax({
+                url: '/planificacion/celda',
+                type: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify({ fecha, trabajador_id: wid, turno: abr, mes, anio, sucursal_id: suc }),
+                success: function (res) {
+                    if (res.status !== 'ok') toastr.warning('No se pudo guardar el cambio en sesión');
+                },
+                error: function () { toastr.error('Error al guardar cambio de celda en sesión'); }
+            });
+        }
     }
 
-    // ─── Publicar ────────────────────────────────────────────────────────────────
-    function publicarCuadrante() {
+    // ─── Guardado en BD y Auditoría ──────────────────────────────────────────────
+    const TURNOS_MAP_ABR_ID = {
+        {% for t in turnos %}
+        '{{ t.abreviacion }}': {{ t.id }},
+        {% endfor %}
+    };
+
+    const TURNOS_MAP_ID_NOMBRE = {
+        {% for t in turnos %}
+        {{ t.id }}: '{{ t.nombre }}',
+        {% endfor %}
+    };
+
+    const TURNOS_EMPRESA = [
+        {% for t in turnos %}
+        {id: {{ t.id }}, nombre: '{{ t.nombre }}', abreviacion: '{{ t.abreviacion }}'},
+        {% endfor %}
+    ];
+
+    function recolectarAsignaciones() {
+        let asignaciones = [];
+        if (!SGT.cuadranteData || !SGT.cuadranteData.trabajadores) return [];
+        SGT.cuadranteData.trabajadores.forEach(trab => {
+            SGT.cuadranteData.dias.forEach(dia => {
+                const abr = SGT.cuadranteData.celdas[dia.fecha] ? SGT.cuadranteData.celdas[dia.fecha][trab.id] : null;
+                const es_libre = (!abr || abr === 'L');
+                const turno_id = es_libre ? null : TURNOS_MAP_ABR_ID[abr];
+                
+                // Horas asignadas es opcional, el modelo por defecto da 0, podemos ignorarlo o calcularlo
+                asignaciones.push({
+                    trabajador_id: trab.id,
+                    fecha: dia.fecha,
+                    turno_id: turno_id,
+                    es_libre: es_libre,
+                    horas_asignadas: 0 // Si tuvieras duración la pones aquí
+                });
+            });
+        });
+        return asignaciones;
+    }
+
+    function guardarCuadrante() {
         Swal.fire({
-            title: '¿Publicar cuadrante oficial?',
-            text: 'Una vez publicado, quedará registrado como el cuadrante oficial del período.',
-            icon: 'warning',
+            title: '¿Guardar cuadrante en Base de Datos?',
+            text: 'Esto persistirá el cuadrante y habilitará las modificaciones manuales.',
+            icon: 'info',
             showCancelButton: true,
-            confirmButtonText: 'Sí, publicar',
+            confirmButtonText: '<i class="fa fa-save"></i> Guardar',
             confirmButtonColor: '#18bc9c',
             cancelButtonText: 'Cancelar'
         }).then(result => {
             if (!result.isConfirmed) return;
+            
+            const asignaciones = recolectarAsignaciones();
+            
             $.ajax({
-                url: '/planificacion/publicar',
+                url: '/cuadrante/guardar',
                 type: 'POST',
                 contentType: 'application/json',
                 data: JSON.stringify({
-                    mes: $('#sel_mes').val(),
-                    anio: $('#sel_anio').val(),
-                    sucursal_id: $('#sel_sucursal').val()
+                    empresa_id: {{ empresa_activa.id if empresa_activa else 1 }},
+                    servicio_id: parseInt($('#sel_sucursal').val()) || null,
+                    mes: parseInt($('#sel_mes').val()),
+                    anio: parseInt($('#sel_anio').val()),
+                    asignaciones: asignaciones
                 }),
                 success: function (res) {
-                    if (res.status === 'ok') {
-                        toastr.success('¡Cuadrante publicado como oficial!');
-                        $('#estado_badge').html('<span class="sim-badge-estado badge bg-success">Oficial</span>');
-                        $('#btn_publicar').prop('disabled', true);
-                        cuadranteData.estado = 'oficial';
+                    if (res.ok) {
+                        toastr.success('¡Cuadrante guardado correctamente!');
+                        $('#estado_badge').html('<span class="sim-badge-estado badge bg-success">Guardado</span>');
+                        $('#btn-guardar-cuadrante').prop('disabled', true);
+                        if (SGT.cuadranteData) SGT.cuadranteData.estado = 'guardado';
+                        window.CABECERA_ID = res.cabecera_id;
+                        
+                        // Una vez guardado, adjuntar IDs de asignación a las celdas (simulado recargando o inyectando data)
+                        // Para simplificar, asumimos que si está guardado, al hacer clic, editamos usando un PUT que requiere asigId.
+                        // Dado que aquí devolvimos el cabecera_id pero no los asig_id exactos,
+                        // lo ideal es recargar la vista del cuadrante desde el backend.
+                        // Ojo: En este caso como es una Single Page / AJAX, la implementación requiere los asignacion_id.
+                        // Pero el backend de edición requiere asig_id. Por ahora, recargamos la página apuntando al modo editar.
+                        setTimeout(() => {
+                            window.location.href = '/planificacion/editar/' + res.cabecera_id;
+                        }, 1500);
                     } else {
-                        toastr.error(res.message);
+                        toastr.error(res.message || 'Error desconocido');
                     }
                 },
-                error: () => toastr.error('Error al publicar')
+                error: () => toastr.error('Error al guardar el cuadrante')
             });
         });
     }
+
+
 
     function descartarCuadrante() {
         cuadranteData = null;
@@ -852,5 +930,24 @@
             cerrarPicker();
         }
     });
+
+    {% if modo == 'editar' %}
+    $(document).ready(function() {
+        console.log("Iniciando en modo edición...");
+        SGT.cuadranteData = {{ preloaded_data | safe }};
+        window.CABECERA_ID = {{ cabecera_id }};
+        
+        // Bloquear UI superior
+        $('#sel_mes').val({{ current_month }}).prop('disabled', true);
+        $('#sel_anio').val({{ current_year }}).prop('disabled', true);
+        $('#btn-generar-cuadrante').prop('disabled', true);
+        
+        // Renderizar y activar modo
+        SGT.renderCuadrante();
+        $('#estado_badge').html('<span class="sim-badge-estado badge bg-success">Guardado</span>');
+        $('#btn-guardar-cuadrante').prop('disabled', true);
+        
+    });
+    {% endif %}
 </script>
 {% endblock %}

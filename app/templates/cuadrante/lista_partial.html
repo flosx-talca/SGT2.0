@@ -1,0 +1,57 @@
+{% extends "_partial.html" if is_htmx else "layout.html" %}
+{% block title %}Últimas Planificaciones{% endblock %}
+
+{% block content %}
+<div class="card">
+  <div class="card-body">
+    <table id="tbl-planificaciones" class="table table-hover dt-table">
+      <thead>
+        <tr>
+          <th>Empresa</th>
+          <th>Servicio</th>
+          <th>Período</th>
+          <th>Estado</th>
+          <th>Asig. Manuales</th>
+          <th>Guardado por</th>
+          <th>Fecha</th>
+          <th>Acciones</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for c in cabeceras %}
+        <tr>
+          <td>{{ c.empresa.razon_social }}</td>
+          <td>{{ c.servicio.descripcion if c.servicio else '—' }}</td>
+          <td>{{ c.periodo }}</td>
+          <td>
+            <span class="badge bg-{{ 'success' if c.estado == 'guardado' else 'secondary' }}">
+              {{ c.estado|capitalize }}
+            </span>
+          </td>
+          <td>
+            {% if c.total_manuales > 0 %}
+              <span class="badge bg-warning text-dark">✏️ {{ c.total_manuales }}</span>
+            {% else %}
+              <span class="text-muted">—</span>
+            {% endif %}
+          </td>
+          <td>{{ c.guardado_por.nombre if c.guardado_por else '—' }}</td>
+          <td>{{ c.guardado_en.strftime('%d/%m/%Y %H:%M') if c.guardado_en else '—' }}</td>
+          <td>
+            <!-- Actions to be implemented later by user -->
+            <a href="/planificacion/ver/{{ c.id }}"
+               class="btn btn-sm btn-outline-primary">
+               <i class="fas fa-eye"></i>
+            </a>
+            <a href="/planificacion/editar/{{ c.id }}"
+               class="btn btn-sm btn-outline-warning">
+               <i class="fas fa-edit"></i>
+            </a>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}
