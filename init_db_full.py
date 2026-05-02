@@ -52,6 +52,7 @@ def init_db():
             {'nombre': 'Menús', 'endpoint': 'menu.index', 'icono': 'fa fa-list', 'orden': 25, 'es_base': False},
             {'nombre': 'Reglas Generales', 'endpoint': 'regla.index', 'icono': 'fa fa-cogs', 'orden': 42, 'es_base': False},
             {'nombre': 'Parámetros Legales', 'endpoint': 'parametro_legal.index', 'icono': 'fa fa-gavel', 'orden': 44, 'es_base': False},
+            {'nombre': 'Feriados', 'endpoint': 'feriado.index', 'icono': 'fa fa-umbrella-beach', 'orden': 46, 'es_base': False},
         ]
         menu_objs = {}
         for m in menus_data:
@@ -66,8 +67,8 @@ def init_db():
         print("Asignando permisos...")
         for rol_nombre, endpoints in {
             'Super Admin': [m['endpoint'] for m in menus_data],
-            'Administrador': ['main.index', 'trabajador.index', 'turno.index', 'ausencia.index', 'tipo_ausencia.index', 'main.planificacion'],
-            'Cliente': ['main.index', 'trabajador.index', 'turno.index', 'ausencia.index', 'tipo_ausencia.index', 'main.planificacion']
+            'Administrador': ['main.index', 'trabajador.index', 'turno.index', 'ausencia.index', 'tipo_ausencia.index', 'main.planificacion', 'feriado.index'],
+            'Cliente': ['main.index', 'trabajador.index', 'turno.index', 'ausencia.index', 'tipo_ausencia.index', 'main.planificacion', 'feriado.index']
         }.items():
             rol_obj = roles_objs.get(rol_nombre)
             for ep in endpoints:

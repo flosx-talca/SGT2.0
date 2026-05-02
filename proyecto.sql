@@ -484,3 +484,11 @@ INSERT INTO "tipo_ausencia_plantilla" ("nombre", "abreviacion", "color", "catego
 INSERT INTO "tipo_ausencia_plantilla" ("nombre", "abreviacion", "color", "categoria", "tipo_restriccion") VALUES ('Solo este Turno', 'SOLO', '#3498db', 'restriccion', 'solo_turno');
 
 SET session_replication_role = 'origin'; -- Reactivar triggers/FKs
+
+-- Migracion Feriados
+ALTER TABLE "feriado" ADD COLUMN "es_irrenunciable" BOOLEAN DEFAULT FALSE;
+ALTER TABLE "feriado" ADD COLUMN "tipo" VARCHAR(20) DEFAULT 'nacional';
+ALTER TABLE "feriado" ADD COLUMN "fuente" VARCHAR(50) DEFAULT 'feriados.io';
+ALTER TABLE "feriado" ADD COLUMN "regiones" VARCHAR(100);
+CREATE INDEX "idx_feriado_fecha" ON "feriado" ("fecha");
+CREATE INDEX "idx_feriado_activo" ON "feriado" ("activo", "fecha");

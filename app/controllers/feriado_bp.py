@@ -87,3 +87,30 @@ def eliminar():
     feriado.activo = False
     db.session.commit()
     return jsonify({'ok': True, 'msg': 'Feriado desactivado.'})
+
+@feriado_bp.route('/is-business-day', methods=['GET'])
+def is_business_day():
+    """
+    Verifica si una fecha es día hábil consumiendo la API de feriados.io.
+    Parámetros:
+        date (YYYY-MM-DD)
+        region (opcional, ej: RM, 01, etc.)
+    """
+    from app.services.feriado_sync_service import verificar_dia_habil
+    
+    fecha_str = request.args.get('date')
+    region_str = request.args.get('region')
+    
+    if not fecha_str:
+        return jsonify({'ok': False, 'msg': 'El parámetro date es requerido.'}), 400
+        
+    try:
+        datetime.strptime(fecha_str, '%Y-%m-%d')
+    except ValueError:
+        return jsonify({'ok': False, 'msg': 'Formato de fecha inválido. Use YYYY-MM-DD.'}), 400
+        
+    resultado = verificar_dia_habil(fecha_str, region_str)
+    if resultado.get('ok'):
+        return jsonify(resultado), 200
+    else:
+        return jsonify(resultado), 500

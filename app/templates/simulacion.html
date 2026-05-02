@@ -207,6 +207,14 @@
                 {% endif %}
             </div>
             <!-- Tabla (se inyecta por JS) -->
+            <div id="leyenda_feriados" class="d-flex gap-2 mb-2 flex-wrap px-3 pt-2" style="display:none !important;">
+                <span class="badge" style="background:#e74c3c">🔴 F. Irrenunciable</span>
+                <span class="badge" style="background:#c0392b">🔴 F. Irrenunciable + Dom</span>
+                <span class="badge" style="background:#f39c12">🟡 Feriado Nacional</span>
+                <span class="badge" style="background:#8e44ad">🟣 Feriado Regional</span>
+                <span class="badge" style="background:#e67e22">🟠 Feriado + Domingo</span>
+                <span class="badge" style="background:#3498db">🔵 Domingo</span>
+            </div>
             <div id="cuadrante_tabla" class="cuadrante-wrapper" style="display:none;"></div>
         </div>
     </div>
@@ -301,6 +309,7 @@
     };
 
     var LISTA_TURNOS = [{% for t in turnos %}"{{ t.abreviacion }}"{% if not loop.last %}, {% endif %} {% endfor %}];
+    var feriadosDict = {{ feriados_dict | tojson | safe if feriados_dict else '{}' }};
 
     function getColorTurno(abr) {
         return COLORES_TURNO[abr] || '#adb5bd';
@@ -448,6 +457,14 @@
                 LISTA_TURNOS.forEach(t => conts[t] = 0);
                 let totalDia = 0;
 
+                const feriado = typeof feriadosDict !== 'undefined' ? feriadosDict[dia.fecha] : null;
+                let badgeHtml = '';
+                if (feriado) {
+                    badgeHtml = `<br><span class="badge badge-sm mt-1" style="background:${feriado.badge_config.color};font-size:0.6rem">${feriado.badge_config.label}</span>`;
+                } else if (esDom) {
+                    badgeHtml = `<br><span class="badge badge-sm mt-1" style="background:#3498db;font-size:0.6rem">Dom</span>`;
+                }
+
                 let celdas_html = trabajadores.map(t => {
                     const raw = (celdas[dia.fecha] !== undefined) ? celdas[dia.fecha][t.id] : undefined;
                     const tAbr = (raw !== undefined && raw !== null && raw !== '') ? raw : 'L';
@@ -466,7 +483,7 @@
                     </td>`;
                 }).join('');
 
-                html += `<tr><td class="col-fecha ${esDom ? 'domingo' : ''}" style="white-space: nowrap;">${dia.label}</td>${celdas_html}`;
+                html += `<tr><td class="col-fecha ${esDom ? 'domingo' : ''}" style="white-space: nowrap;">${dia.label}${badgeHtml}</td>${celdas_html}`;
 
                 // Columnas de Cobertura
                 LISTA_TURNOS.forEach(t => {
@@ -516,6 +533,9 @@
 
             const emptyState = document.getElementById('estado_vacio');
             if (emptyState) emptyState.style.display = 'none';
+
+            const leyendaFeriados = document.getElementById('leyenda_feriados');
+            if (leyendaFeriados) leyendaFeriados.style.setProperty('display', 'flex', 'important');
 
             const footer = document.getElementById('footer_acciones');
             if (footer) {

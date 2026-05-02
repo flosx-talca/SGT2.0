@@ -5,6 +5,9 @@ from .database import db
 from flask_migrate import Migrate
 from flask_login import LoginManager
 from . import models
+from app.scheduler.feriado_scheduler import iniciar_scheduler_feriados
+from app.services.feriado_sync_service import carga_inicial
+import logging
 
 def create_app():
     app = Flask(__name__)
@@ -135,5 +138,17 @@ def create_app():
     app.register_blueprint(rol_bp)
     app.register_blueprint(restricciones_bp)
     app.register_blueprint(parametro_legal_bp)
+
+    with app.app_context():
+        from app.models.core import Feriado
+        if Feriado.query.count() == 0:
+            logger = logging.getLogger(__name__)
+            logger.info("Tabla feriados vacía. Ejecutando carga inicial...")
+            resultado = carga_inicial()
+            logger.info(f"Carga inicial completada: {resultado}")
+
+    import os
+    if os.environ.get("FLASK_ENV") != "testing":
+        iniciar_scheduler_feriados(app)
 
     return app

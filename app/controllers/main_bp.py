@@ -40,12 +40,29 @@ def planificacion():
         turnos = []
     tipos_ausencia = TipoAusencia.query.filter_by(empresa_id=empresa_id, activo=True).all()
     now = datetime.now()
+    
+    import calendar
+    from app.models.core import Feriado
+    _, last_day = calendar.monthrange(now.year, now.month)
+    start_date = datetime(now.year, now.month, 1).date()
+    end_date = datetime(now.year, now.month, last_day).date()
+    feriados_del_mes = Feriado.query.filter(Feriado.fecha >= start_date, Feriado.fecha <= end_date, Feriado.activo == True).all()
+    feriados_dict = {
+        f.fecha.strftime('%Y-%m-%d'): {
+            'es_irrenunciable': f.es_irrenunciable,
+            'es_regional': f.es_regional,
+            'tipo_display': f.tipo_display,
+            'badge_config': f.badge_config
+        } for f in feriados_del_mes
+    }
+    
     return render_template('simulacion.html', 
                            servicios=servicios, 
                            turnos=turnos, 
                            tipos_ausencia=tipos_ausencia, 
                            current_year=now.year, 
-                           current_month=now.month)
+                           current_month=now.month,
+                           feriados_dict=feriados_dict)
 
 @main_bp.route('/simulacion')
 @login_required
