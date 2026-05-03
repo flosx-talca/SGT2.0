@@ -316,28 +316,45 @@ def generar():
 
         # ── Debug post-solución ───────────────────────────────────────────────
         if status in (cp_model.FEASIBLE, cp_model.OPTIMAL):
-            print(f"\n[SGT] TOTALES POR WORKER Y TURNO:")
+            logger.info("=== REPORTE DE CARGA DE TRABAJO (POST-SOLVER) ===")
             total_general = 0
             for w in t_ids:
                 nombre = next((t['nombre'] for t in t_dicts if t['id'] == w), str(w))
-                total_w = sum(
+                total_turnos = sum(
                     1 for d in dias_del_mes for t in turnos
                     if solver.Value(x[w, d, t]) == 1
                 )
-                por_turno = {
-                    t: sum(1 for d in dias_del_mes if solver.Value(x[w, d, t]) == 1)
-                    for t in turnos
-                }
+                
+                # Calcular horas reales asignadas
+                horas_reales = sum(
+                    turnos_meta.get(t, {}).get('horas', 8.0)
+                    for d in dias_del_mes for t in turnos
+                    if solver.Value(x[w, d, t]) == 1
+                )
+                
                 meta_w = trabajadores_meta.get(w, {})
-                h      = meta_w.get('horas_semanales', 42) or 42
-                dur    = meta_w.get('duracion_turno', 8) or 8
-                ext    = meta_w.get('permite_horas_extra', False)
-                alerta = " ⚠️ SOBRE META" if total_w > _math.ceil(h/dur * num_days/7) else ""
-                print(f"  {nombre[:20]:<20} total={total_w:>3} {por_turno}{alerta}")
-                total_general += total_w
-            print(f"  {'TOTAL GENERAL':<20} {total_general}")
+                h_contrato = meta_w.get('horas_semanales', 42) or 42
+                permite_extra = meta_w.get('permite_horas_extra', False)
+                
+                # Determinar Status
+                # Meta teórica mensual (promedio semanas)
+                meta_hrs_mes = (num_days / 7.0) * h_contrato
+                
+                status_msg = "OK"
+                if horas_reales > meta_hrs_mes:
+                    status_msg = "SOBRE JORNADA ⚠️" if permite_extra else "EXCESO NO PERMITIDO ❌"
+                elif horas_reales < meta_hrs_mes - 8: # Margen de un turno
+                    status_msg = "SUB-UTILIZADO ⬇️"
 
-            print(f"\n[SGT] COBERTURA POR TURNO:")
+                logger.info(
+                    f"  {nombre[:20]:<20} | Contrato: {h_contrato}h | Extra: {'SÍ' if permite_extra else 'NO'} | "
+                    f"Turnos: {total_turnos:>2} | Hrs: {horas_reales:>5.1f}/{meta_hrs_mes:>5.1f} | Status: {status_msg}"
+                )
+                total_general += total_turnos
+            logger.info(f"TOTAL TURNOS ASIGNADOS: {total_general}")
+            logger.info("==================================================")
+
+            logger.info("COBERTURA POR TURNO:")
             for t in turnos:
                 req_total  = sum(coberturas_por_dia[d].get(t, 0) for d in dias_del_mes)
                 real_total = sum(
@@ -347,8 +364,8 @@ def generar():
                 )
                 diff = real_total - req_total
                 estado = "✅" if diff == 0 else ("⚠️ SUPERÁVIT" if diff > 0 else "❌ DÉFICIT")
-                print(f"  Turno {t}: req={req_total} real={real_total} diff={diff:+} {estado}")
-            print(f"{'='*60}\n")
+                logger.info(f"  Turno {t}: req={req_total} real={real_total} diff={diff:+} {estado}")
+            logger.info("==================================================")
 
         # Métricas de cobertura (solo cuenta turnos reales, no L ni vacíos)
         turnos_necesarios = sum(
